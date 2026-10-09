@@ -94,10 +94,66 @@ run_session() {
   check "$name: idle CPU ≤ 2 ticks in 10 s" '[[ $((c1 - c0)) -le 2 ]]'
 }
 
+# Real Arcade Link calls from the overlay, against `arcade-link mock` peers
+# (set ARCADE_LINK_CLI to the CLI from Arcade Link v0.1.0): a mock Look,
+# and a mock peer publishing the proposed `shelf.add` contract.
+link_checks() {
+  local name="$1" shot="$2" typer="$3" texter="$4"
+  [[ -n "${ARCADE_LINK_CLI:-}" && -x "${ARCADE_LINK_CLI:-}" ]] || { echo "  skip  $name: Link peer checks (ARCADE_LINK_CLI not set)"; return; }
+  cat >"$T/look.json" <<'J'
+{ "id": "arcade.look", "name": "Arcade Look", "version": "0.0.0-mock",
+  "actions": [ { "id": "look.preview", "title": "Quick Look", "verb": "preview",
+                 "accepts": ["file/*", "file/*[]", "folder/reference", "text/url"],
+                 "effects": ["opens-ui"], "interactive": true, "mock": { "result": { "message": "Previewing" } } } ] }
+J
+  cat >"$T/shelf.json" <<'J'
+{ "id": "arcade.shelf", "name": "Arcade Shelf", "version": "0.0.0-mock",
+  "actions": [ { "id": "shelf.add", "title": "Add to Shelf", "verb": "add",
+                 "accepts": ["file/*", "file/*[]", "folder/reference", "text/plain", "text/url", "text/rich"],
+                 "effects": ["persists"], "mock": { "result": { "message": "Added 2 items to Quick Shelf" } } } ] }
+J
+  rm -f "$T/look.log" "$T/shelf.log"
+  ARCADE_MOCK_LOG="$T/look.log" "$ARCADE_LINK_CLI" mock --as arcade.look --actions "$T/look.json" >/dev/null 2>&1 &
+  local look=$!
+  ARCADE_MOCK_LOG="$T/shelf.log" "$ARCADE_LINK_CLI" mock --as arcade.shelf --actions "$T/shelf.json" >/dev/null 2>&1 &
+  local shelf=$!
+  PIDS+=("$look" "$shelf")
+  sleep 1
+  # Enter previews the selected result in Look and hides Find.
+  af --show "dir: Reports"
+  sleep 0.6
+  $typer FOCUS
+  $typer Return
+  sleep 1
+  check "$name: Enter sends look.preview" 'grep -q "\"look.preview\"" "$T/look.log" && grep -q "\"folder/reference\"" "$T/look.log"'
+  check "$name: Find hides for the preview" '! "$BIN" --status | grep -q "\"visible\": true"'
+  # A mixed multi-selection goes to shelf.add by reference; Find stays open.
+  af --show report
+  sleep 0.6
+  $typer FOCUS
+  $typer shift+Down
+  $typer shift+Down
+  $typer shift+Down
+  $typer Tab
+  sleep 0.4
+  $texter shelf
+  sleep 0.4
+  $shot "$OUT/$name-shelf-entry.png" || true
+  $typer Return
+  sleep 1
+  check "$name: shelf.add received a folder and a file by reference" 'grep -q "\"shelf.add\"" "$T/shelf.log" && grep -q "\"type\":\"file/any\[\]\"" "$T/shelf.log" && grep -q "\"type\":\"folder/reference\"" "$T/shelf.log" && grep -q "\"source\":\"arcade.find\"" "$T/shelf.log"'
+  check "$name: Find stays open after a non-interactive peer action" '"$BIN" --status | grep -q "\"visible\": true"'
+  $shot "$OUT/$name-shelf-done.png" || true
+  $typer Escape
+  kill "$look" "$shelf" 2>/dev/null || true
+  sleep 0.3
+}
+
 overlay_checks() {
   local name="$1" shot="$2" typer="$3"
   af --show report
   sleep 0.8
+  $typer FOCUS
   check "$name: overlay shows (screenshot)" "$shot '$OUT/$name-results.png'"
   $typer Down
   sleep 0.3
@@ -134,7 +190,12 @@ EOF
   PIDS+=($!)
   run_session wayland
   # A fresh virtual keyboard needs a moment before its first key arrives.
-  wl_key() { wtype -s 400 -k "$1"; }
+  wl_key() {
+    if [[ "$1" == FOCUS ]]; then return; fi
+    if [[ "$1" == shift+* ]]; then wtype -s 400 -M shift -k "${1#shift+}" -m shift; else wtype -s 400 -k "$1"; fi
+  }
+  wl_text() { wtype -s 400 "$1"; }
+  link_checks wayland "grim" wl_key wl_text
   overlay_checks wayland "grim" wl_key
   unset WAYLAND_DISPLAY
 else
@@ -150,7 +211,11 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   run_session x11
   x_shot() { import -window root "$1"; }
   # No window manager: give the overlay input focus directly.
-  x_key() { xdotool search --name '^Arcade Find$' windowfocus --sync key "$1" 2>/dev/null || xdotool key "$1"; }
+  x_key() {
+    if [[ "$1" == FOCUS ]]; then xdotool search --name '^Arcade Find$' windowfocus --sync 2>/dev/null || true; else xdotool key "$1"; fi
+  }
+  x_text() { xdotool type "$1"; }
+  link_checks x11 x_shot x_key x_text
   overlay_checks x11 x_shot x_key
 else
   echo "  skip  X11 (Xvfb or xdotool missing)"

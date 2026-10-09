@@ -300,7 +300,11 @@ impl ApplicationHandler<UiMsg> for App {
                 let s = m.state();
                 self.mods = Mods { ctrl: s.control_key(), shift: s.shift_key(), alt: s.alt_key(), logo: s.super_key() };
             }
-            WindowEvent::KeyboardInput { event, .. } if event.state == ElementState::Pressed && self.overlay.visible => {
+            // Synthetic presses replay keys held while focus arrived (the
+            // Enter that opened us, the shortcut's keys): never act on them.
+            WindowEvent::KeyboardInput { event, is_synthetic: false, .. }
+                if event.state == ElementState::Pressed && self.overlay.visible =>
+            {
                 let ev = super::keys::from_winit(&event.logical_key, event.text.as_deref(), self.mods);
                 let svc = self.svc.clone();
                 let effects = self.overlay.key(&ev, &*svc);
