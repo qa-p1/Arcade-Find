@@ -1,0 +1,18 @@
+{
+  "comment": "Design tokens for integration surfaces only (badges, the Look actions strip, Connected apps pages). Existing app UIs are not reskinned.",
+  "accent": {
+    "arcade.box": "#7C5CFF",
+    "arcade.lens": "#2BB3A3",
+    "arcade.look": "#3B82F6",
+    "arcade.wheel": "#F59E0B",
+    "arcade.clipboard": "#EC4899",
+    "arcade.tools": "#64748B"
+  },
+  "neutral": {
+    "dark": { "surface": "#14171C", "raised": "#1C2027", "border": "#2A2F38", "text": "#E7EAF0", "muted": "#9AA3B2" },
+    "light": { "surface": "#FFFFFF", "raised": "#F5F6F8", "border": "#DDE1E7", "text": "#161A20", "muted": "#5B6472" }
+  },
+  "radius": { "badge": 4, "chip": 8, "panel": 12 },
+  "motion": { "fastMs": 120, "baseMs": 180, "slowMs": 260, "easing": "cubic-bezier(0.2, 0, 0, 1)" },
+  "glyph": { "size": 16, "strokeWidth": 1.5 }
+}

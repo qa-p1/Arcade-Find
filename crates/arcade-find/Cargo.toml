@@ -1,0 +1,56 @@
+[package]
+name = "arcade-find"
+description = "Arcade Find: press a shortcut, type a few letters, and any file or folder shows up instantly"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+build = "build.rs"
+
+[[bin]]
+name = "arcade-find"
+path = "src/main.rs"
+
+[dependencies]
+find-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v0.1.0", features = ["watch"] }
+interprocess = "2.4"
+getrandom = "0.4"
+# Overlay rendering (software; no GPU context is created for the overlay).
+resvg = { version = "0.45", default-features = false }
+cosmic-text = { version = "0.15", default-features = false, features = ["std", "swash", "fontconfig"] }
+winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
+softbuffer = { version = "0.4", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "x11-dlopen"] }
+# Settings window (a separate process, started on demand).
+eframe = { version = "0.36", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
+global-hotkey = "0.8"
+arboard = { version = "3.6", default-features = false, features = ["wayland-data-control"] }
+trash = "5"
+open = "5"
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+smithay-client-toolkit = { version = "0.19", default-features = false, features = ["calloop", "xkbcommon"] }
+wayland-client = "0.31"
+ksni = { version = "0.3", features = ["blocking"] }
+zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+tray-icon = "0.26"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Registry", "Win32_UI_Shell", "Win32_System_Com", "Win32_UI_Shell_Common", "Win32_System_Ole", "Win32_System_Memory", "Win32_System_DataExchange", "Win32_Graphics_Gdi"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSRunningApplication", "NSWorkspace", "NSResponder", "NSPasteboard"] }
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSArray", "NSURL"] }
+
+[build-dependencies]
+
+[dev-dependencies]

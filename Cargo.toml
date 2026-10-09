@@ -1,0 +1,27 @@
+[workspace]
+resolver = "2"
+members = ["crates/find-core", "crates/arcade-find"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/qa-p1/Arcade-Find"
+rust-version = "1.89"
+
+[workspace.dependencies]
+find-core = { path = "crates/find-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+memchr = "2"
+crc32fast = "1"
+libc = "0.2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "debuginfo"
+panic = "abort"
+
+[profile.dev.package."*"]
+opt-level = 2

@@ -1,0 +1,30 @@
+[package]
+name = "find-core"
+description = "Arcade Find core: the in-memory file index, crawler, watchers, query language and ranking"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+memchr.workspace = true
+crc32fast.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(target_os = "linux")'.dependencies]
+inotify = { version = "0.11", default-features = false }
+
+[target.'cfg(not(target_os = "linux"))'.dependencies]
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Storage_FileSystem", "Win32_Foundation", "Win32_System_Time"] }
+
+[[bench]]
+name = "synthetic"
+harness = false
