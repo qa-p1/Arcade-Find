@@ -1,9 +1,9 @@
 # ARCADE FIND × ARCADE SHELF — FINAL INTEGRATION HANDOFF
 
-Written 2026-10-09 by the Arcade Find implementer. Each statement has one of these labels:
+Written 2026-10-09 by the Arcade Find implementer; updated the same day after Find's side was implemented and tested. Each statement has one of these labels:
 
 - **[CODE]**: the code exists in the Find working tree and was compiled/tested where stated.
-- **[DESIGNED]**: the Find-side behavior is decided and will be implemented exactly as written. Treat it as the contract. It is not written yet.
+- **[DESIGNED]**: decided, not yet implemented (only a few items remain; marked where they occur).
 - **[PROPOSED]**: something Shelf owns. It is a recommendation awaiting Shelf's implementation.
 - **[LINK]**: verified by reading Arcade Link `v0.1.0` (tag commit `337b85f`; `main` = `92aa03c` changes only docs and tools, not code).
 
@@ -12,10 +12,10 @@ Written 2026-10-09 by the Arcade Find implementer. Each statement has one of the
 ## 0. Corrections to the Shelf brief (read first)
 
 1. **Find never produces URLs or text.** Find indexes filesystem entries only, so a Find result is always a file or a folder (including symlinks, which are not followed). "Add URLs from Find" cannot happen. Shelf still needs `text/url` and `text/plain` for Lens, Clipboard, browsers and DnD, just not for Find.
-2. **Find's Link code isn't written yet.** The first snapshot is on `qa-p1/Arcade-Find` branch `feature/find-v0.1` (commit `810ac1d`): find-core plus the overlay model and renderer. It does not yet contain `link.rs`, `service.rs` or a working binary. Develop Shelf against the contract below, not against Find's code.
+2. **Find's side is implemented** on `qa-p1/Arcade-Find` branch `feature/find-v0.1` (see `docs/STATUS.md` for the tested commit). Shelf doesn't exist yet, so every Find↔Shelf check ran against a mock peer publishing the contract in §C.2.
 3. **Link has no ordered mixed array type.** `inputs` is an array of `Content`, but one `Content` can hold several paths only as `file/<kind>[]`. Folders are always single `folder/reference` values. A mixed selection therefore arrives as several inputs (§C.3), and the order between files and folders is not preserved.
 4. **`launch.invoke` is per manifest, not per action [LINK].** In `client::invoke_action`, a *non-interactive* action of a stopped app runs **one-shot** whenever the manifest has `launch.invoke`. If Shelf advertised `--arcade-invoke`, a `shelf.add` from Find would run in a throwaway process that never updates the resident UI. **Shelf must not set `launch.invoke`** unless it also handles a one-shot `shelf.add` correctly.
-5. **Link's spec requires confirmation for persistence.** SPEC §1.8: persistence is confirmed "in the owner's UI, or the caller marks them with a payload preview". Find does the second: §D.4 shows a payload preview on the entry. Shelf adds an Undo (§E.1). Neither side shows a modal prompt.
+5. **Link's spec requires confirmation for persistence.** SPEC §1.8: persistence is confirmed "in the owner's UI, or the caller marks them with a payload preview". Find does the second: the entry shows a payload preview (§D). Shelf adds an Undo (§E.1). Neither side shows a modal prompt.
 
 ---
 
@@ -41,11 +41,13 @@ Written 2026-10-09 by the Arcade Find implementer. Each statement has one of the
 | `crates/arcade-find/src/instance.rs` | Single instance per profile (lock file, local socket, 32-byte token) | [CODE] tested |
 | `crates/arcade-find/src/ui/model.rs` | Window-system-independent overlay state: keys, multi-selection (Shift+arrows), action list, effects | [CODE] 10 tests |
 | `crates/arcade-find/src/ui/render.rs`, `text.rs`, `icons.rs`, `theme.rs` | Software renderer, Link glyphs (vendored from v0.1.0), light/dark/system themes | [CODE] tested |
-| `crates/arcade-find/src/os.rs` | Open, reveal, no-overwrite rename, trash (never a hard delete), clipboard thread | [CODE] written, not yet compiled |
-| `crates/arcade-find/src/link.rs` | Manifest, `find.search` and `find.show` handler, one-shot mode, generic peer offers, selection-to-`Content` conversion | [DESIGNED] (this document) |
-| `crates/arcade-find/src/service.rs` | Controller: search worker, results, effects, peer invocation off the UI thread | [DESIGNED] |
-| `crates/arcade-find/src/main.rs` | Standard CLI (`--version --background --settings --quit --arcade-manifest --arcade-invoke`, plus `--show [q] --toggle --search --status --rescan --restart`) | [DESIGNED] (placeholder now) |
-| Overlay backends, tray (ksni / tray-icon), global hotkey plus Hyprland runtime bind, settings window, packaging | | [DESIGNED] not started |
+| `crates/arcade-find/src/os.rs` | Open, reveal, no-overwrite rename, trash (never a hard delete), clipboard thread | [CODE] tested |
+| `crates/arcade-find/src/link.rs` | Manifest, `find.search` and `find.show` handler, one-shot mode, generic peer offers, selection-to-`Content` encoding | [CODE] tested |
+| `crates/arcade-find/src/service.rs` | Controller: search worker, results, effects, peer invocation off the UI thread | [CODE] tested end to end |
+| `crates/arcade-find/src/main.rs` | Standard CLI (`--version --background --settings --quit --arcade-manifest --arcade-invoke`, plus `--show [q] --toggle --hide --search --status --rescan --restart`) | [CODE] tested end to end |
+| `crates/arcade-find/src/ui/wayland.rs`, `ui/desktop.rs` | Overlay backends: wlr-layer-shell; winit + softbuffer | [CODE] tested in headless Sway and Xvfb |
+| `hotkey.rs`, `tray.rs`, `autostart.rs`, `settings_ui.rs` | Shortcut (native or Hyprland runtime bind), tray, start at login, Settings window (egui) | [CODE] unit-tested; Settings rendered under Xvfb |
+| `packaging/`, `.github/workflows/ci.yml` | AppImage (built locally), Inno per-user installer and universal DMG (CI only) | [CODE] |
 
 **Process model.**
 - There is one resident instance per profile.
@@ -53,20 +55,20 @@ Written 2026-10-09 by the Arcade Find implementer. Each statement has one of the
 - The Link endpoint is published with `arcade_link::Presence` off the first-frame path.
 - `--arcade-invoke` serves `find.search` from the saved index without any UI, tray, shortcut, listener or manifest write.
 
-**Measured** (synthetic 1M entries in this container, 4 vCPU, not a real crawl yet):
-- Search p50: 1.8–13 ms.
-- Index heap about 41 MiB; RSS growth about 36.6 MiB per 1M entries.
-- Warm load of the saved index about 35 ms.
-- Whole-app RSS and idle CPU are **not measured yet**.
+**Measured** (real tree of 1M empty files plus 4,010 folders, release build, 4 vCPU container, headless; `scripts/bench_real.py`):
+- Whole-app RSS 52 MiB; idle CPU 0 ticks over 30 s.
+- Crawl 0.79 s (warm disk cache); warm start 33–37 ms; index file 38.5 MiB.
+- Keystrokes while typing: the first letter 15–23 ms (half the index matches), later letters 0–14 ms (narrowing).
 
-**Relationship with Look** [DESIGNED; key handling is CODE in `ui/model.rs`]:
+**Relationship with Look** [CODE]:
 - **Enter** previews in Look (`look.preview`). It falls back to the default app when Look is missing, disabled, or doesn't accept the item.
 - **Space**, after arrow navigation, also previews.
 - **Shift+Enter** opens with the default app; **Ctrl+Enter** reveals in the folder.
 - A Look preview counts toward frecency.
-- Find hides its overlay before invoking Look. If the preview fails, Find shows the standard Link error.
+- Find hides its overlay before invoking Look. If the preview fails, Find comes back with the standard Link error.
+- Tested end to end against `arcade-link mock` standing in for Look (Enter → `look.preview` with `folder/reference`); not yet against the real Look build.
 
-**Arcade Link client/server** [DESIGNED; APIs verified LINK]:
+**Arcade Link client/server** [CODE]:
 - Dependency: `arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v0.1.0", features = ["watch"] }`.
 - Discovery: `SharedRegistry::load` plus `watch` (OS notifications, no polling).
 - Offers are computed from the in-memory snapshot. Opening the action list does no disk or IPC work.
@@ -79,22 +81,20 @@ Written 2026-10-09 by the Arcade Find implementer. Each statement has one of the
 
 | Area | Status |
 |---|---|
-| find-core (index, crawl, watchers, persist, query, ranking, frecency, settings) | Implemented; unit tests and benchmark pass in this container |
-| Single instance, overlay model, renderer, icons, text input | Implemented; unit tests pass |
-| os.rs (open, reveal, rename, trash, clipboard) | Written, not compiled |
-| Link layer (`find.search`, `find.show`, peer offers, Shelf support) | **Designed in this document, not coded** |
-| Service, CLI, overlay windows, tray, hotkeys, settings window | Not implemented |
-| Mock-Shelf integration tests | Not written (planned in §F) |
-| Packaging, CI, docs, family onboarding (Link IDs, Tools mappings, tags) | Not done; tags and releases need the owner's authorization |
-| Repository | `qa-p1/Arcade-Find`, branch `feature/find-v0.1`, first snapshot `810ac1d` (work in progress; `cargo test --workspace`: 64 tests pass) |
-
-Nothing in Find has been validated interactively on any desktop yet.
+| find-core (index, crawl, watchers, persist, query, ranking, narrowing, frecency, settings) | Implemented; 48 unit tests pass; 1M-file benchmark above |
+| App: CLI, single instance, service, overlay (model, renderer, Wayland layer shell, X11), shortcut, tray, start at login, Settings | Implemented; 34 unit tests pass; `scripts/e2e-linux.sh` 43/43 checks in headless Sway and Xvfb |
+| Link layer (`find.search`, `find.show`, one-shot, peer offers, selection encoding) | Implemented; unit tests plus `tests/link_shelf.rs` (5 tests, in-process mock peer) plus e2e against `arcade-link mock` peers |
+| Windows, macOS | Type-check (`cargo check`) passes for both; CI builds and tests them; **not run interactively** |
+| Packaging | AppImage built and smoke-tested locally; Inno installer and universal DMG built only in CI; `arcade-release.json` generated with the vendored Link tool |
+| Family onboarding (Link IDs/glyph/tokens, Tools mappings, consumer lists) | **Not started** (deferred by the owner); tags and releases need the owner's approval |
+| Real desktops (Hyprland, KDE, GNOME, Windows, macOS) | **Not validated interactively** |
+| Repository | `qa-p1/Arcade-Find`, branch `feature/find-v0.1`; the tested commit is recorded in `docs/STATUS.md` |
 
 ---
 
 ## C. Final Find ↔ Shelf contract
 
-### C.1 What Find exposes (Shelf may call these) [DESIGNED]
+### C.1 What Find exposes (Shelf may call these) [CODE]
 
 **`find.show`**, version 1:
 - Title "Search in Find", verb `search`.
@@ -145,7 +145,7 @@ Nothing in Find has been validated interactively on any desktop yet.
 - `indexing: true` means the first crawl is still running and results may be incomplete.
 - Shelf does **not** need `find.search` for any flow in the brief. Use `find.show` for "Shelf → Find → Shelf". Never duplicate Find's index.
 
-### C.2 What Shelf exposes (Find consumes) [PROPOSED; Find's consumer side is DESIGNED]
+### C.2 What Shelf exposes (Find consumes) [PROPOSED; Find's consumer side is CODE]
 
 **`shelf.add`**, version 1. This is the only action Find needs.
 
@@ -200,7 +200,7 @@ Nothing in Find has been validated interactively on any desktop yet.
 - Cancellation:
   - Because it answers synchronously, there is nothing to cancel.
   - If Shelf ever uses a job (for example copying a large handoff), it must honor `job.cancel` and remove partial staging.
-  - Find passes a cancel flag; Esc while "Starting Arcade Shelf…" is shown sets it.
+  - Find doesn't cancel peer calls yet [DESIGNED]: it runs one peer call at a time on a worker and waits for the answer (Link's 30 s call timeout applies).
 
 **`shelf.show`**, version 1 [PROPOSED]:
 - Accepts nothing; options `{ "shelf"?: id }`; effects `["opens-ui"]`; interactive.
@@ -213,7 +213,7 @@ Nothing in Find has been validated interactively on any desktop yet.
 
 **No `shelf.open`.** It would duplicate `shelf.show` with `options.shelf`.
 
-### C.3 Selection → Link content (how Find encodes results) [DESIGNED]
+### C.3 Selection → Link content (how Find encodes results) [CODE]
 
 Find builds `Content` values from its in-memory rows with **no disk access**. Kind and size come from the index.
 
@@ -229,7 +229,7 @@ Find builds `Content` values from its in-memory rows with **no disk access**. Ki
 - `<kind>` comes from Link's extension table: image, video, audio, pdf, document, spreadsheet, presentation, archive, text, code, font, model, any.
 - Symlinks are sent as the link path itself, unresolved.
 
-### C.4 Capability discovery and offer rules (Find side) [DESIGNED]
+### C.4 Capability discovery and offer rules (Find side) [CODE]
 
 An entry is shown for the current selection only if all of these hold:
 
@@ -258,37 +258,34 @@ Other rules:
 
 ---
 
-## D. Find-side implementation details [DESIGNED; to be coded in these files]
+## D. Find-side implementation details [CODE]
 
-| File | Change |
+| File | What it does for Shelf (and every other peer) |
 |---|---|
-| `crates/arcade-find/src/link.rs` (new) | `manifest()`, `actions()`, `FindHandler` (`find.search`, `find.show`, status, activate, quit), `oneshot()`, `selection_inputs(&[Row]) -> Vec<Content>`, `offer(&Manifest, &Action, &[Content], bytes) -> Option<Offer>`, `peer_offers(...)` |
-| `crates/arcade-find/src/service.rs` (new) | Builds action items from the cached registry; runs `Effect::Peer` on a worker with `invoke_action`; toasts; hides first only for interactive or `opens-ui` actions |
-| `crates/arcade-find/src/ui/model.rs` | The action filter also matches the app name, so typing "shelf" finds "Add to Shelf". Peer entries go between "Copy file" and "Rename" |
-| `crates/arcade-find/src/ui/icons.rs` | Adds a generic app glyph for peers without a vendored Link glyph |
-| `crates/arcade-find/src/settings/*` | The Connected apps page lists the five known apps plus any other installed `arcade.*` manifest, so Shelf gets a "Use with Arcade Find" toggle |
-| `crates/arcade-find/tests/link_shelf.rs` (new) | Mock-Shelf integration tests (§F) |
+| `crates/arcade-find/src/link.rs` | `selection()` (encoding, §C.3), `offer()` and `peer_offers()` (§C.4), `request()` and `invoke()` (Link calls), `FindHandler` (`find.search`, `find.show`), `serve_oneshot()` |
+| `crates/arcade-find/src/service.rs` | `actions_for()` builds the Tab list from the cached registry; `run_peer()` calls the peer on a worker, hides first only for interactive or `opens-ui` actions, shows the result `message` or the standard error |
+| `crates/arcade-find/src/ui/model.rs` | Multi-selection; the action filter also matches the app name ("shelf" finds "Add to Shelf"); disabled entries show their reason |
+| `crates/arcade-find/src/ui/icons.rs` | A generic app glyph for peers without a vendored Link glyph |
+| `crates/arcade-find/src/settings_ui.rs` | Connected apps lists the five family apps plus any other installed `arcade.*` app, so Shelf gets a "Use with Arcade Find" toggle |
+| `crates/arcade-find/tests/link_shelf.rs` | Mock-peer tests (§F) |
+| `scripts/e2e-linux.sh` | Real binary + `arcade-link mock` peers (§F) |
 
-**How the user adds results to Shelf:**
-1. Select one or more results (Shift+arrows).
-2. Press Tab to open the action list.
-3. Choose "Add to Shelf", or type `shelf` and press Enter.
+**How the user adds results to Shelf:** select one or more results
+(Shift+arrows), press Tab, choose "Add to Shelf" (or type `shelf`), Enter.
+There's no dedicated key, to avoid coupling.
 
-There is no dedicated global key, to avoid coupling. Using a shortcut for "the last used peer action" is possible later.
+**Entry:** the manifest action's `title`; the manifest `name` for errors and
+filtering; a generic glyph until Link ships one for `arcade.shelf`; because
+the action has `persists`, a payload preview line ("logo.svg, brief.pdf +4"),
+no ↗ (that's for outbound effects).
 
-**Entry appearance:**
-- Title: the manifest action `title`.
-- App name: the manifest `name` ("Arcade Shelf").
-- Glyph: Shelf's monochrome glyph once Link ships `assets/glyphs/shelf.svg`; until then a generic glyph.
-- Because the action has `persists`, the entry shows a payload preview line, e.g. "logo.svg, brief.pdf +4". There is no ↗ arrow; that is reserved for outbound effects (`network`, `uploads-content`, `sends-to-device`).
+**Call:** on a worker thread (search keeps working); one peer call at a time;
+if Shelf has to be started, Find shows "Starting Arcade Shelf…"; on success
+the peer's `message` as a toast and the selection stays; on failure the
+standard SPEC §6 text. Items left out (stale or non-UTF-8 paths) are noted
+in the toast.
 
-**Call behavior:**
-- Calls happen on a worker thread. Search keeps running and results never wait for Shelf.
-- After 150 ms the bar shows "Starting Arcade Shelf…" (from `CallOptions::on_launching`).
-- On success, Find shows `message` as a toast and keeps the selection.
-- On failure, Find shows `LinkError::user_message("Arcade Shelf")` (standard SPEC §6 texts) as an error toast.
-
-**Missing or disabled Shelf:** there is no entry and no promotion. "Get" appears only on Find's Connected apps page, after Link knows the ID.
+**Missing or disabled Shelf:** no entry, no promotion.
 
 ---
 
@@ -338,28 +335,35 @@ There is no dedicated global key, to avoid coupling. Using a shortcut for "the l
 
 ## F. Integration testing
 
-**Existing:** find-core unit tests and the 1M synthetic benchmark; tests for the overlay model (multi-select, actions, Enter→Look), the instance channel and the renderer. **None of them touches Link yet.**
+**In Find (all passing):**
 
-**Planned in Find** [DESIGNED]: `crates/arcade-find/tests/link_shelf.rs`.
-- A mock Shelf is an in-process `arcade_link::Server` with a scripted `Handler`, using `Locations::under(tmp)`, a temporary `ARCADE_HOME` and a manifest pointing at an existing executable.
-- Tests:
-  1. No manifest: no entry.
-  2. `linkEnabled:false`: no entry.
-  3. Peer disabled in Find: no entry.
-  4. `accepts` lacks `folder/reference`: a mixed selection shows no entry, a files-only selection does.
-  5. An action with no array pattern and two files: hidden.
-  6. `maxBytes` exceeded: shown disabled with the standard text.
-  7. Invoking with one file, six mixed items and a missing row: the mock records the exact `inputs` (the encoding in §C.3), `version`, `context.source=arcade.find` and `options={}`.
-  8. Error mapping for `unsupported_input`, `denied`, `busy` and `internal`; peer killed mid-call gives "Arcade Shelf isn't running."
-  9. A stopped peer with `launch.background` and no `launch.invoke` is spawned and called. A stopped peer that *does* have `launch.invoke` is called one-shot (documents §0.4).
-  10. `find.search` is served both resident and one-shot.
-- Command: `cargo test -p arcade-find --test link_shelf`.
-- `arcade-link mock` (from `arcade-link-cli`) can stand in for Shelf in manual and e2e runs.
+| Suite | Covers | Command |
+|---|---|---|
+| `link.rs` unit tests | Encoding (single, homogeneous, mixed, non-UTF-8), offer rules (array patterns, `*`, data-only, unavailable, other OS, Link off, `maxBytes`), preset/version in requests, `find.show` arguments, `find.search` results and refusals | `cargo test -p arcade-find --lib link` |
+| `tests/link_shelf.rs` | In-process mock `arcade.shelf` (real `arcade_link::Server`, `Locations::under(tmp)`): offered only when installed, Link on, not disabled in Find, accepting the selection, executable present; `maxBytes` disabled text; exact `inputs`, `version: 1`, `options: {}`, `context.source: arcade.find`; nothing copied; standard errors (`unsupported_input`, `denied`, `busy`); a stopped peer without `launch.invoke` is started with `--background` and `launch_failed` reads "Arcade Shelf didn't start." | `cargo test -p arcade-find --test link_shelf` |
+| `scripts/e2e-linux.sh` | The release binary in headless Sway (layer shell) and Xvfb (X11) with `arcade-link mock` peers: Enter sends `look.preview` and hides Find; a 4-item mixed selection → Tab → "shelf" → Enter sends `shelf.add` with `file/any[]` + `folder/reference` from `arcade.find`, and Find stays open showing the peer's message; one-shot `find.search` | `ARCADE_LINK_CLI=…/arcade-link scripts/e2e-linux.sh target/release/arcade-find` |
+
+Mock fixture used for Shelf (the §C.2 contract):
+
+```json
+{ "id": "arcade.shelf", "name": "Arcade Shelf", "version": "0.0.0-mock",
+  "actions": [ { "id": "shelf.add", "title": "Add to Shelf", "verb": "add",
+                 "accepts": ["file/*", "file/*[]", "folder/reference", "text/plain", "text/url", "text/rich"],
+                 "effects": ["persists"], "mock": { "result": { "message": "Added 2 items to Quick Shelf" } } } ] }
+```
+
+Run it yourself: `arcade-link mock --as arcade.shelf --actions shelf.json`
+(from Arcade Link v0.1.0's `arcade-link-cli`), with `ARCADE_MOCK_LOG=file`
+to record what Find sends.
+
+**Not covered yet:** a peer crashing mid-call (Link reports "… isn't
+running."), a stopped peer that has `launch.invoke` (one-shot path), and
+cancelling a running peer call from Find.
 
 **Only possible once Shelf exists:**
 - Real Find → Shelf with Shelf stopped, running, Link-disabled, or crashing during the call.
 - Shelf → Find (`find.show`).
-- Adding a new `arcade.shelf` group to Link's `tools/e2e.py` (Xvfb, private D-Bus).
+- Adding `arcade.find` and `arcade.shelf` groups to Link's `tools/e2e.py`.
 - Interactive Hyprland validation.
 
 ---
@@ -386,14 +390,14 @@ There is no dedicated global key, to avoid coupling. Using a shortcut for "the l
 
 | Question | Final decision | Basis |
 |---|---|---|
-| How does Find send results to Shelf? | Generic registry-driven peer action: `invoke_action` → `shelf.add` v1, options `{}`, context `{source:"arcade.find", interactive:true, reason:"user-click"}` | DESIGNED (Find); Link API verified |
-| How are multiple results represented? | Files as one `file/<kind>[]`, then one `folder/reference` per folder; missing and non-UTF-8 entries are excluded and reported | DESIGNED |
+| How does Find send results to Shelf? | Generic registry-driven peer action: `invoke_action` → `shelf.add` v1, options `{}`, context `{source:"arcade.find", interactive:true, reason:"user-click"}` | CODE; tested against mock peers |
+| How are multiple results represented? | Files as one `file/<kind>[]`, then one `folder/reference` per folder; missing and non-UTF-8 entries are excluded and reported | CODE; tested |
 | What does Shelf expose? | `shelf.add` (non-interactive, `persists`), `shelf.show`, `shelf.pick`; no `shelf.open`; no `launch.invoke` | PROPOSED |
-| What does Find expose to Shelf? | `find.show` (query, folder scope, reveal); `find.search` for headless use (no history, no content search) | DESIGNED |
+| What does Find expose to Shelf? | `find.show` (query, folder scope, reveal); `find.search` for headless use (no history, no content search) | CODE; `find.search` tested resident and one-shot |
 | Who owns temporary files? | Their creator. Find sends only user paths (never copied). Shelf copies peer handoffs into its own staging before success and cleans up its own | Link SPEC §5.3 + PROPOSED |
-| How are missing peers handled? | No entry, no promotion; "Get" only on Connected apps; Find works fully standalone | DESIGNED |
-| How are errors returned? | Standard Link codes; partial success is a success with `data.skipped`; Find shows `message` or the standard SPEC §6 text | PROPOSED + DESIGNED |
-| How are user permissions enforced? | Find: explicit selection, payload preview, peer toggles. Shelf: input validation, quotas, no execution, Undo, Link switch | DESIGNED + PROPOSED |
+| How are missing peers handled? | No entry, no promotion; "Get" only on Connected apps; Find works fully standalone | CODE; tested |
+| How are errors returned? | Standard Link codes; partial success is a success with `data.skipped`; Find shows `message` or the standard SPEC §6 text | Find: CODE, tested; Shelf: PROPOSED |
+| How are user permissions enforced? | Find: explicit selection, payload preview, peer toggles. Shelf: input validation, quotas, no execution, Undo, Link switch | Find: CODE; Shelf: PROPOSED |
 | What must ChatGPT implement next? | Shelf phases 0–3 (independent of Find); then `shelf.add`, `shelf.show` and `shelf.pick` per §E with the tests in §E.1; then the joint Link onboarding branch for `arcade.shelf` | PROPOSED |
 
-No decision here is confirmed by running code across both apps yet. Find's side moves from DESIGNED to CODE in `feature/find-v0.1`, and Find will report the commit SHA and test results when it is pushed.
+Find's side is confirmed by code and tests against mock peers. Nothing is confirmed across the two real apps yet; that needs Shelf's `shelf.add`.

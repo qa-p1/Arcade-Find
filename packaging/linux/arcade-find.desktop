@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Arcade Find
+GenericName=File Search
+Comment=Find any file or folder instantly
+Exec=arcade-find
+Icon=arcade-find
+Terminal=false
+Categories=Utility;FileTools;
+Keywords=search;find;files;folders;locate;
+StartupNotify=false
+Actions=Settings;
+
+[Desktop Action Settings]
+Name=Arcade Find Settings
+Exec=arcade-find --settings

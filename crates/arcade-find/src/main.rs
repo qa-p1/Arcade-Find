@@ -1,3 +1,6 @@
+// A GUI app on Windows (no console window); a console launch re-attaches below.
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 //! `arcade-find`: the command line. Without arguments it opens the overlay
 //! (starting the resident instance if needed); a second launch hands its
 //! command to the running instance and exits.
@@ -51,6 +54,7 @@ fn parse_args() -> Result<Args, String> {
     let mut it = std::env::args().skip(1).peekable();
     while let Some(arg) = it.next() {
         match arg.as_str() {
+            "--size" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--size needs a number")?),
             "--limit" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--limit needs a number")?),
             "--hidden" => a.hidden = true,
             "--json" => a.json = true,
@@ -61,7 +65,7 @@ fn parse_args() -> Result<Args, String> {
                     a.query = it.next();
                 }
             }
-            "--snapshot" => {
+            "--snapshot" | "--export-icon" => {
                 a.action = Some(arg.clone());
                 a.dir = it.next().map(PathBuf::from);
             }
@@ -125,7 +129,37 @@ fn search_offline(p: &AppPaths, query: &str, limit: usize, hidden: bool) -> serd
             "results": hits.iter().map(|h| json!({"path": h.path.to_string_lossy(), "isDir": h.is_dir, "size": h.size, "modified": h.mtime})).collect::<Vec<_>>() })
 }
 
+/// Packaging: `--export-icon FILE` writes the app icon (`.svg`, `.ico`, or
+/// `.png` at `--size N`, default 256).
+fn export_icon(path: &std::path::Path, size: u32) -> ExitCode {
+    use arcade_find::ui::icons;
+    let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_ascii_lowercase();
+    let bytes = match ext.as_str() {
+        "svg" => icons::app_icon_svg().into_bytes(),
+        "ico" => icons::app_icon_ico(&[16, 24, 32, 48, 64, 128, 256]),
+        _ => icons::app_icon_png(size),
+    };
+    match std::fs::write(path, bytes) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("arcade-find: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// With the Windows GUI subsystem, print to the console we were started from.
+fn attach_console() {
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Console::{AttachConsole, ATTACH_PARENT_PROCESS};
+        // SAFETY: plain Win32 call; failure (no parent console) is fine.
+        unsafe { AttachConsole(ATTACH_PARENT_PROCESS) };
+    }
+}
+
 fn main() -> ExitCode {
+    attach_console();
     let args = match parse_args() {
         Ok(a) => a,
         Err(e) => {
@@ -151,6 +185,9 @@ fn main() -> ExitCode {
         "--arcade-invoke" => return ExitCode::from(link::serve_oneshot(paths) as u8),
         "--settings-window" => return arcade_find::settings_ui::run(paths),
         "--snapshot" => return arcade_find::snapshot::run(args.dir.unwrap_or_else(|| PathBuf::from("snapshots"))),
+        "--export-icon" => {
+            return export_icon(&args.dir.unwrap_or_else(|| PathBuf::from("arcade-find.png")), args.limit.unwrap_or(256) as u32)
+        }
         _ => {}
     }
 

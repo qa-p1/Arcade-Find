@@ -721,9 +721,10 @@ mod tests {
         let (q, reveal) = show_args(&r).unwrap();
         assert_eq!(q.as_deref(), Some(format!("in:\"{}\" ext:png", find_core::paths::tilde(&home.join("My Stuff"))).as_str()));
         assert!(reveal.is_none());
-        let file = Content { kind: "file/pdf".into(), path: Some("/h/my report.pdf".into()), ..Default::default() };
+        let pdf = home.join("my report.pdf");
+        let file = Content { kind: "file/pdf".into(), path: Some(pdf.to_string_lossy().into_owned()), ..Default::default() };
         let r = InvokeRequest::new("find.show", "t").input(file);
-        assert_eq!(show_args(&r).unwrap(), (Some("\"my report.pdf\"".into()), Some(PathBuf::from("/h/my report.pdf"))));
+        assert_eq!(show_args(&r).unwrap(), (Some("\"my report.pdf\"".into()), Some(pdf)));
         let rel = Content { kind: "file/pdf".into(), path: Some("x.pdf".into()), ..Default::default() };
         assert!(show_args(&InvokeRequest::new("find.show", "t").input(rel)).is_err());
         let color = Content::structured("color", json!({"hex": "#fff"}));

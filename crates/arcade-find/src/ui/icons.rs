@@ -212,6 +212,28 @@ pub fn app_icon_png(px: u32) -> Vec<u8> {
     render_svg(&app_icon_svg(), px, Rgba::hex(0)).and_then(|p| p.encode_png().ok()).unwrap_or_default()
 }
 
+/// A Windows `.ico` holding PNG images (valid since Windows Vista).
+pub fn app_icon_ico(sizes: &[u32]) -> Vec<u8> {
+    let pngs: Vec<(u32, Vec<u8>)> = sizes.iter().map(|&s| (s, app_icon_png(s))).collect();
+    let mut out = Vec::new();
+    out.extend_from_slice(&[0, 0, 1, 0]);
+    out.extend_from_slice(&(pngs.len() as u16).to_le_bytes());
+    let mut offset = 6 + 16 * pngs.len() as u32;
+    for (s, png) in &pngs {
+        let dim = if *s >= 256 { 0 } else { *s as u8 };
+        out.extend_from_slice(&[dim, dim, 0, 0]);
+        out.extend_from_slice(&1u16.to_le_bytes());
+        out.extend_from_slice(&32u16.to_le_bytes());
+        out.extend_from_slice(&(png.len() as u32).to_le_bytes());
+        out.extend_from_slice(&offset.to_le_bytes());
+        offset += png.len() as u32;
+    }
+    for (_, png) in &pngs {
+        out.extend_from_slice(png);
+    }
+    out
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

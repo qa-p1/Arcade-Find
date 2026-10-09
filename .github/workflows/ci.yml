@@ -1,0 +1,143 @@
+# Checks, tests, end-to-end runs and package builds. Nothing is published:
+# packages are uploaded as workflow artifacts only.
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev
+      - name: Format
+        if: runner.os == 'Linux'
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --locked
+
+  e2e-linux:
+    name: end-to-end (headless sway + Xvfb)
+    needs: check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Session tools
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool imagemagick dbus
+      - name: Build
+        run: cargo build --release --locked -p arcade-find
+      - name: Arcade Link CLI (mock peers), v0.1.0
+        run: |
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.1.0 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          cargo build --release --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
+      - name: Vendored files match Arcade Link
+        run: scripts/check-vendored.sh
+      - name: End-to-end
+        run: ARCADE_LINK_CLI="$RUNNER_TEMP/link/target/release/arcade-link" scripts/e2e-linux.sh target/release/arcade-find target/e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-screenshots
+          path: target/e2e
+
+  package:
+    name: package (${{ matrix.name }})
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x64, os: ubuntu-22.04 }
+          - { name: windows-x64, os: windows-2022 }
+          - { name: macos-universal, os: macos-14 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev desktop-file-utils
+      - name: Build
+        if: runner.os != 'macOS'
+        run: cargo build --release --locked -p arcade-find
+      - name: Build (universal binary)
+        if: runner.os == 'macOS'
+        run: |
+          rustup target add x86_64-apple-darwin aarch64-apple-darwin
+          cargo build --release --locked -p arcade-find --target aarch64-apple-darwin
+          cargo build --release --locked -p arcade-find --target x86_64-apple-darwin
+          mkdir -p target/release
+          lipo -create -output target/release/arcade-find target/aarch64-apple-darwin/release/arcade-find target/x86_64-apple-darwin/release/arcade-find
+      - name: AppImage
+        if: runner.os == 'Linux'
+        run: packaging/linux/build-appimage.sh target/release/arcade-find dist
+      - name: Installer (Inno Setup, per-user)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          target\release\arcade-find.exe --export-icon target\release\arcade-find.ico
+          $v = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages | Where-Object name -eq 'arcade-find' | Select-Object -ExpandProperty version
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DVersion=$v" "/DSource=..\..\target\release" packaging\windows\arcade-find.iss
+      - name: App bundle and DMG
+        if: runner.os == 'macOS'
+        run: |
+          v=$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print([p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="arcade-find"][0])')
+          packaging/macos/build-app.sh target/release/arcade-find "$v" universal dist
+          rm -rf "dist/Arcade Find.app"
+      - name: Smoke test
+        shell: bash
+        run: |
+          target/release/arcade-find --version
+          target/release/arcade-find --arcade-manifest | python3 -c 'import json,sys; m=json.load(sys.stdin); assert m["id"]=="arcade.find" and any(a["id"]=="find.search" for a in m["actions"])'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.name }}
+          path: dist/*
+
+  release-manifest:
+    name: arcade-release.json
+    needs: package
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: dist
+          merge-multiple: true
+      - name: Release manifest and checksums
+        run: |
+          v=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          python3 tools/arcade-release.py --id arcade.find --version "$v" --channel stable \
+            --notes "https://github.com/qa-p1/Arcade-Find/blob/${GITHUB_SHA}/CHANGELOG.md" --windows-installer inno dist
+          cat dist/arcade-release.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest
+          path: |
+            dist/arcade-release.json
+            dist/SHA256SUMS.txt
