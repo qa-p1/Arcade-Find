@@ -12,7 +12,7 @@ Written 2026-10-09 by the Arcade Find implementer. Each statement has one of the
 ## 0. Corrections to the Shelf brief (read first)
 
 1. **Find never produces URLs or text.** Find indexes filesystem entries only, so a Find result is always a file or a folder (including symlinks, which are not followed). "Add URLs from Find" cannot happen. Shelf still needs `text/url` and `text/plain` for Lens, Clipboard, browsers and DnD, just not for Find.
-2. **There is no Find repo state to inspect yet.** Find has **no commits** (`qa-p1/Arcade-Find`, local branch `master`, empty history). It will be pushed to the feature branch `feature/find-v0.1`. Until then there is no SHA to pin against. Develop Shelf against the contract below, not against Find's code.
+2. **Find's Link code isn't written yet.** The first snapshot is on `qa-p1/Arcade-Find` branch `feature/find-v0.1` (commit `810ac1d`): find-core plus the overlay model and renderer. It does not yet contain `link.rs`, `service.rs` or a working binary. Develop Shelf against the contract below, not against Find's code.
 3. **Link has no ordered mixed array type.** `inputs` is an array of `Content`, but one `Content` can hold several paths only as `file/<kind>[]`. Folders are always single `folder/reference` values. A mixed selection therefore arrives as several inputs (§C.3), and the order between files and folders is not preserved.
 4. **`launch.invoke` is per manifest, not per action [LINK].** In `client::invoke_action`, a *non-interactive* action of a stopped app runs **one-shot** whenever the manifest has `launch.invoke`. If Shelf advertised `--arcade-invoke`, a `shelf.add` from Find would run in a throwaway process that never updates the resident UI. **Shelf must not set `launch.invoke`** unless it also handles a one-shot `shelf.add` correctly.
 5. **Link's spec requires confirmation for persistence.** SPEC §1.8: persistence is confirmed "in the owner's UI, or the caller marks them with a payload preview". Find does the second: §D.4 shows a payload preview on the entry. Shelf adds an Undo (§E.1). Neither side shows a modal prompt.
@@ -86,7 +86,7 @@ Written 2026-10-09 by the Arcade Find implementer. Each statement has one of the
 | Service, CLI, overlay windows, tray, hotkeys, settings window | Not implemented |
 | Mock-Shelf integration tests | Not written (planned in §F) |
 | Packaging, CI, docs, family onboarding (Link IDs, Tools mappings, tags) | Not done; tags and releases need the owner's authorization |
-| Repository | `qa-p1/Arcade-Find`, **no commits yet**. Target branch `feature/find-v0.1`; the SHA will be reported when pushed |
+| Repository | `qa-p1/Arcade-Find`, branch `feature/find-v0.1`, first snapshot `810ac1d` (work in progress; `cargo test --workspace`: 64 tests pass) |
 
 Nothing in Find has been validated interactively on any desktop yet.
 
