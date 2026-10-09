@@ -84,9 +84,15 @@ fn settings_readonly(p: &AppPaths) -> Settings {
     std::fs::read(p.settings_file()).ok().and_then(|b| serde_json::from_slice(&b).ok()).unwrap_or_default()
 }
 
+/// Prints a line; a closed pipe (`| head`) is not an error.
+fn out(s: impl std::fmt::Display) {
+    use std::io::Write;
+    let _ = writeln!(std::io::stdout().lock(), "{s}");
+}
+
 fn print_search(v: &serde_json::Value, json: bool) -> ExitCode {
     if json {
-        println!("{}", serde_json::to_string_pretty(v).unwrap_or_default());
+        out(serde_json::to_string_pretty(v).unwrap_or_default());
         return ExitCode::SUCCESS;
     }
     if v["ok"] != true {
@@ -94,7 +100,7 @@ fn print_search(v: &serde_json::Value, json: bool) -> ExitCode {
         return ExitCode::FAILURE;
     }
     for r in v["results"].as_array().into_iter().flatten() {
-        println!("{}", r["path"].as_str().unwrap_or_default());
+        out(r["path"].as_str().unwrap_or_default());
     }
     ExitCode::SUCCESS
 }
@@ -131,15 +137,15 @@ fn main() -> ExitCode {
     let action = args.action.clone().unwrap_or_default();
     match action.as_str() {
         "--help" | "-h" => {
-            println!("{HELP}");
+            out(HELP);
             return ExitCode::SUCCESS;
         }
         "--version" => {
-            println!("arcade-find {VERSION}");
+            out(format!("arcade-find {VERSION}"));
             return ExitCode::SUCCESS;
         }
         "--arcade-manifest" => {
-            println!("{}", link::manifest(&settings_readonly(&paths)).to_json());
+            out(link::manifest(&settings_readonly(&paths)).to_json());
             return ExitCode::SUCCESS;
         }
         "--arcade-invoke" => return ExitCode::from(link::serve_oneshot(paths) as u8),
@@ -173,7 +179,7 @@ fn main() -> ExitCode {
                 return match c {
                     Command::Search { .. } => print_search(&reply, args.json),
                     Command::Status => {
-                        println!("{}", serde_json::to_string_pretty(&reply).unwrap_or_default());
+                        out(serde_json::to_string_pretty(&reply).unwrap_or_default());
                         ExitCode::SUCCESS
                     }
                     _ if reply["ok"] == true => ExitCode::SUCCESS,
@@ -194,7 +200,7 @@ fn main() -> ExitCode {
             return print_search(&search_offline(&paths, query, limit.unwrap_or(20), hidden.unwrap_or(false)), args.json);
         }
         Some(Command::Status) => {
-            println!("{}", serde_json::json!({ "ok": false, "running": false }));
+            out(serde_json::json!({ "ok": false, "running": false }));
             return ExitCode::from(3);
         }
         Some(Command::Quit | Command::Hide | Command::Rescan | Command::Reload) => {
@@ -301,7 +307,32 @@ fn run_ui(svc: &Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
     if std::env::var_os("ARCADE_FIND_BACKEND").is_none_or(|b| b == "wayland") && arcade_find::ui::wayland::available() {
         return arcade_find::ui::wayland::run(svc.clone(), initial);
     }
+    if std::env::var_os("DISPLAY").is_none() && std::env::var_os("WAYLAND_DISPLAY").is_none() {
+        return headless(svc);
+    }
     arcade_find::ui::desktop::run(svc.clone(), initial, None)
+}
+
+/// No display (a server, a test, or login before the session is up): keep
+/// indexing and answering the command line and Arcade Link until quit.
+#[cfg(target_os = "linux")]
+fn headless(svc: &Arc<Service>) -> Result<(), String> {
+    eprintln!("arcade-find: no display; running without the overlay");
+    let (tx, rx) = std::sync::mpsc::channel::<UiMsg>();
+    let tx = std::sync::Mutex::new(tx);
+    svc.attach_ui(Arc::new(move |m| {
+        if let Ok(t) = tx.lock() {
+            let _ = t.send(m);
+        }
+    }));
+    for m in rx {
+        match m {
+            UiMsg::Quit => break,
+            UiMsg::Show { .. } | UiMsg::Toggle => eprintln!("arcade-find: no display to show the overlay on"),
+            _ => {}
+        }
+    }
+    Ok(())
 }
 
 #[cfg(not(target_os = "linux"))]

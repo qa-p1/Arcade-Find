@@ -234,55 +234,73 @@ fn ext_matches(name: &[u8], exts: &[String]) -> bool {
     exts.iter().any(|e| e.as_bytes().eq_ignore_ascii_case(ext))
 }
 
-/// Scores entry `i` against the query, or `None` if it's filtered out.
+/// How an entry fares against a query.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Eval {
+    /// Filtered out, or a word doesn't occur in it at all.
+    No,
+    /// Every word occurs (in order), but a fuzzy match scored below the
+    /// floor: not a result, yet a longer word could still match it.
+    Near,
+    Yes(i32),
+}
+
+/// Scores entry `i` against the query (without frecency boosts).
 #[inline]
-fn evaluate(ix: &Index, q: &Query, prep: &Prepared, opts: &SearchOptions, show_hidden: bool, i: usize) -> Option<i32> {
+fn evaluate(ix: &Index, q: &Query, prep: &Prepared, opts: &SearchOptions, show_hidden: bool, i: usize) -> Eval {
     let f = ix.flags[i];
     if f & flag::DELETED != 0 || (!show_hidden && f & flag::HIDDEN != 0) {
-        return None;
+        return Eval::No;
     }
     let is_dir = f & flag::DIR != 0;
     match q.kind {
-        KindFilter::Dirs if !is_dir => return None,
-        KindFilter::Files if is_dir => return None,
+        KindFilter::Dirs if !is_dir => return Eval::No,
+        KindFilter::Files if is_dir => return Eval::No,
         _ => {}
     }
     if let Some(w) = &prep.within {
         if !w[i] {
-            return None;
+            return Eval::No;
         }
     }
     let name = ix.name(i as u32);
     if !q.exts.is_empty() && (is_dir || !ext_matches(name, &q.exts)) {
-        return None;
+        return Eval::No;
     }
     if let Some((lo, hi)) = q.size {
         if is_dir {
-            return None;
+            return Eval::No;
         }
         let s = crate::index::decode_size(ix.size[i]);
         if s < lo || s > hi {
-            return None;
+            return Eval::No;
         }
     }
     if let Some((lo, hi)) = q.modified {
         let t = ix.mtime[i] as i64;
         if t < lo || t > hi {
-            return None;
+            return Eval::No;
         }
     }
     let mut score = 0i32;
+    let mut near = false;
     let mut pi = 0;
     for (ti, t) in q.terms.iter().enumerate() {
         let s = match t.kind {
             TermKind::Name => {
-                if prep.ascii[ti] {
-                    matcher::score_ascii(name, t.text.as_bytes(), !t.exact)?
+                let r = if prep.ascii[ti] {
+                    matcher::score_ascii_raw(name, t.text.as_bytes(), !t.exact)
                 } else {
-                    matcher::score_unicode(name, &t.text, !t.exact)?
-                }
+                    matcher::score_unicode_raw(name, &t.text, !t.exact)
+                };
+                let Some(s) = r else { return Eval::No };
+                near |= s < matcher::FUZZY_MIN;
+                s
             }
-            TermKind::Glob => matcher::score_glob(name, &t.text)?,
+            TermKind::Glob => match matcher::score_glob(name, &t.text) {
+                Some(s) => s,
+                None => return Eval::No,
+            },
             TermKind::Path => {
                 let kmp = &prep.path_kmp[pi];
                 let parent = ix.parent[i];
@@ -292,12 +310,15 @@ fn evaluate(ix: &Index, q: &Query, prep: &Prepared, opts: &SearchOptions, show_h
                 // last separator: "…X/" ends the folder path and the name
                 // starts with what follows the word's last separator.
                 if st & FOUND == 0 && !kmp.spans(st, name) {
-                    return None;
+                    return Eval::No;
                 }
                 300
             }
         };
         score += s;
+    }
+    if near {
+        return Eval::Near;
     }
     if q.terms.is_empty() {
         // Filters only: prefer recent, then shallow.
@@ -310,12 +331,7 @@ fn evaluate(ix: &Index, q: &Query, prep: &Prepared, opts: &SearchOptions, show_h
     } else if age < 7 * 86_400 {
         score += 10;
     }
-    if !opts.boosts.is_empty() {
-        if let Some(b) = opts.boosts.get(&(i as u32)) {
-            score += *b;
-        }
-    }
-    Some(score)
+    Eval::Yes(score)
 }
 
 /// The rarest ASCII character that every match must contain (from the
@@ -360,40 +376,121 @@ fn depth_penalty(ix: &Index, i: usize) -> i32 {
     depth * 3
 }
 
+/// The previous query's candidates, so typing more letters only re-checks
+/// those (every match of "repo" is a match or near-match of "rep").
+#[derive(Debug, Default)]
+pub struct Narrowing {
+    query: Option<Query>,
+    generation: u64,
+    show_hidden: bool,
+    /// Entries that matched or nearly matched, in index order.
+    ids: Vec<u32>,
+}
+
+/// Most candidates kept for narrowing (4 bytes each).
+const NARROW_MAX: usize = 4_000_000;
+
+impl Narrowing {
+    pub fn clear(&mut self) {
+        self.query = None;
+        self.ids = Vec::new();
+    }
+
+    /// Can `q` be answered from the candidates of the previous query?
+    fn covers(&self, ix: &Index, q: &Query, show_hidden: bool) -> bool {
+        let Some(old) = &self.query else { return false };
+        if self.generation != ix.generation() || self.show_hidden != show_hidden {
+            return false;
+        }
+        if old.exts != q.exts
+            || old.kind != q.kind
+            || old.within != q.within
+            || old.size != q.size
+            || old.modified != q.modified
+            || old.hidden != q.hidden
+        {
+            return false;
+        }
+        if q.content.is_some() || old.content.is_some() || old.terms.is_empty() || q.terms.len() < old.terms.len() {
+            return false;
+        }
+        // Each old word must be a prefix of the new word in its place (same
+        // kind); extra words only narrow further. Globs aren't monotonic.
+        old.terms
+            .iter()
+            .zip(&q.terms)
+            .all(|(a, b)| a.kind == b.kind && a.exact == b.exact && a.kind != TermKind::Glob && b.text.starts_with(&a.text))
+            && q.terms.iter().all(|t| t.kind != TermKind::Glob)
+    }
+}
+
+type Heap = BinaryHeap<Reverse<(i32, Reverse<u32>)>>;
+
+fn push_top(heap: &mut Heap, limit: usize, s: i32, id: u32) {
+    if heap.len() < limit {
+        heap.push(Reverse((s, Reverse(id))));
+    } else if let Some(Reverse((min, _))) = heap.peek() {
+        if s > *min {
+            heap.pop();
+            heap.push(Reverse((s, Reverse(id))));
+        }
+    }
+}
+
 pub fn search(ix: &Index, q: &Query, opts: &SearchOptions) -> SearchResult {
+    search_narrowing(ix, q, opts, None)
+}
+
+/// Searches, re-using (and updating) `narrow` when given.
+pub fn search_narrowing(ix: &Index, q: &Query, opts: &SearchOptions, mut narrow: Option<&mut Narrowing>) -> SearchResult {
     let start = Instant::now();
     let limit = opts.limit.max(1);
     let show_hidden = q.hidden.unwrap_or(opts.show_hidden);
     let prep = prepare(ix, q);
     let n = ix.len();
+    let from: Option<Vec<u32>> = match narrow.as_deref_mut() {
+        Some(nw) if nw.covers(ix, q, show_hidden) => Some(std::mem::take(&mut nw.ids)),
+        _ => None,
+    };
+    let keep = narrow.is_some() && !q.terms.is_empty() && q.terms.iter().all(|t| t.kind != TermKind::Glob) && q.content.is_none();
+    let work = from.as_ref().map_or(n, Vec::len);
     let threads = if opts.threads > 0 { opts.threads } else { std::thread::available_parallelism().map_or(4, |p| p.get()).min(8) };
-    let threads = if n < 50_000 { 1 } else { threads };
-    let chunk = n.div_ceil(threads.max(1)).max(1);
+    let threads = if work < 50_000 { 1 } else { threads };
+    let chunk = work.div_ceil(threads.max(1)).max(1);
     let key = prefilter_char(q);
-    let monotonic = key.is_some();
-    let run = |lo: usize, hi: usize| -> (BinaryHeap<Reverse<(i32, Reverse<u32>)>>, usize) {
-        let mut heap: BinaryHeap<Reverse<(i32, Reverse<u32>)>> = BinaryHeap::with_capacity(limit + 1);
+    let run = |lo: usize, hi: usize| -> (Heap, usize, Vec<u32>) {
+        let mut heap: Heap = BinaryHeap::with_capacity(limit + 1);
         let mut matched = 0usize;
-        let mut consider = |i: usize, heap: &mut BinaryHeap<Reverse<(i32, Reverse<u32>)>>| {
-            if let Some(s) = evaluate(ix, q, &prep, opts, show_hidden, i) {
-                matched += 1;
-                // The depth penalty only lowers a score: skip it for entries that can't make the cut.
-                if heap.len() >= limit && heap.peek().is_some_and(|Reverse((min, _))| s <= *min) {
-                    return;
-                }
-                let s = s - depth_penalty(ix, i);
-                if heap.len() < limit {
-                    heap.push(Reverse((s, Reverse(i as u32))));
-                } else if let Some(Reverse((min, _))) = heap.peek() {
-                    if s > *min {
-                        heap.pop();
-                        heap.push(Reverse((s, Reverse(i as u32))));
+        let mut cands: Vec<u32> = Vec::new();
+        let mut consider = |i: usize, heap: &mut Heap, cands: &mut Vec<u32>| {
+            match evaluate(ix, q, &prep, opts, show_hidden, i) {
+                Eval::No => {}
+                Eval::Near => {
+                    if keep {
+                        cands.push(i as u32);
                     }
+                }
+                Eval::Yes(s) => {
+                    if keep {
+                        cands.push(i as u32);
+                    }
+                    matched += 1;
+                    // The depth penalty only lowers a score: skip it for entries that can't make the cut.
+                    if heap.len() >= limit && heap.peek().is_some_and(|Reverse((min, _))| s <= *min) {
+                        return;
+                    }
+                    push_top(heap, limit, s - depth_penalty(ix, i), i as u32);
                 }
             }
         };
+        if let Some(ids) = &from {
+            for &i in &ids[lo..hi] {
+                consider(i as usize, &mut heap, &mut cands);
+            }
+            return (heap, matched, cands);
+        }
         match key {
-            Some((a, b)) if monotonic && lo < hi => {
+            Some((a, b)) if lo < hi => {
                 // Every match contains this character: find it in the
                 // contiguous name bytes and evaluate only those entries.
                 let start = ix.name_off[lo] as usize;
@@ -413,7 +510,7 @@ pub fn search(ix: &Index, q: &Query, opts: &SearchOptions) -> SearchResult {
                         break;
                     }
                     if (ix.name_off[id] as usize) <= at {
-                        consider(id, &mut heap);
+                        consider(id, &mut heap, &mut cands);
                     }
                     pos = ix.name_off[id] as usize + ix.name_len[id] as usize - start;
                     id += 1;
@@ -421,18 +518,18 @@ pub fn search(ix: &Index, q: &Query, opts: &SearchOptions) -> SearchResult {
             }
             _ => {
                 for i in lo..hi {
-                    consider(i, &mut heap);
+                    consider(i, &mut heap, &mut cands);
                 }
             }
         }
-        (heap, matched)
+        (heap, matched, cands)
     };
-    let parts: Vec<(BinaryHeap<Reverse<(i32, Reverse<u32>)>>, usize)> = if threads <= 1 {
-        vec![run(0, n)]
+    let parts: Vec<(Heap, usize, Vec<u32>)> = if threads <= 1 {
+        vec![run(0, work)]
     } else {
         std::thread::scope(|s| {
             let handles: Vec<_> = (0..threads)
-                .map(|t| (t * chunk, ((t + 1) * chunk).min(n)))
+                .map(|t| (t * chunk, ((t + 1) * chunk).min(work)))
                 .filter(|(lo, hi)| lo < hi)
                 .map(|(lo, hi)| s.spawn(move || run(lo, hi)))
                 .collect();
@@ -440,10 +537,45 @@ pub fn search(ix: &Index, q: &Query, opts: &SearchOptions) -> SearchResult {
         })
     };
     let matched = parts.iter().map(|p| p.1).sum();
-    let mut all: Vec<Scored> =
-        parts.into_iter().flat_map(|p| p.0.into_iter().map(|Reverse((score, Reverse(id)))| Scored { id, score })).collect();
+    let mut cands_total: Vec<u32> = Vec::new();
+    let mut overflow = !keep;
+    let mut all: Vec<Scored> = Vec::new();
+    for (heap, _, cands) in parts {
+        all.extend(heap.into_iter().map(|Reverse((score, Reverse(id)))| Scored { id, score }));
+        if !overflow && cands_total.len() + cands.len() <= NARROW_MAX {
+            cands_total.extend(cands);
+        } else {
+            overflow = true;
+            cands_total = Vec::new();
+        }
+    }
+    // Frecency: score only the boosted entries again (a few thousand at
+    // most) instead of a hash lookup for every match.
+    if !opts.boosts.is_empty() {
+        let mut boosted: IdMap<i32> = IdMap::default();
+        for (&id, &b) in &opts.boosts {
+            if (id as usize) < n {
+                if let Eval::Yes(s) = evaluate(ix, q, &prep, opts, show_hidden, id as usize) {
+                    boosted.insert(id, s + b - depth_penalty(ix, id as usize));
+                }
+            }
+        }
+        all.retain(|h| !boosted.contains_key(&h.id));
+        all.extend(boosted.into_iter().map(|(id, score)| Scored { id, score }));
+    }
     all.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| ix.name(a.id).len().cmp(&ix.name(b.id).len())).then_with(|| a.id.cmp(&b.id)));
     all.truncate(limit);
+    if let Some(nw) = narrow {
+        if !overflow {
+            // Chunks are in index order, so candidates stay sorted.
+            nw.query = Some(q.clone());
+            nw.generation = ix.generation();
+            nw.show_hidden = show_hidden;
+            nw.ids = cands_total;
+        } else {
+            nw.clear();
+        }
+    }
     SearchResult { hits: all, matched, elapsed: start.elapsed(), generation: ix.generation() }
 }
 
@@ -499,6 +631,40 @@ mod tests {
         assert_eq!(names(&ix, "src/", false), ["main.rs", "report_gen.rs"]);
         assert!(names(&ix, "hidden:yes report", false).contains(&"report.toml".to_string()));
         assert!(names(&ix, "zzz", false).is_empty());
+    }
+
+    #[test]
+    fn narrowing_matches_full_search() {
+        let mut ix = Index::new();
+        let r = ix.add_root(Path::new("/r"), Meta::default());
+        let words = ["report", "rapport", "repo", "r-e-p-o-r-t", "prepare", "xrexpxoxrxtx", "README", "zebra", "rep_2024", "a"];
+        for i in 0..60_000u32 {
+            let w = words[i as usize % words.len()];
+            ix.push(
+                r,
+                format!("{w}-{}.txt", i % 911).as_bytes(),
+                Meta { size: i as u64, mtime: 1, flags: if i % 17 == 0 { flag::HIDDEN } else { 0 } },
+                0,
+            );
+        }
+        let mut nw = Narrowing::default();
+        let mut typed = String::new();
+        for c in "report 9".chars() {
+            typed.push(c);
+            let q = Query::parse_at(&typed, 10, 0);
+            let opts = SearchOptions { limit: 300, now: 10, threads: 3, ..Default::default() };
+            let a = search_narrowing(&ix, &q, &opts, Some(&mut nw));
+            let b = search(&ix, &q, &opts);
+            assert_eq!(a.matched, b.matched, "{typed}");
+            assert_eq!(a.hits, b.hits, "{typed}");
+        }
+        assert!(nw.query.is_some(), "the last query is kept for narrowing");
+        // A changed filter or a new index generation starts over.
+        let q = Query::parse_at("report ext:md", 10, 0);
+        assert!(!nw.covers(&ix, &q, false));
+        ix.push(r, b"report-new.txt", Meta::default(), 0);
+        let q = Query::parse_at("report 91", 10, 0);
+        assert!(!nw.covers(&ix, &q, false));
     }
 
     #[test]

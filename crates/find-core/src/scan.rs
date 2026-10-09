@@ -350,7 +350,7 @@ impl Scanner {
     fn process(&self, job: &Job, children: &Children, visited: &Mutex<HashSet<(u64, u64)>>) -> Vec<Job> {
         let p = &self.progress;
         let n = p.dirs.fetch_add(1, Ordering::Relaxed);
-        if n % 256 == 0 {
+        if n.is_multiple_of(256) {
             if let Ok(mut c) = p.current.lock() {
                 *c = job.path.display().to_string();
             }

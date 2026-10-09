@@ -90,13 +90,13 @@ fn main() {
     let mut count = 1;
     while count < n {
         let (parent, pk) = dirs[(rng.next() % dirs.len() as u64) as usize];
-        if rng.next() % 10 == 0 && ix.depth(parent) < 8 {
+        if rng.next().is_multiple_of(10) && ix.depth(parent) < 8 {
             let name = format!("{}-{}", rng.pick(WORDS), rng.next() % 1000);
             let k = key_child(pk, name.as_bytes());
             let id = ix.push(
                 parent,
                 name.as_bytes(),
-                Meta { flags: flag::DIR | if rng.next() % 40 == 0 { flag::HIDDEN } else { 0 }, mtime: 1_700_000_000, size: 0 },
+                Meta { flags: flag::DIR | if rng.next().is_multiple_of(40) { flag::HIDDEN } else { 0 }, mtime: 1_700_000_000, size: 0 },
                 k,
             );
             dirs.push((id, k));

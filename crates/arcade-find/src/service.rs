@@ -170,6 +170,10 @@ pub struct Service {
     peer_busy: AtomicBool,
     /// How the global shortcut works now (for Settings and `--status`).
     shortcut: Mutex<Value>,
+    /// What the overlay shows (for `--status` and end-to-end tests).
+    ui_state: Mutex<Value>,
+    /// The overlay's previous query, so each keystroke narrows its results.
+    narrow: Mutex<find_core::search::Narrowing>,
 }
 
 impl Service {
@@ -198,6 +202,8 @@ impl Service {
             ripgrep: OnceLock::new(),
             peer_busy: AtomicBool::new(false),
             shortcut: Mutex::new(json!({ "mode": "off" })),
+            ui_state: Mutex::new(json!({ "visible": false })),
+            narrow: Mutex::new(Default::default()),
             paths,
         });
         let worker = Arc::downgrade(&svc);
@@ -251,6 +257,20 @@ impl Service {
 
     pub fn set_shortcut_state(&self, v: Value) {
         *self.shortcut.lock().unwrap_or_else(|e| e.into_inner()) = v;
+    }
+
+    /// Records what the overlay shows (called by the backends after drawing).
+    pub fn note_ui(&self, o: &Overlay) {
+        use crate::ui::model::Mode;
+        let mode = match o.mode {
+            Mode::Results => "results",
+            Mode::Actions { .. } => "actions",
+            Mode::Rename { .. } => "rename",
+            Mode::ConfirmTrash { .. } => "confirm-trash",
+            Mode::Details { .. } => "details",
+        };
+        let v = json!({ "visible": o.visible, "mode": mode, "rows": o.rows.len(), "selected": o.sel, "height": o.height() });
+        *self.ui_state.lock().unwrap_or_else(|e| e.into_inner()) = v;
     }
 
     pub fn shortcut_state(&self) -> Value {
@@ -337,7 +357,10 @@ impl Service {
             return;
         }
         let opts = SearchOptions { limit: RESULT_LIMIT, show_hidden: req.hidden, boosts: (*self.boosts(now)).clone(), now, threads: 0 };
-        let (hits, r) = self.engine.search_hits(&q, &opts);
+        let (hits, r) = {
+            let mut nw = self.narrow.lock().unwrap_or_else(|e| e.into_inner());
+            self.engine.search_hits_narrowing(&q, &opts, &mut nw)
+        };
         if self.search.latest.load(Ordering::SeqCst) != req.seq {
             return;
         }
@@ -866,6 +889,7 @@ impl Service {
                 let st = self.engine.status();
                 json!({ "ok": true, "version": crate::VERSION, "pid": std::process::id(), "background": self.background,
                         "engine": st, "shortcut": self.shortcut_state(),
+                        "ui": self.ui_state.lock().map(|v| v.clone()).unwrap_or(Value::Null),
                         "link": { "listening": self.presence().map(|p| p.listening()).unwrap_or(false),
                                   "lastError": self.presence().and_then(|p| p.last_error()) } })
             }

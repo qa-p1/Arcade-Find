@@ -478,7 +478,8 @@ impl Index {
         out.roots = self
             .roots
             .iter()
-            .filter_map(|r| (remap[r.id as usize] != NONE).then(|| Root { id: remap[r.id as usize], path: r.path.clone() }))
+            .filter(|&r| remap[r.id as usize] != NONE)
+            .map(|r| Root { id: remap[r.id as usize], path: r.path.clone() })
             .collect();
         *self = out;
         remap

@@ -64,6 +64,13 @@ fn eq_folded(a: &[u8], lower: &[u8]) -> bool {
 
 /// Scores an ASCII lower-case `term` against `name`. `None` if it doesn't match.
 pub fn score_ascii(name: &[u8], term: &[u8], fuzzy: bool) -> Option<i32> {
+    score_ascii_raw(name, term, fuzzy).filter(|&s| s >= FUZZY_MIN)
+}
+
+/// Like [`score_ascii`], but a fuzzy match below [`FUZZY_MIN`] is still
+/// returned. Matching is then monotonic: whatever matches a word also
+/// matches every prefix of it (search narrowing relies on this).
+pub fn score_ascii_raw(name: &[u8], term: &[u8], fuzzy: bool) -> Option<i32> {
     let (tl, nl) = (term.len(), name.len());
     if tl == 0 {
         return Some(0);
@@ -99,11 +106,15 @@ pub fn score_ascii(name: &[u8], term: &[u8], fuzzy: bool) -> Option<i32> {
     if best.is_some() || !fuzzy || tl < 2 {
         return best;
     }
-    fuzzy_ascii(name, term)
+    fuzzy_ascii_raw(name, term)
 }
 
 /// Characters of `term` in order inside `name`, scored by gaps and word starts.
 pub fn fuzzy_ascii(name: &[u8], term: &[u8]) -> Option<i32> {
+    fuzzy_ascii_raw(name, term).filter(|&b| b >= FUZZY_MIN)
+}
+
+fn fuzzy_ascii_raw(name: &[u8], term: &[u8]) -> Option<i32> {
     let first = term[0];
     let mut s = name.iter().position(|&b| fold(b) == first)?;
     let mut best: Option<i32> = None;
@@ -121,7 +132,7 @@ pub fn fuzzy_ascii(name: &[u8], term: &[u8]) -> Option<i32> {
             None => break,
         }
     }
-    best.filter(|&b| b >= FUZZY_MIN)
+    best
 }
 
 fn fuzzy_from(name: &[u8], term: &[u8], start: usize) -> Option<i32> {
@@ -162,6 +173,11 @@ fn fuzzy_from(name: &[u8], term: &[u8], start: usize) -> Option<i32> {
 
 /// Unicode path: lower-case both sides and run the same rules.
 pub fn score_unicode(name: &[u8], term_lower: &str, fuzzy: bool) -> Option<i32> {
+    score_unicode_raw(name, term_lower, fuzzy).filter(|&s| s >= FUZZY_MIN)
+}
+
+/// [`score_unicode`] without the fuzzy floor (see [`score_ascii_raw`]).
+pub fn score_unicode_raw(name: &[u8], term_lower: &str, fuzzy: bool) -> Option<i32> {
     let lowered = String::from_utf8_lossy(name).to_lowercase();
     let n = lowered.as_bytes();
     let t = term_lower.as_bytes();
@@ -213,7 +229,7 @@ pub fn score_unicode(name: &[u8], term_lower: &str, fuzzy: bool) -> Option<i32> 
         matched += 1;
     }
     let score = FUZZY_MAX - gaps * 8 - (lowered.chars().count() as i32 / 12);
-    (matched == tc.len() && score >= FUZZY_MIN).then_some(score)
+    (matched == tc.len()).then_some(score)
 }
 
 /// Scores a name word. An ASCII word only ever matches ASCII bytes, so it

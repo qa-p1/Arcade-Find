@@ -3,7 +3,9 @@
 //! `ArcadeFind` (Windows), `~/Library/LaunchAgents/arcade.find.plist`
 //! (macOS). Development builds and isolated test profiles never register.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::path::PathBuf;
 
 use find_core::paths::AppPaths;
 use find_core::Settings;

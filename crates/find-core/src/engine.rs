@@ -562,6 +562,20 @@ impl Engine {
         (hits, r)
     }
 
+    /// Like [`Engine::search_hits`], re-using the previous query's candidates
+    /// while the user types (see [`crate::search::Narrowing`]).
+    pub fn search_hits_narrowing(
+        &self,
+        q: &Query,
+        opts: &SearchOptions,
+        narrow: &mut crate::search::Narrowing,
+    ) -> (Vec<Hit>, SearchResult) {
+        let ix = self.index.read().unwrap_or_else(|e| e.into_inner());
+        let r = crate::search::search_narrowing(&ix, q, opts, Some(narrow));
+        let hits = r.hits.iter().map(|&s| Hit::from_index(&ix, s)).collect();
+        (hits, r)
+    }
+
     /// Resolves many paths to entry ids in one pass (for frecency boosts).
     pub fn resolve(&self, paths: &[PathBuf]) -> Vec<Option<u32>> {
         let ix = self.index.read().unwrap_or_else(|e| e.into_inner());

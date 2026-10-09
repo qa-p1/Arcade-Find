@@ -141,6 +141,7 @@ impl App {
             self.overlay.hide();
         }
         self.svc.set_visible(false);
+        self.svc.note_ui(&self.overlay);
         if let Some(w) = self.window() {
             w.set_visible(false);
         }
@@ -207,6 +208,7 @@ impl App {
             }
         }
         let _ = buf.present();
+        self.svc.note_ui(&self.overlay);
     }
 
     fn effects(&mut self, effects: Vec<Effect>) {
@@ -281,6 +283,9 @@ impl ApplicationHandler<UiMsg> for App {
     }
 
     fn window_event(&mut self, _el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
+        if !matches!(event, WindowEvent::RedrawRequested | WindowEvent::CursorMoved { .. }) {
+            crate::debug!("winit {event:?}");
+        }
         match event {
             WindowEvent::RedrawRequested => self.draw(),
             WindowEvent::CloseRequested => self.hide(),

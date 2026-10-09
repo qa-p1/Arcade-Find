@@ -25,3 +25,9 @@ panic = "abort"
 
 [profile.dev.package."*"]
 opt-level = 2
+
+[workspace.lints.clippy]
+# Style lints that would make the hot paths or renderer harder to read.
+type_complexity = "allow"
+too_many_arguments = "allow"
+field_reassign_with_default = "allow"

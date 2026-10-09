@@ -105,6 +105,8 @@ struct Wl {
     qh: QueueHandle<Wl>,
     handle: LoopHandle<'static, Wl>,
     toast_timer: Option<RegistrationToken>,
+    /// A pending "focus left" check (transient leave/enter pairs are ignored).
+    leave_timer: Option<RegistrationToken>,
     exit: bool,
 }
 
@@ -166,6 +168,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
         qh: qh.clone(),
         handle: handle.clone(),
         toast_timer: None,
+        leave_timer: None,
         exit: false,
     };
     if let Some(m) = initial {
@@ -234,6 +237,7 @@ impl Wl {
     }
 
     fn hide(&mut self) {
+        crate::debug!("wayland hide (shown={})", self.shown.is_some());
         if let Some(s) = self.shown.take() {
             if let Some(v) = s.viewport {
                 v.destroy();
@@ -247,6 +251,7 @@ impl Wl {
             self.overlay.hide();
         }
         self.svc.set_visible(false);
+        self.svc.note_ui(&self.overlay);
         self.has_focus = false;
         self.frac_scale = None;
     }
@@ -316,6 +321,7 @@ impl Wl {
         if buffer.attach_to(surface).is_ok() {
             s.layer.commit();
         }
+        self.svc.note_ui(&self.overlay);
     }
 
     fn effects(&mut self, effects: Vec<super::model::Effect>) {
@@ -330,6 +336,7 @@ impl Wl {
     }
 
     fn key(&mut self, event: WlKeyEvent) {
+        crate::debug!("wayland key {:?} shown={}", event.keysym, self.shown.is_some());
         if self.shown.is_none() {
             return;
         }
@@ -402,6 +409,7 @@ impl SeatHandler for Wl {
     }
     fn new_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
     fn new_capability(&mut self, _: &Connection, qh: &QueueHandle<Self>, seat: wl_seat::WlSeat, capability: Capability) {
+        crate::debug!("wayland seat capability + {capability:?}");
         if capability == Capability::Keyboard && self.keyboard.is_none() {
             let handle = self.handle.clone();
             self.keyboard =
@@ -412,6 +420,7 @@ impl SeatHandler for Wl {
         }
     }
     fn remove_capability(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat, capability: Capability) {
+        crate::debug!("wayland seat capability - {capability:?}");
         if capability == Capability::Keyboard {
             if let Some(k) = self.keyboard.take() {
                 k.release();
@@ -439,13 +448,34 @@ impl KeyboardHandler for Wl {
     ) {
         if self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = true;
+            if let Some(t) = self.leave_timer.take() {
+                self.handle.remove(t);
+            }
         }
+        crate::debug!("wayland keyboard enter (ours={})", self.has_focus);
     }
 
     fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_keyboard::WlKeyboard, surface: &wl_surface::WlSurface, _: u32) {
-        // Focus moved elsewhere (another window or overlay took it): hide.
+        crate::debug!("wayland keyboard leave");
+        // Focus moved elsewhere (another window or overlay took it): hide,
+        // unless it comes straight back (compositors re-enter when the
+        // keyboard device changes).
         if self.has_focus && self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
-            self.hide();
+            self.has_focus = false;
+            if let Some(t) = self.leave_timer.take() {
+                self.handle.remove(t);
+            }
+            let timer = Timer::from_duration(Duration::from_millis(150));
+            self.leave_timer = self
+                .handle
+                .insert_source(timer, |_, _, st: &mut Wl| {
+                    st.leave_timer = None;
+                    if !st.has_focus && st.shown.is_some() {
+                        st.hide();
+                    }
+                    TimeoutAction::Drop
+                })
+                .ok();
         }
     }
 
