@@ -8,6 +8,10 @@ repository.workspace = true
 rust-version.workspace = true
 build = "build.rs"
 
+[lib]
+name = "arcade_find"
+path = "src/lib.rs"
+
 [[bin]]
 name = "arcade-find"
 path = "src/main.rs"

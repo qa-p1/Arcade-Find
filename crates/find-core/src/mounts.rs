@@ -8,13 +8,59 @@ use std::path::{Path, PathBuf};
 
 /// Filesystem types treated as network (or otherwise remote) on Linux.
 pub const NETWORK_FS: &[&str] = &[
-    "nfs", "nfs4", "cifs", "smb3", "smbfs", "ncpfs", "afs", "9p", "ceph", "glusterfs", "lustre", "gfs2", "ocfs2", "davfs", "sshfs", "fuse.sshfs",
-    "fuse.rclone", "fuse.davfs2", "fuse.gvfsd-fuse", "fuse.s3fs", "fuse.glusterfs", "fuse.cephfs", "fuse.smbnetfs", "fuse.curlftpfs", "fuse.gcsfuse",
-    "fuse.goofys", "fuse.mergerfs-remote", "fuse.juicefs", "fuse.onedriver", "fuse.google-drive-ocamlfuse",
+    "nfs",
+    "nfs4",
+    "cifs",
+    "smb3",
+    "smbfs",
+    "ncpfs",
+    "afs",
+    "9p",
+    "ceph",
+    "glusterfs",
+    "lustre",
+    "gfs2",
+    "ocfs2",
+    "davfs",
+    "sshfs",
+    "fuse.sshfs",
+    "fuse.rclone",
+    "fuse.davfs2",
+    "fuse.gvfsd-fuse",
+    "fuse.s3fs",
+    "fuse.glusterfs",
+    "fuse.cephfs",
+    "fuse.smbnetfs",
+    "fuse.curlftpfs",
+    "fuse.gcsfuse",
+    "fuse.goofys",
+    "fuse.mergerfs-remote",
+    "fuse.juicefs",
+    "fuse.onedriver",
+    "fuse.google-drive-ocamlfuse",
 ];
 
 /// Pseudo filesystems never worth indexing.
-pub const PSEUDO_FS: &[&str] = &["proc", "sysfs", "devtmpfs", "devpts", "cgroup", "cgroup2", "securityfs", "debugfs", "tracefs", "pstore", "bpf", "mqueue", "hugetlbfs", "configfs", "fusectl", "autofs", "binfmt_misc", "efivarfs"];
+pub const PSEUDO_FS: &[&str] = &[
+    "proc",
+    "sysfs",
+    "devtmpfs",
+    "devpts",
+    "cgroup",
+    "cgroup2",
+    "securityfs",
+    "debugfs",
+    "tracefs",
+    "pstore",
+    "bpf",
+    "mqueue",
+    "hugetlbfs",
+    "configfs",
+    "fusectl",
+    "autofs",
+    "binfmt_misc",
+    "efivarfs",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Mount {
@@ -25,7 +71,9 @@ pub struct Mount {
 
 impl Mount {
     pub fn is_network(&self) -> bool {
-        is_network_fs(&self.fstype) || self.source.starts_with("//") || (self.fstype.starts_with("fuse") && self.source.contains(':') && !self.source.starts_with('/'))
+        is_network_fs(&self.fstype)
+            || self.source.starts_with("//")
+            || (self.fstype.starts_with("fuse") && self.source.contains(':') && !self.source.starts_with('/'))
     }
     pub fn is_pseudo(&self) -> bool {
         PSEUDO_FS.contains(&self.fstype.as_str())

@@ -10,11 +10,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use interprocess::local_socket::{prelude::*, ListenerOptions, Stream};
 #[cfg(unix)]
 use interprocess::local_socket::GenericFilePath;
 #[cfg(windows)]
 use interprocess::local_socket::GenericNamespaced;
+use interprocess::local_socket::{prelude::*, ListenerOptions, Stream};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -100,7 +100,6 @@ fn socket_name(p: &AppPaths) -> std::io::Result<interprocess::local_socket::Name
 fn socket_name(p: &AppPaths) -> std::io::Result<interprocess::local_socket::Name<'static>> {
     p.instance_name().to_ns_name::<GenericNamespaced>().map(|n| n.into_owned())
 }
-
 
 fn new_token() -> String {
     let mut b = [0u8; 32];

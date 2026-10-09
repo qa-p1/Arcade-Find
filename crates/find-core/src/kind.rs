@@ -92,8 +92,8 @@ impl Kind {
 /// Arcade Link's file kind for a lower-case extension.
 pub fn link_kind_for_extension(ext: &str) -> &'static str {
     match ext {
-        "png" | "jpg" | "jpeg" | "jpe" | "jfif" | "gif" | "webp" | "bmp" | "tif" | "tiff" | "heic" | "heif" | "avif" | "ico" | "svg" | "jxl" | "tga" | "qoi"
-        | "psd" | "raw" | "cr2" | "nef" | "dng" | "arw" | "exr" | "hdr" => "image",
+        "png" | "jpg" | "jpeg" | "jpe" | "jfif" | "gif" | "webp" | "bmp" | "tif" | "tiff" | "heic" | "heif" | "avif" | "ico" | "svg"
+        | "jxl" | "tga" | "qoi" | "psd" | "raw" | "cr2" | "nef" | "dng" | "arw" | "exr" | "hdr" => "image",
         "mp4" | "mkv" | "mov" | "webm" | "avi" | "m4v" | "wmv" | "flv" | "mpg" | "mpeg" | "3gp" | "ogv" => "video",
         "mp3" | "wav" | "flac" | "ogg" | "oga" | "opus" | "m4a" | "aac" | "wma" | "aiff" | "aif" | "alac" | "mid" | "midi" => "audio",
         "pdf" => "pdf",
@@ -102,9 +102,9 @@ pub fn link_kind_for_extension(ext: &str) -> &'static str {
         "ppt" | "pptx" | "odp" | "key" => "presentation",
         "zip" | "tar" | "gz" | "tgz" | "bz2" | "xz" | "7z" | "rar" | "zst" | "lz" | "lzma" | "cab" | "iso" => "archive",
         "txt" | "md" | "markdown" | "log" | "ini" | "cfg" | "conf" | "nfo" => "text",
-        "rs" | "c" | "h" | "cpp" | "hpp" | "cc" | "py" | "js" | "mjs" | "ts" | "tsx" | "jsx" | "java" | "kt" | "go" | "rb" | "php" | "swift" | "cs" | "sh"
-        | "bash" | "zsh" | "fish" | "ps1" | "json" | "yaml" | "yml" | "toml" | "xml" | "html" | "htm" | "css" | "scss" | "sql" | "lua" | "dart" | "qml" | "vue"
-        | "svelte" => "code",
+        "rs" | "c" | "h" | "cpp" | "hpp" | "cc" | "py" | "js" | "mjs" | "ts" | "tsx" | "jsx" | "java" | "kt" | "go" | "rb" | "php"
+        | "swift" | "cs" | "sh" | "bash" | "zsh" | "fish" | "ps1" | "json" | "yaml" | "yml" | "toml" | "xml" | "html" | "htm" | "css"
+        | "scss" | "sql" | "lua" | "dart" | "qml" | "vue" | "svelte" => "code",
         "ttf" | "otf" | "woff" | "woff2" | "ttc" => "font",
         "obj" | "stl" | "gltf" | "glb" | "fbx" | "3mf" | "dae" | "ply" => "model",
         _ => "any",

@@ -95,7 +95,11 @@ impl Text {
             size: (style.size * 10.0) as u32,
             weight: style.weight,
             color: [style.color.r, style.color.g, style.color.b, style.color.a],
-            spans: spans.iter().filter(|s| s.0 < s.1 && s.1 <= text.len() && text.is_char_boundary(s.0) && text.is_char_boundary(s.1)).map(|&(s, e, c, w)| (s, e, [c.r, c.g, c.b, c.a], w)).collect(),
+            spans: spans
+                .iter()
+                .filter(|s| s.0 < s.1 && s.1 <= text.len() && text.is_char_boundary(s.0) && text.is_char_boundary(s.1))
+                .map(|&(s, e, c, w)| (s, e, [c.r, c.g, c.b, c.a], w))
+                .collect(),
         };
         if !self.lines.contains_key(&key) {
             let l = self.shape(&key, style);
@@ -177,12 +181,23 @@ impl Text {
         x
     }
 
-    /// Draws a shaped line with its top-left at (x, y), clipped to `clip` (x0, y0, x1, y1).
-    pub fn draw(&mut self, pm: &mut Pixmap, text: &str, style: Style, spans: &[(usize, usize, Rgba, u16)], x: f32, y: f32, clip: (i32, i32, i32, i32)) -> f32 {
+    /// Draws a shaped line with its top-left at (x, y), clipped to `clip`
+    /// (x0, y0, x1, y1). `spans` recolor byte ranges glyph by glyph (the
+    /// shaping is the plain line's, so widths never change).
+    pub fn draw(
+        &mut self,
+        pm: &mut Pixmap,
+        text: &str,
+        style: Style,
+        spans: &[(usize, usize, Rgba, u16)],
+        x: f32,
+        y: f32,
+        clip: (i32, i32, i32, i32),
+    ) -> f32 {
         let key_line_width;
         // Borrow dance: shape first, then draw with the font system.
         {
-            let l = self.line(text, style, spans);
+            let l = self.line(text, style, &[]);
             key_line_width = l.width;
         }
         let key = Key {
@@ -190,7 +205,7 @@ impl Text {
             size: (style.size * 10.0) as u32,
             weight: style.weight,
             color: [style.color.r, style.color.g, style.color.b, style.color.a],
-            spans: spans.iter().filter(|s| s.0 < s.1 && s.1 <= text.len() && text.is_char_boundary(s.0) && text.is_char_boundary(s.1)).map(|&(s, e, c, w)| (s, e, [c.r, c.g, c.b, c.a], w)).collect(),
+            spans: Vec::new(),
         };
         let Some(line) = self.lines.get(&key) else { return key_line_width };
         let (w, h) = (pm.width() as i32, pm.height() as i32);
@@ -199,7 +214,7 @@ impl Text {
         for run in line.buffer.layout_runs() {
             for g in run.glyphs {
                 let pg = g.physical((x, y), 1.0);
-                let c = g.color_opt.unwrap_or(color(style.color));
+                let c = spans.iter().find(|s| g.start >= s.0 && g.start < s.1).map_or(color(style.color), |s| color(s.2));
                 let Some(img) = self.cache.get_image(&mut self.fonts, pg.cache_key) else { continue };
                 let gx = pg.x + img.placement.left;
                 let gy = run.line_y.round() as i32 + pg.y - img.placement.top;

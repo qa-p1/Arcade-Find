@@ -33,7 +33,14 @@ fn candidates(extra: &[PathBuf]) -> Vec<PathBuf> {
     #[cfg(unix)]
     {
         let home = crate::paths::home_dir();
-        dirs.extend([home.join(".cargo/bin"), home.join(".local/bin"), PathBuf::from("/usr/local/bin"), PathBuf::from("/usr/bin"), PathBuf::from("/opt/homebrew/bin"), PathBuf::from("/opt/local/bin")]);
+        dirs.extend([
+            home.join(".cargo/bin"),
+            home.join(".local/bin"),
+            PathBuf::from("/usr/local/bin"),
+            PathBuf::from("/usr/bin"),
+            PathBuf::from("/opt/homebrew/bin"),
+            PathBuf::from("/opt/local/bin"),
+        ]);
     }
     #[cfg(windows)]
     {
@@ -108,8 +115,19 @@ pub enum ContentEnd {
 
 /// The arguments for `rg` (no shell; the pattern is passed after `--`).
 pub fn args(req: &ContentRequest) -> Vec<String> {
-    let mut a: Vec<String> =
-        ["--files-with-matches", "--no-messages", "--smart-case", "--fixed-strings", "--max-filesize", "64M", "--no-config", "--no-ignore-vcs"].iter().map(|s| s.to_string()).collect();
+    let mut a: Vec<String> = [
+        "--files-with-matches",
+        "--no-messages",
+        "--smart-case",
+        "--fixed-strings",
+        "--max-filesize",
+        "64M",
+        "--no-config",
+        "--no-ignore-vcs",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
     if req.hidden {
         a.push("--hidden".into());
     }
@@ -223,7 +241,15 @@ mod tests {
         let dir = crate::test_dir("content");
         std::fs::write(dir.join("a.txt"), "hello needle world").unwrap();
         std::fs::write(dir.join("b.txt"), "nothing here").unwrap();
-        let req = ContentRequest { pattern: "needle".into(), dirs: vec![dir.clone()], exts: vec![], exclude_names: vec![], hidden: false, limit: 10, timeout: Duration::from_secs(10) };
+        let req = ContentRequest {
+            pattern: "needle".into(),
+            dirs: vec![dir.clone()],
+            exts: vec![],
+            exclude_names: vec![],
+            hidden: false,
+            limit: 10,
+            timeout: Duration::from_secs(10),
+        };
         let mut found = Vec::new();
         let end = run(&rg, &req, &AtomicBool::new(false), |p| found.push(p));
         assert_eq!(end, ContentEnd::Done);

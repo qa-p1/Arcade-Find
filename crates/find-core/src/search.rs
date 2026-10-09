@@ -6,7 +6,7 @@ use std::collections::BinaryHeap;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use crate::index::{flag, Index, IdMap, IdSet, NONE};
+use crate::index::{flag, IdMap, IdSet, Index, NONE};
 use crate::matcher;
 use crate::query::{KindFilter, Query, TermKind};
 
@@ -103,7 +103,10 @@ fn prepare(ix: &Index, q: &Query) -> Prepared {
                 if ix.is_dir(i) && !ix.is_deleted(i) {
                     let p = ix.path(i);
                     let pb = p.as_os_str().as_encoded_bytes().to_ascii_lowercase();
-                    if prefixes.iter().any(|pre| pb.starts_with(pre) && (pb.len() == pre.len() || pb[pre.len()] == std::path::MAIN_SEPARATOR as u8)) {
+                    if prefixes
+                        .iter()
+                        .any(|pre| pb.starts_with(pre) && (pb.len() == pre.len() || pb[pre.len()] == std::path::MAIN_SEPARATOR as u8))
+                    {
                         targets.insert(i);
                     }
                 }
@@ -428,12 +431,17 @@ pub fn search(ix: &Index, q: &Query, opts: &SearchOptions) -> SearchResult {
         vec![run(0, n)]
     } else {
         std::thread::scope(|s| {
-            let handles: Vec<_> = (0..threads).map(|t| (t * chunk, ((t + 1) * chunk).min(n))).filter(|(lo, hi)| lo < hi).map(|(lo, hi)| s.spawn(move || run(lo, hi))).collect();
+            let handles: Vec<_> = (0..threads)
+                .map(|t| (t * chunk, ((t + 1) * chunk).min(n)))
+                .filter(|(lo, hi)| lo < hi)
+                .map(|(lo, hi)| s.spawn(move || run(lo, hi)))
+                .collect();
             handles.into_iter().map(|h| h.join().unwrap_or_default()).collect()
         })
     };
     let matched = parts.iter().map(|p| p.1).sum();
-    let mut all: Vec<Scored> = parts.into_iter().flat_map(|p| p.0.into_iter().map(|Reverse((score, Reverse(id)))| Scored { id, score })).collect();
+    let mut all: Vec<Scored> =
+        parts.into_iter().flat_map(|p| p.0.into_iter().map(|Reverse((score, Reverse(id)))| Scored { id, score })).collect();
     all.sort_by(|a, b| b.score.cmp(&a.score).then_with(|| ix.name(a.id).len().cmp(&ix.name(b.id).len())).then_with(|| a.id.cmp(&b.id)));
     all.truncate(limit);
     SearchResult { hits: all, matched, elapsed: start.elapsed(), generation: ix.generation() }

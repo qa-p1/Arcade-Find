@@ -18,18 +18,30 @@ const WHEEL: &str = include_str!("../../../../assets/glyphs/arcade.wheel.svg");
 const CLIPBOARD: &str = include_str!("../../../../assets/glyphs/arcade.clipboard.svg");
 const LENS: &str = include_str!("../../../../assets/glyphs/arcade.lens.svg");
 const TOOLS: &str = include_str!("../../../../assets/glyphs/arcade.tools.svg");
+/// Apps the vendored Link assets have no glyph for yet: a neutral app tile.
+const OTHER_APP: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="2.25" width="11.5" height="11.5" rx="3"/><path d="M5.5 8h5M8 5.5v5"/></svg>"##;
 
 fn stroke16(body: &str) -> String {
-    format!(r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{body}</svg>"##)
+    format!(
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">{body}</svg>"##
+    )
 }
 
 fn action_svg(g: Glyph) -> String {
     match g {
         Glyph::Preview => LOOK.to_string(),
-        Glyph::Open => stroke16(r##"<path d="M9.5 2.25h4.25V6.5M13.75 2.25 7.5 8.5M12 9.5v3.25a1 1 0 0 1-1 1H3.25a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H6.5"/>"##),
-        Glyph::Reveal => stroke16(r##"<path d="M1.75 4.25a1 1 0 0 1 1-1H6l1.5 1.5h5.75a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z"/><path d="M6 9h4.5M8.75 7.25 10.5 9 8.75 10.75"/>"##),
-        Glyph::Copy => stroke16(r##"<rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.25"/><path d="M10.75 5.25V3.25a1 1 0 0 0-1-1H3.25a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h2"/>"##),
-        Glyph::CopyFile => stroke16(r##"<path d="M5.25 5.25h5.25l3.25 3.25v4.25a1 1 0 0 1-1 1h-7.5z"/><path d="M10.5 5.25V8.5h3.25M10.75 5.25V3.25a1 1 0 0 0-1-1H3.25a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h2"/>"##),
+        Glyph::Open => stroke16(
+            r##"<path d="M9.5 2.25h4.25V6.5M13.75 2.25 7.5 8.5M12 9.5v3.25a1 1 0 0 1-1 1H3.25a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H6.5"/>"##,
+        ),
+        Glyph::Reveal => stroke16(
+            r##"<path d="M1.75 4.25a1 1 0 0 1 1-1H6l1.5 1.5h5.75a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z"/><path d="M6 9h4.5M8.75 7.25 10.5 9 8.75 10.75"/>"##,
+        ),
+        Glyph::Copy => stroke16(
+            r##"<rect x="5.25" y="5.25" width="8.5" height="8.5" rx="1.25"/><path d="M10.75 5.25V3.25a1 1 0 0 0-1-1H3.25a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h2"/>"##,
+        ),
+        Glyph::CopyFile => stroke16(
+            r##"<path d="M5.25 5.25h5.25l3.25 3.25v4.25a1 1 0 0 1-1 1h-7.5z"/><path d="M10.5 5.25V8.5h3.25M10.75 5.25V3.25a1 1 0 0 0-1-1H3.25a1 1 0 0 0-1 1v6.5a1 1 0 0 0 1 1h2"/>"##,
+        ),
         Glyph::Rename => stroke16(r##"<path d="M10.25 2.75 13.25 5.75 5.75 13.25H2.75v-3z"/><path d="M8.75 4.25 11.75 7.25"/>"##),
         Glyph::Pin => stroke16(r##"<path d="M5.75 2.25h4.5M6.5 2.25v4l-2.25 2.5h7.5L9.5 6.25v-4M8 8.75v5"/>"##),
         Glyph::Trash => stroke16(r##"<path d="M2.75 4.25h10.5M6.25 4.25V2.75h3.5v1.5M4.25 4.25l.75 9h6l.75-9M6.75 6.75v4M9.25 6.75v4"/>"##),
@@ -41,6 +53,7 @@ fn action_svg(g: Glyph) -> String {
             AppGlyph::Clipboard => CLIPBOARD,
             AppGlyph::Lens => LENS,
             AppGlyph::Tools => TOOLS,
+            AppGlyph::Other => OTHER_APP,
         }
         .to_string(),
     }
@@ -76,25 +89,35 @@ fn kind_svg(k: Kind, color: Rgba, symlink: bool) -> String {
     };
     if k == Kind::Folder {
         return format!(
-            r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" color="{c}"><path d="M2.5 6.5A2 2 0 0 1 4.5 4.5h4.4a2 2 0 0 1 1.4.6l1.4 1.4h7.8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2z" fill="currentColor" fill-opacity="0.85"/><path d="M2.5 9h19" stroke="white" stroke-opacity="0.35" stroke-width="1.2"/>{link}</svg>"##
+            r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M2.5 6.5A2 2 0 0 1 4.5 4.5h4.4a2 2 0 0 1 1.4.6l1.4 1.4h7.8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2z" fill="{c}" fill-opacity="0.9"/><path d="M2.5 9h19" stroke="white" stroke-opacity="0.35" stroke-width="1.2"/>{link}</svg>"##
         );
     }
     let symbol = match k {
         Kind::Image => r##"<circle cx="10" cy="11" r="1.6" fill="white"/><path d="M7 18l3.5-3.5 2 2 3-3.5 1.5 2V18z" fill="white"/>"##,
         Kind::Video => r##"<path d="M10 11v6l5-3z" fill="white"/>"##,
-        Kind::Audio => r##"<path d="M11 17.5a1.5 1.5 0 1 1-1.5-1.5H11v-6l4-1v6" stroke="white" stroke-width="1.4" fill="none" stroke-linejoin="round"/>"##,
+        Kind::Audio => {
+            r##"<path d="M11 17.5a1.5 1.5 0 1 1-1.5-1.5H11v-6l4-1v6" stroke="white" stroke-width="1.4" fill="none" stroke-linejoin="round"/>"##
+        }
         Kind::Pdf => r##"<path d="M8 17h8M8 14h8M8 11h5" stroke="white" stroke-width="1.4" stroke-linecap="round"/>"##,
         Kind::Document | Kind::Text => r##"<path d="M8 11h8M8 14h8M8 17h5" stroke="white" stroke-width="1.4" stroke-linecap="round"/>"##,
         Kind::Spreadsheet => r##"<path d="M8 11h8v7H8zM8 14.5h8M12 11v7" stroke="white" stroke-width="1.2" fill="none"/>"##,
         Kind::Presentation => r##"<path d="M9 18v-3M12 18v-6M15 18v-4.5" stroke="white" stroke-width="1.6" stroke-linecap="round"/>"##,
-        Kind::Archive => r##"<path d="M12 5v2M12 8.5v2M12 12v2" stroke="white" stroke-width="1.6"/><rect x="10.5" y="14.5" width="3" height="3" rx="0.6" fill="white"/>"##,
-        Kind::Code => r##"<path d="M10 11.5 7.5 14l2.5 2.5M14 11.5l2.5 2.5-2.5 2.5" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>"##,
-        Kind::Font => r##"<path d="M9 18l3-7 3 7M10.2 15.5h3.6" stroke="white" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>"##,
-        Kind::Model => r##"<path d="M12 10.5l3.5 2v4L12 18.5l-3.5-2v-4zM8.5 12.5 12 14.5l3.5-2M12 14.5v4" stroke="white" stroke-width="1.1" fill="none" stroke-linejoin="round"/>"##,
+        Kind::Archive => {
+            r##"<path d="M12 5v2M12 8.5v2M12 12v2" stroke="white" stroke-width="1.6"/><rect x="10.5" y="14.5" width="3" height="3" rx="0.6" fill="white"/>"##
+        }
+        Kind::Code => {
+            r##"<path d="M10 11.5 7.5 14l2.5 2.5M14 11.5l2.5 2.5-2.5 2.5" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>"##
+        }
+        Kind::Font => {
+            r##"<path d="M9 18l3-7 3 7M10.2 15.5h3.6" stroke="white" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>"##
+        }
+        Kind::Model => {
+            r##"<path d="M12 10.5l3.5 2v4L12 18.5l-3.5-2v-4zM8.5 12.5 12 14.5l3.5-2M12 14.5v4" stroke="white" stroke-width="1.1" fill="none" stroke-linejoin="round"/>"##
+        }
         _ => "",
     };
     format!(
-        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" color="{c}"><path d="M6 2.5h8.2l4.8 4.8V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5z" fill="currentColor" fill-opacity="0.85"/><path d="M14.2 2.5v3.3a1.5 1.5 0 0 0 1.5 1.5H19" fill="white" fill-opacity="0.4"/>{symbol}{link}</svg>"##
+        r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M6 2.5h8.2l4.8 4.8V20a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 20V4A1.5 1.5 0 0 1 6 2.5z" fill="{c}" fill-opacity="0.9"/><path d="M14.2 2.5v3.3a1.5 1.5 0 0 0 1.5 1.5H19" fill="white" fill-opacity="0.4"/>{symbol}{link}</svg>"##
     )
 }
 
@@ -215,9 +238,13 @@ mod tests {
             let p = icons.kind(k, k == Kind::Folder, 28, Rgba::hex(0xffffff)).expect("kind icon");
             assert!(p.pixels().iter().any(|px| px.alpha() > 0), "{k:?} is empty");
         }
-        for g in [Glyph::Preview, Glyph::Open, Glyph::Reveal, Glyph::Copy, Glyph::CopyFile, Glyph::Rename, Glyph::Pin, Glyph::Trash, Glyph::Info]
-            .into_iter()
-            .chain([AppGlyph::Box, AppGlyph::Look, AppGlyph::Wheel, AppGlyph::Clipboard, AppGlyph::Lens, AppGlyph::Tools].map(Glyph::App))
+        for g in
+            [Glyph::Preview, Glyph::Open, Glyph::Reveal, Glyph::Copy, Glyph::CopyFile, Glyph::Rename, Glyph::Pin, Glyph::Trash, Glyph::Info]
+                .into_iter()
+                .chain(
+                    [AppGlyph::Box, AppGlyph::Look, AppGlyph::Wheel, AppGlyph::Clipboard, AppGlyph::Lens, AppGlyph::Tools, AppGlyph::Other]
+                        .map(Glyph::App),
+                )
         {
             let p = icons.glyph(g, 16, Rgba::hex(0x000000)).expect("glyph");
             assert!(p.pixels().iter().any(|px| px.alpha() > 0), "{g:?} is empty");

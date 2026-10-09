@@ -70,7 +70,8 @@ impl AppPaths {
             (roaming.join("Arcade").join("Arcade Find"), data.clone(), data.join("run"))
         };
         #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
-        let (config, data, runtime) = (home.join(".config/arcade-find"), home.join(".local/share/arcade-find"), home.join(".local/share/arcade-find/run"));
+        let (config, data, runtime) =
+            (home.join(".config/arcade-find"), home.join(".local/share/arcade-find"), home.join(".local/share/arcade-find/run"));
         let mut p = AppPaths { config, data, runtime, profile: String::new(), isolated: false };
         if !profile.is_empty() {
             p.config = p.config.join("profiles").join(&profile);
@@ -83,7 +84,13 @@ impl AppPaths {
 
     pub fn under(root: &Path, profile: &str) -> AppPaths {
         let base = if profile.is_empty() { root.to_path_buf() } else { root.join("profiles").join(profile) };
-        AppPaths { config: base.join("config"), data: base.join("data"), runtime: base.join("run"), profile: profile.to_string(), isolated: true }
+        AppPaths {
+            config: base.join("config"),
+            data: base.join("data"),
+            runtime: base.join("run"),
+            profile: profile.to_string(),
+            isolated: true,
+        }
     }
 
     pub fn settings_file(&self) -> PathBuf {

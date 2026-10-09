@@ -675,7 +675,9 @@ mod tests {
         let index_file = dir.join("data/index.bin");
         let e = Engine::start(index_file.clone(), settings.clone(), Arc::new(move |x| ev.lock().unwrap().push(x)));
         assert!(e.wait_ready(Duration::from_secs(20)));
-        let find = |e: &Engine, q: &str| e.search_hits(&Query::parse(q), &SearchOptions { limit: 10, now: crate::now_secs(), ..Default::default() }).0;
+        let find = |e: &Engine, q: &str| {
+            e.search_hits(&Query::parse(q), &SearchOptions { limit: 10, now: crate::now_secs(), ..Default::default() }).0
+        };
         assert_eq!(find(&e, "alpha").len(), 1);
         assert!(index_file.exists(), "saved after the first crawl");
 

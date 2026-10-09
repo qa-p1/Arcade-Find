@@ -372,7 +372,9 @@ impl Index {
     /// A live child of `parent` with this exact name (linear scan after `parent`).
     pub fn find_child(&self, parent: u32, name: &[u8]) -> Option<u32> {
         let start = parent as usize + 1;
-        (start..self.len()).find(|&i| self.parent[i] == parent && self.flags[i] & flag::DELETED == 0 && self.name(i as u32) == name).map(|i| i as u32)
+        (start..self.len())
+            .find(|&i| self.parent[i] == parent && self.flags[i] & flag::DELETED == 0 && self.name(i as u32) == name)
+            .map(|i| i as u32)
     }
 
     /// Live children of every folder in `dirs`, in one pass.
@@ -473,7 +475,11 @@ impl Index {
                 out.dirs.insert(key, id);
             }
         }
-        out.roots = self.roots.iter().filter_map(|r| (remap[r.id as usize] != NONE).then(|| Root { id: remap[r.id as usize], path: r.path.clone() })).collect();
+        out.roots = self
+            .roots
+            .iter()
+            .filter_map(|r| (remap[r.id as usize] != NONE).then(|| Root { id: remap[r.id as usize], path: r.path.clone() }))
+            .collect();
         *self = out;
         remap
     }

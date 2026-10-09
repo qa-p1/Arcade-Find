@@ -65,7 +65,8 @@ pub struct Frecency {
 
 impl Frecency {
     pub fn load(path: &Path) -> Frecency {
-        let items = std::fs::read(path).ok().and_then(|b| serde_json::from_slice::<FrecencyFile>(&b).ok()).map(|f| f.items).unwrap_or_default();
+        let items =
+            std::fs::read(path).ok().and_then(|b| serde_json::from_slice::<FrecencyFile>(&b).ok()).map(|f| f.items).unwrap_or_default();
         Frecency { items, generation: 1 }
     }
 

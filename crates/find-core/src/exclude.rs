@@ -124,7 +124,11 @@ mod tests {
 
     #[test]
     fn names_and_globs() {
-        let s = Settings { exclude_names: vec![".git".into(), "*.tmp".into(), "cache?".into()], skip_network_mounts: false, ..Settings::default() };
+        let s = Settings {
+            exclude_names: vec![".git".into(), "*.tmp".into(), "cache?".into()],
+            skip_network_mounts: false,
+            ..Settings::default()
+        };
         let e = Excludes::from_settings(&s);
         assert!(e.name_excluded(b".git"));
         assert!(!e.name_excluded(b".github"));

@@ -15,6 +15,8 @@ pub struct Renderer {
     pub icons: Icons,
     /// Local UTC offset for dates.
     pub utc_offset: i64,
+    /// Panel corner radius (0 where the window itself can't be transparent).
+    pub radius: f32,
 }
 
 fn paint(c: Rgba) -> Paint<'static> {
@@ -78,7 +80,7 @@ fn bar_status(o: &Overlay) -> Option<(String, bool, bool)> {
 
 impl Renderer {
     pub fn new() -> Renderer {
-        Renderer { text: Text::new(), icons: Icons::default(), utc_offset: find_core::local_offset_secs() }
+        Renderer { text: Text::new(), icons: Icons::default(), utc_offset: find_core::local_offset_secs(), radius: m::RADIUS }
     }
 
     /// Renders the overlay at `scale` into a new pixmap of the window size.
@@ -88,8 +90,8 @@ impl Renderer {
         let mut pm = Pixmap::new(w as u32, h as u32)?;
         let s = scale;
         // Panel.
-        fill_round(&mut pm, 0.0, 0.0, w, h, m::RADIUS * s, p.panel);
-        if let Some(path) = rounded(0.5 * s, 0.5 * s, w - s, h - s, m::RADIUS * s - 0.5 * s) {
+        fill_round(&mut pm, 0.0, 0.0, w, h, self.radius * s, p.panel);
+        if let Some(path) = rounded(0.5 * s, 0.5 * s, w - s, h - s, (self.radius * s - 0.5 * s).max(0.0)) {
             let mut st = Stroke::default();
             st.width = s.max(1.0);
             pm.stroke_path(&path, &paint(p.border), &st, Transform::identity(), None);
@@ -118,10 +120,19 @@ impl Renderer {
         let style = Style { size: 18.0 * s, weight: 400, color: p.text };
         let mut x = 52.0 * s;
         // Right side: status / toast.
-        let small = Style { size: 12.5 * s, weight: 450, color: p.muted };
+        let small = Style { size: 12.5 * s, weight: 400, color: p.muted };
         let mut right_edge = w - 18.0 * s;
         if let Some((text, err, accent)) = bar_status(o) {
-            let st = Style { color: if err { p.danger } else if accent { p.accent } else { p.faint }, ..small };
+            let st = Style {
+                color: if err {
+                    p.danger
+                } else if accent {
+                    p.accent
+                } else {
+                    p.faint
+                },
+                ..small
+            };
             let fitted = self.text.fit_end(&text, st, 260.0 * s).0;
             let tw = self.text.width(&fitted, st);
             let lh = self.text.line(&fitted, st, &[]).height;
@@ -268,7 +279,8 @@ impl Renderer {
             }
         }
         let (name, cut) = self.text.fit_end(&r.name, name_st, if confirm { text_w - 60.0 * s } else { text_w });
-        let spans: Vec<(usize, usize, Rgba, u16)> = r.highlights.iter().filter(|(a, _)| *a < cut).map(|&(a, b)| (a, b.min(cut), p.highlight, 700)).collect();
+        let spans: Vec<(usize, usize, Rgba, u16)> =
+            r.highlights.iter().filter(|(a, _)| *a < cut).map(|&(a, b)| (a, b.min(cut), p.highlight, 700)).collect();
         self.text.draw(pm, &name, name_st, &spans, tx, y + 8.0 * s, full);
         let parent = self.text.fit_middle(&r.parent, sub_st, text_w);
         self.text.draw(pm, &parent, sub_st, &[], tx, y + 28.0 * s, full);
@@ -334,15 +346,31 @@ impl Renderer {
             if i == sel {
                 fill_round(pm, 6.0 * s, y + 1.0 * s, w - 12.0 * s, rh - 2.0 * s, 9.0 * s, p.selection);
             }
-            let color = if a.danger { p.danger } else { p.text };
+            let color = if a.disabled {
+                p.faint
+            } else if a.danger {
+                p.danger
+            } else {
+                p.text
+            };
             let gs = (18.0 * s).round() as u32;
-            if let Some(icon) = self.icons.glyph(a.glyph, gs, if a.danger { p.danger } else { p.muted }) {
+            if let Some(icon) = self.icons.glyph(
+                a.glyph,
+                gs,
+                if a.disabled {
+                    p.faint
+                } else if a.danger {
+                    p.danger
+                } else {
+                    p.muted
+                },
+            ) {
                 let icon = icon.clone();
                 blit(pm, &icon, 23.0 * s, y + (rh - gs as f32) / 2.0);
             }
             let title = if a.outbound { format!("{} ↗", a.title) } else { a.title.clone() };
             let st = Style { size: 14.5 * s, weight: 500, color };
-            let hint_st = Style { size: 12.0 * s, weight: 450, color: p.faint };
+            let hint_st = Style { size: 12.0 * s, weight: 400, color: p.faint };
             let hint_w = a.hint.as_ref().map(|h| self.text.width(h, hint_st) + 16.0 * s).unwrap_or(0.0);
             let tx = 58.0 * s;
             let max = w - tx - hint_w - 24.0 * s;
@@ -390,8 +418,16 @@ impl Renderer {
         let lab = Style { size: 12.5 * s, weight: 500, color: p.faint };
         let val = Style { size: 13.0 * s, weight: 400, color: p.text };
         let kind = if r.is_symlink { format!("{} (link)", r.kind.label()) } else { r.kind.label().to_string() };
-        let size = if r.is_dir { "—".to_string() } else { r.size.map(|b| format!("{} ({} bytes)", fmt::size(b), fmt::count(b))).unwrap_or_default() };
-        let modified = if r.mtime > 0 { format!("{} · {}", fmt::datetime(r.mtime, self.utc_offset), fmt::date(r.mtime, now, self.utc_offset)) } else { String::new() };
+        let size = if r.is_dir {
+            "—".to_string()
+        } else {
+            r.size.map(|b| format!("{} ({} bytes)", fmt::size(b), fmt::count(b))).unwrap_or_default()
+        };
+        let modified = if r.mtime > 0 {
+            format!("{} · {}", fmt::datetime(r.mtime, self.utc_offset), fmt::date(r.mtime, now, self.utc_offset))
+        } else {
+            String::new()
+        };
         let lines = [("Kind", kind), ("Size", size), ("Modified", modified), ("Where", r.parent.clone())];
         let mut y = top + 44.0 * s;
         for (l, v) in lines {
@@ -438,7 +474,11 @@ mod tests {
         let mut r = Renderer::new();
         let mut o = Overlay::default();
         o.show(Some("report"), None);
-        let rows = vec![row("annual-report.pdf", vec![(7, 13)]), row("report.docx", vec![(0, 6)]), row("a very long file name that will certainly need to be truncated somewhere.txt", vec![])];
+        let rows = vec![
+            row("annual-report.pdf", vec![(7, 13)]),
+            row("report.docx", vec![(0, 6)]),
+            row("a very long file name that will certainly need to be truncated somewhere.txt", vec![]),
+        ];
         o.set_results(o.seq, rows, ResultsInfo { matched: 3, ..Default::default() });
         for pal in [Palette::dark(true), Palette::light(false)] {
             for scale in [1.0, 1.5, 2.0] {

@@ -166,7 +166,11 @@ impl Query {
                     self.within.push(crate::settings::normalize(&p));
                 } else {
                     // A relative `in:` is a folder-name fragment of the path.
-                    self.terms.push(Term { text: format!("{}{}", value.to_lowercase(), std::path::MAIN_SEPARATOR), kind: TermKind::Path, exact: true });
+                    self.terms.push(Term {
+                        text: format!("{}{}", value.to_lowercase(), std::path::MAIN_SEPARATOR),
+                        kind: TermKind::Path,
+                        exact: true,
+                    });
                 }
                 true
             }

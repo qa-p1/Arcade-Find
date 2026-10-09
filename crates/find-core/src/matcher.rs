@@ -28,7 +28,10 @@ pub fn boundary(name: &[u8], i: usize) -> bool {
         return true;
     }
     let (p, c) = (name[i - 1], name[i]);
-    is_sep(p) || (p.is_ascii_lowercase() && c.is_ascii_uppercase()) || (p.is_ascii_alphabetic() && c.is_ascii_digit()) || (p.is_ascii_digit() && c.is_ascii_alphabetic())
+    is_sep(p)
+        || (p.is_ascii_lowercase() && c.is_ascii_uppercase())
+        || (p.is_ascii_alphabetic() && c.is_ascii_digit())
+        || (p.is_ascii_digit() && c.is_ascii_alphabetic())
 }
 
 /// Bonus (0..=100) for how much of the name the word covers.
@@ -289,7 +292,10 @@ mod tests {
         let boundary = s("annual-report.pdf", "report").unwrap();
         let sub = s("misreported.txt", "report").unwrap();
         let fuzzy = s("r_e_p_o_r_t.txt", "report").unwrap();
-        assert!(exact > stem && stem > prefix && prefix > boundary && boundary > sub && sub > fuzzy, "{exact} {stem} {prefix} {boundary} {sub} {fuzzy}");
+        assert!(
+            exact > stem && stem > prefix && prefix > boundary && boundary > sub && sub > fuzzy,
+            "{exact} {stem} {prefix} {boundary} {sub} {fuzzy}"
+        );
     }
 
     #[test]

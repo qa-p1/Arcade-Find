@@ -12,11 +12,49 @@ use find_core::query::Query;
 use find_core::search::{search, SearchOptions};
 
 const WORDS: &[&str] = &[
-    "report", "invoice", "photo", "img", "screenshot", "notes", "draft", "final", "project", "budget", "meeting", "summary", "resume", "letter", "scan",
-    "backup", "config", "main", "index", "test", "utils", "readme", "data", "export", "video", "track", "song", "album", "chapter", "thesis", "paper",
-    "design", "logo", "icon", "banner", "slides", "deck", "plan", "todo", "journal",
+    "report",
+    "invoice",
+    "photo",
+    "img",
+    "screenshot",
+    "notes",
+    "draft",
+    "final",
+    "project",
+    "budget",
+    "meeting",
+    "summary",
+    "resume",
+    "letter",
+    "scan",
+    "backup",
+    "config",
+    "main",
+    "index",
+    "test",
+    "utils",
+    "readme",
+    "data",
+    "export",
+    "video",
+    "track",
+    "song",
+    "album",
+    "chapter",
+    "thesis",
+    "paper",
+    "design",
+    "logo",
+    "icon",
+    "banner",
+    "slides",
+    "deck",
+    "plan",
+    "todo",
+    "journal",
 ];
-const EXTS: &[&str] = &["pdf", "jpg", "png", "txt", "md", "rs", "py", "js", "json", "docx", "xlsx", "mp4", "mp3", "zip", "html", "css", "ts", "go", "c", "h"];
+const EXTS: &[&str] =
+    &["pdf", "jpg", "png", "txt", "md", "rs", "py", "js", "json", "docx", "xlsx", "mp4", "mp3", "zip", "html", "css", "ts", "go", "c", "h"];
 
 struct Rng(u64);
 impl Rng {
@@ -55,7 +93,12 @@ fn main() {
         if rng.next() % 10 == 0 && ix.depth(parent) < 8 {
             let name = format!("{}-{}", rng.pick(WORDS), rng.next() % 1000);
             let k = key_child(pk, name.as_bytes());
-            let id = ix.push(parent, name.as_bytes(), Meta { flags: flag::DIR | if rng.next() % 40 == 0 { flag::HIDDEN } else { 0 }, mtime: 1_700_000_000, size: 0 }, k);
+            let id = ix.push(
+                parent,
+                name.as_bytes(),
+                Meta { flags: flag::DIR | if rng.next() % 40 == 0 { flag::HIDDEN } else { 0 }, mtime: 1_700_000_000, size: 0 },
+                k,
+            );
             dirs.push((id, k));
         } else {
             let name = match rng.next() % 4 {
@@ -64,7 +107,12 @@ fn main() {
                 2 => format!("IMG_{:08}.{}", rng.next() % 100_000_000, rng.pick(EXTS)),
                 _ => format!("{}{}.{}", rng.pick(WORDS), rng.pick(WORDS), rng.pick(EXTS)),
             };
-            ix.push(parent, name.as_bytes(), Meta { flags: 0, mtime: 1_600_000_000 + (rng.next() % 200_000_000) as i64, size: rng.next() % (512 << 20) }, 0);
+            ix.push(
+                parent,
+                name.as_bytes(),
+                Meta { flags: 0, mtime: 1_600_000_000 + (rng.next() % 200_000_000) as i64, size: rng.next() % (512 << 20) },
+                0,
+            );
         }
         count += 1;
     }
@@ -75,7 +123,20 @@ fn main() {
     println!("index heap estimate: {:.1} MiB", ix.heap_bytes() as f64 / 1048576.0);
     println!("process RSS growth: {:.1} MiB (RSS {:.1} MiB)", (rss1 - rss0) as f64 / 1024.0, rss1 as f64 / 1024.0);
 
-    let queries = ["re", "report", "invoice 2024", "reprt", "IMG_1234", "ext:pdf budget", "notes ext:md modified:<30d", "dir: project", "size:>400mb", "photo/img", "zzzz", "budget final 2019"];
+    let queries = [
+        "re",
+        "report",
+        "invoice 2024",
+        "reprt",
+        "IMG_1234",
+        "ext:pdf budget",
+        "notes ext:md modified:<30d",
+        "dir: project",
+        "size:>400mb",
+        "photo/img",
+        "zzzz",
+        "budget final 2019",
+    ];
     let opts = SearchOptions { limit: 200, now: 1_800_000_000, ..Default::default() };
     println!("\n{:<32} {:>10} {:>10} {:>10}", "query", "matched", "p50 ms", "max ms");
     for q in queries {
@@ -102,6 +163,12 @@ fn main() {
     let t = Instant::now();
     let (back, _) = find_core::persist::load(&file).unwrap();
     let load = t.elapsed();
-    println!("\nsave: {:.0} ms, load (warm start): {:.0} ms, file {:.1} MiB, {} entries", save.as_secs_f64() * 1000.0, load.as_secs_f64() * 1000.0, size as f64 / 1048576.0, back.live());
+    println!(
+        "\nsave: {:.0} ms, load (warm start): {:.0} ms, file {:.1} MiB, {} entries",
+        save.as_secs_f64() * 1000.0,
+        load.as_secs_f64() * 1000.0,
+        size as f64 / 1048576.0,
+        back.live()
+    );
     std::fs::remove_dir_all(dir).ok();
 }

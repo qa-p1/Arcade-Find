@@ -156,6 +156,8 @@ pub enum AppGlyph {
     Clipboard,
     Lens,
     Tools,
+    /// An app without a glyph in the vendored Link assets.
+    Other,
 }
 
 impl AppGlyph {
@@ -169,6 +171,11 @@ impl AppGlyph {
             "arcade.tools" => AppGlyph::Tools,
             _ => return None,
         })
+    }
+
+    /// The app's glyph, or the generic one.
+    pub fn of(id: &str) -> AppGlyph {
+        AppGlyph::for_id(id).unwrap_or(AppGlyph::Other)
     }
 }
 
@@ -184,6 +191,36 @@ pub struct ActionItem {
     pub detail: Option<String>,
     pub danger: bool,
     pub group: Option<String>,
+    /// Shown but can't run; `detail` says why.
+    pub disabled: bool,
+    /// Extra words the filter matches (the owning app's name).
+    pub keywords: String,
+}
+
+impl ActionItem {
+    pub fn new(id: ActionId, title: impl Into<String>, glyph: Glyph) -> ActionItem {
+        ActionItem {
+            id,
+            title: title.into(),
+            hint: None,
+            glyph,
+            outbound: false,
+            detail: None,
+            danger: false,
+            group: None,
+            disabled: false,
+            keywords: String::new(),
+        }
+    }
+
+    pub fn hint(mut self, h: &str) -> ActionItem {
+        self.hint = Some(h.into());
+        self
+    }
+
+    fn matches(&self, f: &str) -> bool {
+        f.is_empty() || self.title.to_lowercase().contains(f) || self.keywords.to_lowercase().contains(f)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -211,7 +248,11 @@ pub struct Toast {
 /// What the controller should do.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
-    Search { seq: u64, text: String, hidden: bool },
+    Search {
+        seq: u64,
+        text: String,
+        hidden: bool,
+    },
     Hide,
     Preview(Vec<Row>),
     Open(Vec<Row>),
@@ -219,10 +260,17 @@ pub enum Effect {
     CopyPaths(Vec<Row>),
     CopyFiles(Vec<Row>),
     CopyText(String),
-    Rename { row: Row, new_name: String },
+    Rename {
+        row: Row,
+        new_name: String,
+    },
     Trash(Vec<Row>),
     TogglePin(Row),
-    Peer { action: PeerAction, title: String, targets: Vec<Row> },
+    Peer {
+        action: PeerAction,
+        title: String,
+        targets: Vec<Row>,
+    },
     /// Fetch clipboard text and call [`Overlay::paste`].
     Paste,
     OpenSettings,
@@ -413,7 +461,9 @@ impl Overlay {
     /// Whether the list area is shown at all (the bar alone at rest).
     pub fn shows_list(&self) -> bool {
         match self.mode {
-            Mode::Results => !self.rows.is_empty() || (self.shown_seq == self.seq && (!self.input.text.trim().is_empty() || self.empty_open)),
+            Mode::Results => {
+                !self.rows.is_empty() || (self.shown_seq == self.seq && (!self.input.text.trim().is_empty() || self.empty_open))
+            }
             _ => true,
         }
     }
@@ -525,7 +575,7 @@ impl Overlay {
     fn filter_actions(&mut self) {
         if let Mode::Actions { items, all, sel, scroll, filter, .. } = &mut self.mode {
             let f = filter.text.to_lowercase();
-            *items = all.iter().filter(|a| f.is_empty() || a.title.to_lowercase().contains(&f)).cloned().collect();
+            *items = all.iter().filter(|a| a.matches(&f)).cloned().collect();
             *sel = 0;
             *scroll = 0;
         }
@@ -554,7 +604,8 @@ impl Overlay {
             ActionId::Rename => {
                 if let Some(i) = self.rows.iter().position(|r| r.path == first.path) {
                     let mut input = TextInput::with(&first.name);
-                    let stem = if first.is_dir { first.name.len() } else { first.name.rfind('.').filter(|&i| i > 0).unwrap_or(first.name.len()) };
+                    let stem =
+                        if first.is_dir { first.name.len() } else { first.name.rfind('.').filter(|&i| i > 0).unwrap_or(first.name.len()) };
                     input.select_range(0, stem);
                     self.sel = i;
                     self.anchor = None;
@@ -652,6 +703,11 @@ impl Overlay {
                     }
                     Key::Enter => {
                         if let Some(item) = items.get(*sel).cloned() {
+                            if item.disabled {
+                                let why = item.detail.clone().unwrap_or_else(|| "This action isn't available now.".into());
+                                self.toast(why, ToastKind::Error);
+                                return vec![];
+                            }
                             let t = targets.clone();
                             return self.run_action(&item.id, &item.title, t, ctx);
                         }
@@ -796,6 +852,11 @@ impl Overlay {
                 if i < items.len() {
                     *sel = i;
                     let item = items[i].clone();
+                    if item.disabled {
+                        let why = item.detail.clone().unwrap_or_else(|| "This action isn't available now.".into());
+                        self.toast(why, ToastKind::Error);
+                        return vec![];
+                    }
                     let t = targets.clone();
                     return self.run_action(&item.id, &item.title, t, ctx);
                 }
@@ -986,10 +1047,21 @@ mod tests {
         let Effect::WantActions(t) = &e[0] else { panic!() };
         assert_eq!(t.len(), 3);
         let items = vec![
-            ActionItem { id: ActionId::CopyPath, title: "Copy path".into(), hint: None, glyph: Glyph::Copy, outbound: false, detail: None, danger: false, group: None },
-            ActionItem { id: ActionId::Trash, title: "Move to Trash".into(), hint: None, glyph: Glyph::Trash, outbound: false, detail: None, danger: true, group: None },
+            ActionItem::new(ActionId::CopyPath, "Copy path", Glyph::Copy),
+            ActionItem { danger: true, ..ActionItem::new(ActionId::Trash, "Move to Trash", Glyph::Trash) },
+            ActionItem {
+                keywords: "Arcade Shelf".into(),
+                ..ActionItem::new(ActionId::CopyFile, "Add to collection", Glyph::App(AppGlyph::Other))
+            },
         ];
         o.set_actions(t.clone(), items);
+        typed(&mut o, "shel", &Ctx(true));
+        if let Mode::Actions { items, .. } = &o.mode {
+            assert_eq!(items.len(), 1, "the filter matches the app name");
+        }
+        for _ in 0..4 {
+            o.key(&KeyEvent::new(Key::Backspace), &Ctx(true));
+        }
         typed(&mut o, "tra", &Ctx(true));
         if let Mode::Actions { items, .. } = &o.mode {
             assert_eq!(items.len(), 1);

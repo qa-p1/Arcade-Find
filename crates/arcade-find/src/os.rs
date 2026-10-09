@@ -34,7 +34,12 @@ pub fn reveal(path: &Path) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("/usr/bin/open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| format!("Couldn't open Finder: {e}"))
+        std::process::Command::new("/usr/bin/open")
+            .arg("-R")
+            .arg(path)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("Couldn't open Finder: {e}"))
     }
 }
 
@@ -167,11 +172,17 @@ fn clipboard() -> &'static mpsc::Sender<ClipReq> {
                 }
                 match req {
                     ClipReq::Text(t, reply) => {
-                        let r = cb.as_mut().ok_or("The clipboard isn't available.".to_string()).and_then(|c| c.set_text(t).map_err(|e| e.to_string()));
+                        let r = cb
+                            .as_mut()
+                            .ok_or("The clipboard isn't available.".to_string())
+                            .and_then(|c| c.set_text(t).map_err(|e| e.to_string()));
                         let _ = reply.send(r);
                     }
                     ClipReq::Files(f, reply) => {
-                        let r = cb.as_mut().ok_or("The clipboard isn't available.".to_string()).and_then(|c| c.set().file_list(&f).map_err(|e| e.to_string()));
+                        let r = cb
+                            .as_mut()
+                            .ok_or("The clipboard isn't available.".to_string())
+                            .and_then(|c| c.set().file_list(&f).map_err(|e| e.to_string()));
                         let _ = reply.send(r);
                     }
                     ClipReq::Get(reply) => {

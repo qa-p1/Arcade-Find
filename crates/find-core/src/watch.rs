@@ -59,9 +59,7 @@ pub fn read_inotify_limit() -> Option<u64> {
 }
 
 pub fn fix_command(new_limit: u64) -> String {
-    format!(
-        "echo fs.inotify.max_user_watches={new_limit} | sudo tee /etc/sysctl.d/90-arcade-find.conf && sudo sysctl --system"
-    )
+    format!("echo fs.inotify.max_user_watches={new_limit} | sudo tee /etc/sysctl.d/90-arcade-find.conf && sudo sysctl --system")
 }
 
 #[cfg(target_os = "linux")]
@@ -111,7 +109,13 @@ mod linux {
         pub fn start(sink: Arc<dyn Sink>, _index: Arc<RwLock<Index>>) -> Option<Arc<Watcher>> {
             let ino = Inotify::init().ok()?;
             let w = Arc::new(Watcher {
-                state: Mutex::new(State { watches: ino.watches(), by_wd: HashMap::new(), by_dir: IdMap::default(), full: false, error: None }),
+                state: Mutex::new(State {
+                    watches: ino.watches(),
+                    by_wd: HashMap::new(),
+                    by_dir: IdMap::default(),
+                    full: false,
+                    error: None,
+                }),
                 watched: AtomicU64::new(0),
                 unwatched: AtomicU64::new(0),
                 limit: read_inotify_limit(),
@@ -385,4 +389,3 @@ impl Pending {
         self.count.load(Ordering::SeqCst) == 0 && !self.all.load(Ordering::SeqCst)
     }
 }
-

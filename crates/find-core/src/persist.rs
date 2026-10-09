@@ -245,7 +245,12 @@ mod tests {
         let mut ix = Index::new();
         let root = Path::new("/data/root");
         let r = ix.add_root(root, Meta::default());
-        let d = ix.push(r, "Ünïcode dir".as_bytes(), Meta { flags: flag::DIR, mtime: 5, size: 0 }, key_child(key_root(root), "Ünïcode dir".as_bytes()));
+        let d = ix.push(
+            r,
+            "Ünïcode dir".as_bytes(),
+            Meta { flags: flag::DIR, mtime: 5, size: 0 },
+            key_child(key_root(root), "Ünïcode dir".as_bytes()),
+        );
         for i in 0..1000 {
             ix.push(d, format!("file-{i}.txt").as_bytes(), Meta { size: i, mtime: 100 + i as i64, flags: 0 }, 0);
         }
