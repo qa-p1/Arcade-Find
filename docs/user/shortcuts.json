@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "app": "arcade.find",
+  "version": "0.2.1",
+  "groups": [
+    {
+      "title": "Global",
+      "context": "global",
+      "shortcuts": [
+        {
+          "id": "show",
+          "title": "Show or hide Find",
+          "keys": { "default": "Ctrl+Alt+F" },
+          "rebindable": true
+        }
+      ]
+    },
+    {
+      "title": "Search results",
+      "context": "results",
+      "shortcuts": [
+        { "id": "move-up", "title": "Select the previous result", "keys": { "default": "Up" } },
+        { "id": "move-down", "title": "Select the next result", "keys": { "default": "Down" } },
+        { "id": "extend-up", "title": "Extend selection upward", "keys": { "default": "Shift+Up" } },
+        { "id": "extend-down", "title": "Extend selection downward", "keys": { "default": "Shift+Down" } },
+        { "id": "previous-page", "title": "Move up one page", "keys": { "default": "PageUp" } },
+        { "id": "next-page", "title": "Move down one page", "keys": { "default": "PageDown" } },
+        { "id": "first-result", "title": "Select the first result", "keys": { "default": "Home" } },
+        { "id": "last-result", "title": "Select the last result", "keys": { "default": "End" } },
+        { "id": "open-preview", "title": "Preview the selected result", "keys": { "default": "Enter" } },
+        { "id": "open-default", "title": "Open with the default app", "keys": { "default": "Shift+Enter" } },
+        { "id": "reveal-in-folder", "title": "Show the result in its folder", "keys": { "default": "Ctrl+Enter", "macos": "Super+Enter" } },
+        { "id": "quick-look", "title": "Quick Look the selected result", "keys": { "default": "Space" } },
+        { "id": "open-actions", "title": "Open actions for the selection", "keys": { "default": "Tab" } },
+        { "id": "rename", "title": "Rename one selected item", "keys": { "default": "F2" } },
+        { "id": "move-to-trash", "title": "Move the selection to Trash", "keys": { "default": "Delete" } },
+        { "id": "copy-paths", "title": "Copy paths or selected search text", "keys": { "default": "Ctrl+C", "macos": "Super+C" } },
+        { "id": "copy-files", "title": "Copy selected files", "keys": { "default": "Ctrl+Shift+C", "macos": "Shift+Super+C" } },
+        { "id": "pin", "title": "Pin or unpin the selected item", "keys": { "default": "Ctrl+Shift+P", "macos": "Shift+Super+P" } },
+        { "id": "toggle-hidden", "title": "Toggle hidden files", "keys": { "default": "Ctrl+H", "macos": "Super+H" } },
+        { "id": "show-details", "title": "Show details for the selected item", "keys": { "default": "Ctrl+I", "macos": "Super+I" } },
+        { "id": "open-settings", "title": "Open Settings", "keys": { "default": "Ctrl+Comma", "macos": "Super+Comma" } },
+        { "id": "paste-files", "title": "Paste files into Find", "keys": { "default": "Ctrl+V", "macos": "Super+V" } },
+        { "id": "refresh-index", "title": "Refresh the current search", "keys": { "default": "F5" } },
+        { "id": "next-result-emacs", "title": "Select the next result with Ctrl+N", "keys": { "default": "Ctrl+N" } },
+        { "id": "previous-result-emacs", "title": "Select the previous result with Ctrl+P", "keys": { "default": "Ctrl+P" } },
+        { "id": "close-or-clear", "title": "Clear selection or close Find", "keys": { "default": "Escape" } }
+      ]
+    },
+    {
+      "title": "Action list",
+      "context": "actions",
+      "shortcuts": [
+        { "id": "actions-up", "title": "Select the previous action", "keys": { "default": "Up" } },
+        { "id": "actions-down", "title": "Select the next action", "keys": { "default": "Down" } },
+        { "id": "run-action", "title": "Run the selected action", "keys": { "default": "Enter" } },
+        { "id": "leave-actions-escape", "title": "Return to search results", "keys": { "default": "Escape" } },
+        { "id": "leave-actions-tab", "title": "Return to search results", "keys": { "default": "Tab" } },
+        { "id": "paste-files-in-actions", "title": "Paste files into Find", "keys": { "default": "Ctrl+V", "macos": "Super+V" } }
+      ]
+    },
+    {
+      "title": "Text entry",
+      "context": "text-input",
+      "shortcuts": [
+        { "id": "backspace", "title": "Delete the previous character", "keys": { "default": "Backspace" } },
+        { "id": "delete", "title": "Delete the next character", "keys": { "default": "Delete" } },
+        { "id": "move-cursor-left", "title": "Move the text cursor left", "keys": { "default": "Left" } },
+        { "id": "move-cursor-right", "title": "Move the text cursor right", "keys": { "default": "Right" } },
+        { "id": "select-all-text", "title": "Select all text in the field", "keys": { "default": "Ctrl+A", "macos": "Super+A" } },
+        { "id": "delete-word-back", "title": "Delete the previous word", "keys": { "default": "Ctrl+Backspace", "macos": "Super+Backspace" } },
+        { "id": "delete-word-forward", "title": "Delete the next word", "keys": { "default": "Ctrl+Delete", "macos": "Super+Delete" } },
+        { "id": "move-word-left", "title": "Move the cursor to the previous word", "keys": { "default": "Ctrl+Left", "macos": "Super+Left" } },
+        { "id": "move-word-right", "title": "Move the cursor to the next word", "keys": { "default": "Ctrl+Right", "macos": "Super+Right" } },
+        { "id": "delete-to-line-start", "title": "Delete to the start of the field", "keys": { "default": "Ctrl+U", "macos": null } },
+        { "id": "delete-word-emacs", "title": "Delete the previous word with Ctrl+W", "keys": { "default": "Ctrl+W", "macos": null } }
+      ]
+    },
+    {
+      "title": "Rename",
+      "context": "rename",
+      "shortcuts": [
+        { "id": "save-rename", "title": "Save the new name", "keys": { "default": "Enter" } },
+        { "id": "cancel-rename", "title": "Cancel renaming", "keys": { "default": "Escape" } }
+      ]
+    },
+    {
+      "title": "Confirm moving to Trash",
+      "context": "confirm-trash",
+      "shortcuts": [
+        { "id": "confirm-trash-enter", "title": "Confirm moving items to Trash", "keys": { "default": "Enter" } },
+        { "id": "confirm-trash-delete", "title": "Confirm moving items to Trash", "keys": { "default": "Delete" } }
+      ]
+    },
+    {
+      "title": "Item details",
+      "context": "details",
+      "shortcuts": [
+        { "id": "details-back", "title": "Return to search results", "keys": { "default": ["Escape", "Space", "Backspace", "Left"] } },
+        { "id": "details-open", "title": "Open the selected item", "keys": { "default": "Enter" } }
+      ]
+    }
+  ]
+}
