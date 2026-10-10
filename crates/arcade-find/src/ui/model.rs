@@ -156,6 +156,7 @@ pub enum AppGlyph {
     Clipboard,
     Lens,
     Tools,
+    Shelf,
     /// An app without a glyph in the vendored Link assets.
     Other,
 }
@@ -169,6 +170,7 @@ impl AppGlyph {
             "arcade.clipboard" => AppGlyph::Clipboard,
             "arcade.lens" => AppGlyph::Lens,
             "arcade.tools" => AppGlyph::Tools,
+            "arcade.shelf" => AppGlyph::Shelf,
             _ => return None,
         })
     }

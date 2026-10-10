@@ -8,7 +8,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::time::{Duration, Instant};
 
 use arcade_link::client::{app_state, AppState};
-use arcade_link::manifest::{app_name, app_pitch, ids, releases_url};
+use arcade_link::manifest::ids;
 use arcade_link::{Locations, Registry};
 use eframe::egui;
 use serde_json::Value;
@@ -214,7 +214,7 @@ impl SettingsApp {
 /// The apps the Connected apps page lists: the family, plus any other
 /// installed Arcade app (a new app shows up without a Find update).
 fn app_ids(reg: &Registry) -> Vec<String> {
-    let mut v: Vec<String> = ids::APPS.iter().map(|s| s.to_string()).collect();
+    let mut v: Vec<String> = link::apps::known().iter().map(|s| s.to_string()).collect();
     for m in reg.apps() {
         if m.id != link::ME && m.id != ids::TOOLS && !v.contains(&m.id) && m.id.starts_with("arcade.") {
             v.push(m.id.clone());
@@ -587,7 +587,11 @@ impl SettingsApp {
         ui.add_space(8.0);
         let tools_installed = self.registry.as_ref().is_some_and(|r| r.get(ids::TOOLS).is_some());
         for (id, state) in self.states.clone() {
-            let name = self.registry.as_ref().and_then(|r| r.get(&id).map(|m| m.name.clone())).unwrap_or_else(|| app_name(&id).to_string());
+            let name = self
+                .registry
+                .as_ref()
+                .and_then(|r| r.get(&id).map(|m| m.name.clone()))
+                .unwrap_or_else(|| link::apps::name(&id).to_string());
             ui.group(|ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
@@ -601,11 +605,11 @@ impl SettingsApp {
                 });
                 match state {
                     AppState::NotInstalled => {
-                        let pitch = app_pitch(&id);
+                        let pitch = link::apps::pitch(&id);
                         if !pitch.is_empty() {
                             note(ui, pitch);
                         }
-                        if ids::APPS.contains(&id.as_str()) && ui.button("Get").clicked() {
+                        if link::apps::known().contains(&id.as_str()) && ui.button("Get").clicked() {
                             self.get_app(ctx, &id, tools_installed);
                         }
                     }
@@ -663,7 +667,7 @@ impl SettingsApp {
                         link::invoke(&loc, &m, &req, None, None).is_ok()
                     });
             if !via_tools {
-                if let Err(e) = open::that_detached(releases_url(&id)) {
+                if let Err(e) = open::that_detached(link::apps::releases_url(&id)) {
                     let _ = tx.send(Bg::Message(format!("Couldn't open the browser: {e}")));
                 }
             }

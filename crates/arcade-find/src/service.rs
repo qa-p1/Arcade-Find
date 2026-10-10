@@ -737,7 +737,7 @@ impl Service {
 
     fn run_peer(self: &Arc<Self>, pa: PeerAction, title: String, rows: Vec<Row>) {
         let Some(m) = self.registry.get().and_then(|r| r.with(|r| r.get(&pa.app).cloned())) else {
-            let name = arcade_link::manifest::app_name(&pa.app).to_string();
+            let name = link::apps::name(&pa.app).to_string();
             return self.peer_failed(&pa, format!("{name} isn't installed."), &rows);
         };
         let lookup = pa.preset.as_ref().map(|p| format!("{}#{p}", pa.action.split('#').next().unwrap_or(&pa.action)));

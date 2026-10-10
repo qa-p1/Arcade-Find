@@ -18,6 +18,9 @@ const WHEEL: &str = include_str!("../../../../assets/glyphs/arcade.wheel.svg");
 const CLIPBOARD: &str = include_str!("../../../../assets/glyphs/arcade.clipboard.svg");
 const LENS: &str = include_str!("../../../../assets/glyphs/arcade.lens.svg");
 const TOOLS: &str = include_str!("../../../../assets/glyphs/arcade.tools.svg");
+/// Arcade Shelf's glyph, from Arcade Link's onboarding branch
+/// (`assets/glyphs/arcade.shelf.svg`) until a Link tag ships it.
+const SHELF: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16h16v4H4z"/><rect x="5" y="7" width="5" height="6" rx="1"/><rect x="13" y="4" width="6" height="9" rx="1"/></svg>"##;
 /// Apps the vendored Link assets have no glyph for yet: a neutral app tile.
 const OTHER_APP: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="2.25" width="11.5" height="11.5" rx="3"/><path d="M5.5 8h5M8 5.5v5"/></svg>"##;
 
@@ -53,6 +56,7 @@ fn action_svg(g: Glyph) -> String {
             AppGlyph::Clipboard => CLIPBOARD,
             AppGlyph::Lens => LENS,
             AppGlyph::Tools => TOOLS,
+            AppGlyph::Shelf => SHELF,
             AppGlyph::Other => OTHER_APP,
         }
         .to_string(),
@@ -264,8 +268,17 @@ mod tests {
             [Glyph::Preview, Glyph::Open, Glyph::Reveal, Glyph::Copy, Glyph::CopyFile, Glyph::Rename, Glyph::Pin, Glyph::Trash, Glyph::Info]
                 .into_iter()
                 .chain(
-                    [AppGlyph::Box, AppGlyph::Look, AppGlyph::Wheel, AppGlyph::Clipboard, AppGlyph::Lens, AppGlyph::Tools, AppGlyph::Other]
-                        .map(Glyph::App),
+                    [
+                        AppGlyph::Box,
+                        AppGlyph::Look,
+                        AppGlyph::Wheel,
+                        AppGlyph::Clipboard,
+                        AppGlyph::Lens,
+                        AppGlyph::Tools,
+                        AppGlyph::Shelf,
+                        AppGlyph::Other,
+                    ]
+                    .map(Glyph::App),
                 )
         {
             let p = icons.glyph(g, 16, Rgba::hex(0x000000)).expect("glyph");
