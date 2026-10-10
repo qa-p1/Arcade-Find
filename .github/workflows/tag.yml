@@ -1,0 +1,35 @@
+# Creates an annotated version tag on a commit that is already on main, after
+# checking it matches the app version. Then run "CI" on the tag (Actions →
+# Run workflow → the tag) to build, test and publish the release.
+name: Tag a release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to create, e.g. v0.1.0
+        required: true
+      sha:
+        description: Full SHA of a commit on main
+        required: true
+permissions:
+  contents: write
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create and push the tag
+        env:
+          TAG: ${{ inputs.tag }}
+          SHA: ${{ inputs.sha }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "tag must look like v1.2.3"; exit 1; }
+          git merge-base --is-ancestor "$SHA" origin/main || { echo "$SHA is not on main"; exit 1; }
+          v=$(git show "$SHA:Cargo.toml" | grep -m1 '^version' | cut -d'"' -f2)
+          [ "$v" = "${TAG#v}" ] || { echo "version at $SHA is $v, not ${TAG#v}"; exit 1; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" "$SHA" -m "Arcade Find ${TAG#v}" -m "See CHANGELOG.md."
+          git push origin "refs/tags/$TAG"

@@ -1,7 +1,7 @@
 # Status
 
-Updated 2026-10-10. Branch `feature/find-v0.1` on `qa-p1/Arcade-Find`. Not
-merged, not tagged, not released.
+Updated 2026-10-10. Version 0.1.0, released from `main` on `qa-p1/Arcade-Find`
+(AppImage, Windows installer, universal DMG; unsigned).
 
 ## Evidence
 
@@ -65,10 +65,6 @@ measured together.
 
 ## Not done
 
-- Family onboarding is on reviewable branches (Link #1, Tools #1, Wheel #5;
-  see [ARCADE_LINK.md](ARCADE_LINK.md#family-onboarding-open-for-review)), not
-  merged. A Link tag, the consumer bumps (Box, Look, Lens, Clipboard list
-  apps from Link) and releases need the owner's approval.
 - Windows USN-journal helper (optional in the brief): not implemented;
   Windows uses ReadDirectoryChangesW plus rescans.
 - No drag-and-drop out of the overlay; no exe icon resource on Windows (the

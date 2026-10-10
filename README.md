@@ -17,8 +17,8 @@ and file contents are read only when you search inside files with `/`.
 | Windows (x64) | `Arcade-Find-<version>-x64-setup.exe` (per-user, no admin) | `%LOCALAPPDATA%\Programs\Arcade Find` |
 | macOS 11+ (universal) | `Arcade-Find-<version>-universal.dmg` | `/Applications/Arcade Find.app` (Arcade Tools: `~/Applications`) |
 
-Packages are built by CI as artifacts; there is no published release yet.
-The macOS app isn't signed or notarized. Content search needs
+Get them from [Releases](https://github.com/qa-p1/Arcade-Find/releases) or install
+with Arcade Tools. Packages are unsigned; the macOS app isn't notarized. Content search needs
 [ripgrep](https://github.com/BurntSushi/ripgrep) installed (it is detected,
 never bundled or downloaded).
 

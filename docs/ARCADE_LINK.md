@@ -110,20 +110,18 @@ page), and diagnostics (registry, runtime, endpoint, last error).
   onboarding branch below) runs the real Find and Shelf: 3/3.
 - Not yet run against the real Look, Box, Wheel, Clipboard or Lens builds.
 
-## Family onboarding (open for review)
+## Family onboarding
 
-Reviewable branches, pushed 2026-10-10, nothing merged, tagged or released:
+Find is a registered family app since Arcade Link `v0.2.0` (2026-10-10):
 
-| Repository | Branch / review | Find's part |
+| Repository | Find's part | Merged |
 |---|---|---|
-| Arcade Link | `feature/shelf-find-onboarding`, [#1](https://github.com/qa-p1/Arcade-Link/pull/1) | `ids::FIND`, name, pitch, releases URL (Rust and Qt), glyph `arcade.find.svg`, accent `#22C55E`, `fixtures/find.json`, `find.search`/`find.show` in the SPEC catalog, Find in `tools/e2e.py` and the benchmarks |
-| Arcade Tools | `feature/shelf-onboarding`, [#1](https://github.com/qa-p1/Arcade-tools/pull/1) | Install (AppImage, Inno, universal DMG), data folders, login entries, `tools.install` |
-| Arcade Wheel | `feature/shelf-action-onboarding`, [#5](https://github.com/qa-p1/Arcade-wheel/pull/5) | Connected apps row, glyph, accent; slots can hold Find's actions |
+| Arcade Link | `ids::FIND`, name, pitch, releases URL (Rust and Qt), glyph `arcade.find.svg`, accent `#22C55E`, `fixtures/find.json`, `find.search`/`find.show` in the SPEC catalog, Find in `tools/e2e.py` and the benchmarks; tag `v0.2.0` | [#1](https://github.com/qa-p1/Arcade-Link/pull/1) |
+| Arcade Tools | Install (AppImage, Inno, universal DMG), data folders, login entries, `tools.install` | [#1](https://github.com/qa-p1/Arcade-tools/pull/1) |
+| Arcade Wheel | Connected apps row, glyph, accent; slots can hold Find's actions | [#5](https://github.com/qa-p1/Arcade-wheel/pull/5) |
+| Box, Look, Lens, Clipboard | Link pin moved to `v0.2.0`: Find in Connected apps, with their own glyph and accent copies | per repository |
 
-Until a new Link tag ships these (and consumers bump to it), Find works with
-peers through manifests alone; Find itself carries local metadata for apps
-newer than its Link pin (`link::apps`, currently Shelf). Box, Look, Lens and
-Clipboard list apps from Link's `ids::APPS`, so their Connected apps pages
-show Find and Shelf only after that bump; their action menus already offer
-Find's actions generically. Tagging Link, merging the branches and releasing
-are the owner's decisions.
+Find itself uses Link `v0.2.0`, so `link::apps` and the Shelf glyph come from
+Link. On `v0.1.0`, Look ignored manifests from apps outside Link's list, so
+the bump is what makes Find's actions appear there; Box, Lens and Clipboard
+offered them generically already.

@@ -65,11 +65,7 @@ and drop between the two.
 
 - No drag from Find's overlay yet; Shelf already accepts `text/uri-list`
   drops from file managers.
-- Link's shared catalogs and the consumers' app lists know both apps only on
-  the open onboarding branches ([Link #1](https://github.com/qa-p1/Arcade-Link/pull/1),
-  [Tools #1](https://github.com/qa-p1/Arcade-tools/pull/1),
-  [Wheel #5](https://github.com/qa-p1/Arcade-wheel/pull/5)). Until a Link tag
-  and consumer bumps ship (the owner's call), the integration works through
-  the manifests alone.
+- Both apps are in Link's shared catalogs since `v0.2.0`; Tools installs them
+  and Wheel slots can hold their actions ([ARCADE_LINK.md](ARCADE_LINK.md#family-onboarding)).
 - On Hyprland, Find's overlay takes exclusive keyboard focus while open;
   Shelf's collapsed capsule never takes focus, so they don't fight.
