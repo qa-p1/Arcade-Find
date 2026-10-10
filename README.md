@@ -48,6 +48,11 @@ grows up and down around the center as results arrive.
 
 On macOS, Cmd replaces Ctrl.
 
+With the mouse: click selects, Shift+click extends the selection,
+double-click does what Enter does, and dragging a result (or the whole
+selection) drops the files into another app: a file manager, an editor,
+Arcade Shelf. Files are always copied or linked by the target, never moved.
+
 ### Query language
 
 | Example | Finds |

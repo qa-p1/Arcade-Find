@@ -505,6 +505,24 @@ impl Overlay {
         }
     }
 
+    /// What dragging row `i` carries: the whole selection when `i` is in it,
+    /// else just that row. Only result rows can be dragged.
+    pub fn drag_rows(&self, i: usize) -> Vec<Row> {
+        if !matches!(self.mode, Mode::Results) || i >= self.rows.len() || self.rows[i].missing {
+            return Vec::new();
+        }
+        if self.is_selected(i) {
+            self.targets()
+        } else {
+            vec![self.rows[i].clone()]
+        }
+    }
+
+    /// Whether pressing row `i` lands inside a multi-row selection.
+    pub fn in_multi_selection(&self, i: usize) -> bool {
+        matches!(self.mode, Mode::Results) && self.is_selected(i) && self.targets().len() > 1
+    }
+
     pub fn is_selected(&self, i: usize) -> bool {
         match self.anchor {
             Some(a) => i >= a.min(self.sel) && i <= a.max(self.sel),
@@ -848,7 +866,8 @@ impl Overlay {
     }
 
     /// A click on list row `i` (double-click runs the primary action).
-    pub fn click(&mut self, i: usize, double: bool, ctx: &dyn Context) -> Vec<Effect> {
+    /// A click on row `i`; `extend` (Shift) extends the selection to it.
+    pub fn click(&mut self, i: usize, double: bool, extend: bool, ctx: &dyn Context) -> Vec<Effect> {
         match &mut self.mode {
             Mode::Actions { items, sel, targets, .. } => {
                 if i < items.len() {
@@ -865,10 +884,14 @@ impl Overlay {
                 vec![]
             }
             Mode::Results if i < self.rows.len() => {
+                if extend {
+                    self.anchor.get_or_insert(self.sel);
+                } else {
+                    self.anchor = None;
+                }
                 self.sel = i;
-                self.anchor = None;
                 self.nav = true;
-                if double {
+                if double && !extend {
                     return self.primary(ctx);
                 }
                 vec![]

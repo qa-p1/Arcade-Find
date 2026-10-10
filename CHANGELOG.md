@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 — 2026-10-10
+
+- Drag results out of the overlay: one row, or the whole multi-selection
+  when the drag starts inside it, into file managers, editors or Arcade
+  Shelf. Wayland (layer shell) and X11 show a drag image with the first
+  name and "+N"; Windows uses the shell's drag loop (Explorer's image and
+  cursors); macOS an AppKit dragging session with Finder icons. Copy or
+  link only.
+- Shift+click extends the selection with the mouse.
+- `examples/e2e-pointer` (a virtual pointer for headless compositors) and
+  drag checks in `scripts/e2e-linux.sh`: with the real Shelf, two results
+  dragged onto its window land there by reference, on Wayland and X11.
+
 ## 0.1.0 — 2026-10-10
 
 First version.

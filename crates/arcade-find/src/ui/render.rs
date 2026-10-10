@@ -117,6 +117,44 @@ impl Renderer {
         Some(pm)
     }
 
+    /// The image that follows the pointer while result rows are dragged:
+    /// the first item's icon and name, and "+N" for the rest.
+    pub fn drag_image(&mut self, rows: &[Row], p: &Palette, s: f32) -> Option<Pixmap> {
+        let first = rows.first()?;
+        let h = 40.0 * s;
+        let isz = (22.0 * s).round() as u32;
+        let name_st = Style { size: 13.5 * s, weight: 500, color: p.text };
+        let name = self.text.fit_end(&first.name, name_st, 220.0 * s).0;
+        let name_w = self.text.width(&name, name_st);
+        let more = (rows.len() > 1).then(|| format!("+{}", rows.len() - 1));
+        let badge_st = Style { size: 12.0 * s, weight: 600, color: p.panel.alpha(255) };
+        let badge_w = more.as_ref().map(|t| self.text.width(t, badge_st) + 14.0 * s).unwrap_or(0.0);
+        let w = (12.0 * s + isz as f32 + 10.0 * s + name_w + if more.is_some() { 10.0 * s + badge_w } else { 0.0 } + 14.0 * s).ceil();
+        let mut pm = Pixmap::new(w as u32, h.ceil() as u32)?;
+        fill_round(&mut pm, 0.0, 0.0, w, h, 10.0 * s, p.panel.alpha(240));
+        if let Some(path) = rounded(0.5 * s, 0.5 * s, w - s, h - s, 9.5 * s) {
+            let mut st = Stroke::default();
+            st.width = s.max(1.0);
+            pm.stroke_path(&path, &paint(p.border), &st, Transform::identity(), None);
+        }
+        if let Some(icon) = self.icons.kind(first.kind, first.is_symlink, isz, p.panel.alpha(255)) {
+            let icon = icon.clone();
+            blit(&mut pm, &icon, 12.0 * s, (h - isz as f32) / 2.0);
+        }
+        let full = (0, 0, pm.width() as i32, pm.height() as i32);
+        let tx = 12.0 * s + isz as f32 + 10.0 * s;
+        let lh = self.text.line(&name, name_st, &[]).height;
+        self.text.draw(&mut pm, &name, name_st, &[], tx, (h - lh) / 2.0, full);
+        if let Some(t) = more {
+            let bx = tx + name_w + 10.0 * s;
+            let bh = 20.0 * s;
+            fill_round(&mut pm, bx, (h - bh) / 2.0, badge_w, bh, bh / 2.0, p.accent);
+            let blh = self.text.line(&t, badge_st, &[]).height;
+            self.text.draw(&mut pm, &t, badge_st, &[], bx + 7.0 * s, (h - blh) / 2.0, full);
+        }
+        Some(pm)
+    }
+
     fn bar(&mut self, pm: &mut Pixmap, o: &Overlay, p: &Palette, s: f32) {
         let w = m::WIDTH * s;
         let mid = m::BAR * s / 2.0;

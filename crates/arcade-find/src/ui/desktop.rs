@@ -14,6 +14,7 @@ use winit::event::{ElementState, MouseButton, MouseScrollDelta, StartCause, Wind
 use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy};
 use winit::window::{Window, WindowAttributes, WindowId, WindowLevel};
 
+use super::dnd;
 use super::model::{metrics, Effect, Mode, Mods, Overlay};
 use super::render::Renderer;
 use crate::service::{Outcome, Service, UiMsg};
@@ -30,8 +31,11 @@ struct App {
     window: Option<Rc<Window>>,
     surface: Option<Surface>,
     mods: Mods,
-    cursor_y: f64,
+    /// Logical pointer position in the window.
+    cursor: (f64, f64),
     last_click: Option<(Instant, usize)>,
+    /// A left press on a row that may become a drag.
+    press: Option<dnd::Press>,
     /// The window had focus since it was shown (so losing it means "hide").
     focused: bool,
     /// The screen center the window stays centered on while shown.
@@ -67,8 +71,9 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
         window: None,
         surface: None,
         mods: Mods::default(),
-        cursor_y: 0.0,
+        cursor: (0.0, 0.0),
         last_click: None,
+        press: None,
         focused: false,
         center: None,
         on_start,
@@ -221,6 +226,24 @@ impl App {
         self.apply(out);
     }
 
+    /// Drags the pressed rows out (the selection when the press was inside
+    /// it). The drag runs on its own; the overlay keeps drawing.
+    fn start_drag(&mut self) {
+        let Some(press) = self.press.take() else { return };
+        let paths: Vec<std::path::PathBuf> = self.overlay.drag_rows(press.row).into_iter().map(|r| r.path).collect();
+        let Some(w) = self.window().cloned() else { return };
+        if paths.is_empty() {
+            return;
+        }
+        let n = paths.len();
+        let rows = self.overlay.drag_rows(press.row);
+        let palette = Palette::for_theme(self.svc.settings().theme, false);
+        let image = self.renderer.drag_image(&rows, &palette, w.scale_factor() as f32);
+        if let Err(e) = drag_out(&w, paths, image.as_ref(), [palette.panel.r, palette.panel.g, palette.panel.b]) {
+            crate::debug!("drag of {n} item(s) not started: {e}");
+        }
+    }
+
     fn row_at(&self, y: f64) -> Option<usize> {
         let top = (metrics::BAR + metrics::LIST_PAD) as f64;
         if y < top || !self.overlay.shows_list() {
@@ -312,16 +335,35 @@ impl ApplicationHandler<UiMsg> for App {
             }
             WindowEvent::CursorMoved { position, .. } => {
                 let scale = self.window().map_or(1.0, |w| w.scale_factor());
-                self.cursor_y = position.y / scale;
+                self.cursor = (position.x / scale, position.y / scale);
+                if self.press.as_ref().is_some_and(|p| p.moved_past(self.cursor)) {
+                    self.start_drag();
+                }
             }
             WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. } => {
-                let Some(i) = self.row_at(self.cursor_y) else { return };
+                let Some(i) = self.row_at(self.cursor.1) else { return };
                 let now = Instant::now();
                 let double = self.last_click.is_some_and(|(t, j)| j == i && now - t < DOUBLE_CLICK);
                 self.last_click = if double { None } else { Some((now, i)) };
-                let svc = self.svc.clone();
-                let effects = self.overlay.click(i, double, &*svc);
-                self.effects(effects);
+                let extend = self.mods.shift;
+                // Inside a multi-selection the click waits for release, so
+                // the whole selection can be dragged.
+                let deferred = !extend && !double && self.overlay.in_multi_selection(i);
+                self.press = Some(dnd::Press { row: i, at: self.cursor, deferred_click: deferred });
+                if !deferred {
+                    let svc = self.svc.clone();
+                    let effects = self.overlay.click(i, double, extend, &*svc);
+                    self.effects(effects);
+                }
+            }
+            WindowEvent::MouseInput { state: ElementState::Released, button: MouseButton::Left, .. } => {
+                if let Some(p) = self.press.take() {
+                    if p.deferred_click {
+                        let svc = self.svc.clone();
+                        let effects = self.overlay.click(p.row, false, false, &*svc);
+                        self.effects(effects);
+                    }
+                }
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let lines = match delta {
@@ -344,6 +386,45 @@ impl ApplicationHandler<UiMsg> for App {
             Some(until) => el.set_control_flow(ControlFlow::WaitUntil(until)),
             None => el.set_control_flow(ControlFlow::Wait),
         }
+    }
+}
+
+/// Starts the platform drag of `paths` from the overlay window.
+#[allow(unused_variables)]
+fn drag_out(
+    w: &Window,
+    paths: Vec<std::path::PathBuf>,
+    image: Option<&resvg::tiny_skia::Pixmap>,
+    background: [u8; 3],
+) -> Result<(), String> {
+    use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
+    let handle = w.window_handle().map_err(|e| e.to_string())?.as_raw();
+    #[cfg(target_os = "linux")]
+    let x_image =
+        || image.map(|p| super::xdnd::Image { width: p.width() as u16, height: p.height() as u16, rgba: p.data().to_vec(), background });
+    // X11: the XDND loop has its own connection, on its own thread, until
+    // the button is released.
+    #[cfg(target_os = "linux")]
+    let x11 = |own: u32| {
+        let image = x_image();
+        let n = paths.len();
+        std::thread::Builder::new()
+            .name("drag".into())
+            .spawn(move || crate::debug!("x11 drag of {n} item(s): {:?}", super::xdnd::drag(paths, own, image)))
+            .map(|_| ())
+            .map_err(|e| e.to_string())
+    };
+    match handle {
+        #[cfg(target_os = "linux")]
+        RawWindowHandle::Xlib(h) => x11(h.window as u32),
+        #[cfg(target_os = "linux")]
+        RawWindowHandle::Xcb(h) => x11(h.window.get()),
+        // The shell's modal drag loop, with its own drag image.
+        #[cfg(windows)]
+        RawWindowHandle::Win32(h) => super::drag_win::drag(h.hwnd.get(), &paths).map(|dropped| crate::debug!("drag dropped: {dropped}")),
+        #[cfg(target_os = "macos")]
+        RawWindowHandle::AppKit(h) => super::drag_mac::drag(h.ns_view.as_ptr(), &paths),
+        _ => Err("dragging out isn't supported in this session".into()),
     }
 }
 

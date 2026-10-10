@@ -5,9 +5,17 @@
 //! rendering into shared memory; fractional scaling through
 //! `wp_fractional_scale_v1` + `wp_viewporter` when the compositor has them.
 
+use std::io::Write;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use smithay_client_toolkit::data_device_manager::{
+    data_device::{DataDevice, DataDeviceHandler},
+    data_offer::{DataOfferHandler, DragOffer},
+    data_source::{DataSourceHandler, DragSource},
+    DataDeviceManagerState, WritePipe,
+};
 use smithay_client_toolkit::reexports::calloop::channel::{channel, Event as ChannelEvent};
 use smithay_client_toolkit::reexports::calloop::timer::{TimeoutAction, Timer};
 use smithay_client_toolkit::reexports::calloop::{EventLoop, LoopHandle, RegistrationToken};
@@ -18,8 +26,8 @@ use smithay_client_toolkit::reexports::protocols::wp::fractional_scale::v1::clie
 use smithay_client_toolkit::reexports::protocols::wp::viewporter::client::{wp_viewport, wp_viewporter};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat,
-    delegate_shm,
+    delegate_compositor, delegate_data_device, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
+    delegate_seat, delegate_shm,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
@@ -35,9 +43,13 @@ use smithay_client_toolkit::{
     shm::{slot::SlotPool, Shm, ShmHandler},
 };
 use wayland_client::globals::{registry_queue_init, GlobalListContents};
-use wayland_client::protocol::{wl_keyboard, wl_output, wl_pointer, wl_registry, wl_seat, wl_shm, wl_surface};
+use wayland_client::protocol::wl_data_device_manager::DndAction;
+use wayland_client::protocol::{
+    wl_data_device, wl_data_source, wl_keyboard, wl_output, wl_pointer, wl_registry, wl_seat, wl_shm, wl_surface,
+};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 
+use super::dnd;
 use super::model::{metrics, Mode, Mods, Overlay};
 use super::render::Renderer;
 use crate::service::{Outcome, Service, UiMsg};
@@ -78,6 +90,21 @@ struct Shown {
     size: (u32, u32),
 }
 
+/// A drag of result rows in flight: the compositor asks the source for data.
+struct Drag {
+    source: DragSource,
+    paths: Vec<PathBuf>,
+    icon: Option<wl_surface::WlSurface>,
+}
+
+impl Drop for Drag {
+    fn drop(&mut self) {
+        if let Some(icon) = self.icon.take() {
+            icon.destroy();
+        }
+    }
+}
+
 struct Wl {
     svc: Arc<Service>,
     overlay: Overlay,
@@ -102,6 +129,11 @@ struct Wl {
     has_focus: bool,
     pointer_pos: (f64, f64),
     last_click: Option<(Instant, usize)>,
+    data_manager: Option<DataDeviceManagerState>,
+    data_device: Option<DataDevice>,
+    /// A left press on a row that may become a drag, with its serial.
+    press: Option<(dnd::Press, u32)>,
+    drag: Option<Drag>,
     qh: QueueHandle<Wl>,
     handle: LoopHandle<'static, Wl>,
     toast_timer: Option<RegistrationToken>,
@@ -125,6 +157,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
     let pool = SlotPool::new((metrics::WIDTH as usize) * 600 * 4, &shm).map_err(|e| e.to_string())?;
     let fractional_mgr = globals.bind::<wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1, _, _>(&qh, 1..=1, ()).ok();
     let viewporter = globals.bind::<wp_viewporter::WpViewporter, _, _>(&qh, 1..=1, ()).ok();
+    let data_manager = DataDeviceManagerState::bind(&globals, &qh).ok();
 
     let (tx, rx) = channel::<UiMsg>();
     let tx = std::sync::Mutex::new(tx);
@@ -165,6 +198,10 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
         has_focus: false,
         pointer_pos: (0.0, 0.0),
         last_click: None,
+        data_manager,
+        data_device: None,
+        press: None,
+        drag: None,
         qh: qh.clone(),
         handle: handle.clone(),
         toast_timer: None,
@@ -238,6 +275,8 @@ impl Wl {
 
     fn hide(&mut self) {
         crate::debug!("wayland hide (shown={})", self.shown.is_some());
+        self.press = None;
+        self.drag = None;
         if let Some(s) = self.shown.take() {
             if let Some(v) = s.viewport {
                 v.destroy();
@@ -359,6 +398,60 @@ impl Wl {
         };
         Some(scroll + vi)
     }
+
+    /// Turns the pending press into a drag of its rows (the selection when
+    /// the press was inside it). Copy only: the files never move.
+    fn start_drag(&mut self) {
+        let Some((press, serial)) = self.press.take() else { return };
+        let rows = self.overlay.drag_rows(press.row);
+        if rows.is_empty() {
+            return;
+        }
+        let (Some(manager), Some(device), Some(shown)) = (&self.data_manager, &self.data_device, &self.shown) else { return };
+        crate::debug!("wayland drag of {} item(s)", rows.len());
+        let source =
+            manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
+        let icon = self.compositor.create_surface(&self.qh);
+        source.start_drag(device, shown.layer.wl_surface(), Some(&icon), serial);
+        self.paint_drag_icon(&icon, &rows);
+        let paths = rows.into_iter().map(|r| r.path).collect();
+        self.drag = Some(Drag { source, paths, icon: Some(icon) });
+    }
+
+    /// Draws the drag image into the icon surface (its top-left follows the
+    /// pointer hotspot).
+    fn paint_drag_icon(&mut self, icon: &wl_surface::WlSurface, rows: &[super::model::Row]) {
+        let scale = self.frac_scale.map(|f| f.div_ceil(120) as i32).unwrap_or(self.int_scale).max(1);
+        let palette = Palette::for_theme(self.svc.settings().theme, true);
+        let Some(image) = self.renderer.drag_image(rows, &palette, scale as f32) else { return };
+        // Below and right of the hotspot, clear of the cursor.
+        let gap = 14 * scale as u32;
+        let Some(mut pm) = resvg::tiny_skia::Pixmap::new(image.width() + gap, image.height() + gap) else { return };
+        pm.draw_pixmap(
+            gap as i32,
+            gap as i32,
+            image.as_ref(),
+            &resvg::tiny_skia::PixmapPaint::default(),
+            resvg::tiny_skia::Transform::identity(),
+            None,
+        );
+        let (w, h) = (pm.width() as i32, pm.height() as i32);
+        let Ok((buffer, canvas)) = self.pool.create_buffer(w, h, w * 4, wl_shm::Format::Argb8888) else { return };
+        for (dst, src) in canvas.as_chunks_mut::<4>().0.iter_mut().zip(pm.data().as_chunks::<4>().0) {
+            *dst = [src[2], src[1], src[0], src[3]];
+        }
+        icon.set_buffer_scale(scale);
+        icon.damage_buffer(0, 0, w, h);
+        if buffer.attach_to(icon).is_ok() {
+            icon.commit();
+        }
+    }
+
+    fn end_drag(&mut self, source: &wl_data_source::WlDataSource) {
+        if self.drag.as_ref().is_some_and(|d| d.source.inner() == source) {
+            self.drag = None;
+        }
+    }
 }
 
 impl CompositorHandler for Wl {
@@ -414,6 +507,9 @@ impl SeatHandler for Wl {
         }
         if capability == Capability::Pointer && self.pointer.is_none() {
             self.pointer = self.seat_state.get_pointer(qh, &seat).ok();
+            if self.data_device.is_none() {
+                self.data_device = self.data_manager.as_ref().map(|m| m.get_data_device(qh, &seat));
+            }
         }
     }
     fn remove_capability(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat, capability: Capability) {
@@ -459,6 +555,11 @@ impl KeyboardHandler for Wl {
         // keyboard device changes).
         if self.has_focus && self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = false;
+            if self.drag.is_some() {
+                // Some compositors move keyboard focus while a drag is over
+                // another window; the overlay stays until the drag ends.
+                return;
+            }
             if let Some(t) = self.leave_timer.take() {
                 self.handle.remove(t);
             }
@@ -495,14 +596,40 @@ impl PointerHandler for Wl {
             }
             self.pointer_pos = ev.position;
             match ev.kind {
-                PointerEventKind::Press { button: BTN_LEFT, .. } => {
+                PointerEventKind::Press { button: BTN_LEFT, serial, .. } => {
                     let Some(i) = self.row_at(ev.position.1) else { continue };
                     let now = Instant::now();
                     let double = self.last_click.is_some_and(|(t, j)| j == i && now - t < DOUBLE_CLICK);
                     self.last_click = if double { None } else { Some((now, i)) };
-                    let svc = self.svc.clone();
-                    let effects = self.overlay.click(i, double, &*svc);
-                    self.effects(effects);
+                    let extend = self.mods.shift;
+                    // Inside a multi-selection the click waits for release,
+                    // so the whole selection can be dragged.
+                    let deferred = !extend && !double && self.overlay.in_multi_selection(i);
+                    self.press = Some((dnd::Press { row: i, at: ev.position, deferred_click: deferred }, serial));
+                    if !deferred {
+                        let svc = self.svc.clone();
+                        let effects = self.overlay.click(i, double, extend, &*svc);
+                        self.effects(effects);
+                    }
+                }
+                PointerEventKind::Motion { .. } => {
+                    if self.drag.is_none() && self.press.as_ref().is_some_and(|(p, _)| p.moved_past(ev.position)) {
+                        self.start_drag();
+                    }
+                }
+                PointerEventKind::Release { button: BTN_LEFT, .. } => {
+                    if let Some((p, _)) = self.press.take() {
+                        if p.deferred_click {
+                            let svc = self.svc.clone();
+                            let effects = self.overlay.click(p.row, false, false, &*svc);
+                            self.effects(effects);
+                        }
+                    }
+                }
+                PointerEventKind::Leave { .. } => {
+                    if self.drag.is_none() {
+                        self.press = None;
+                    }
                 }
                 PointerEventKind::Axis { vertical, .. } => {
                     let lines =
@@ -572,7 +699,65 @@ impl Dispatch<wp_viewport::WpViewport, ()> for Wl {
     fn event(_: &mut Self, _: &wp_viewport::WpViewport, _: wp_viewport::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
 }
 
+impl DataSourceHandler for Wl {
+    fn accept_mime(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource, _: Option<String>) {}
+
+    fn send_request(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        source: &wl_data_source::WlDataSource,
+        mime: String,
+        mut fd: WritePipe,
+    ) {
+        let Some(drag) = self.drag.as_ref().filter(|d| d.source.inner() == source) else { return };
+        if let Some(bytes) = dnd::payload(&drag.paths, &mime) {
+            if let Err(e) = fd.write_all(&bytes) {
+                crate::debug!("drag data ({mime}) not sent: {e}");
+            }
+        }
+    }
+
+    fn cancelled(&mut self, _: &Connection, _: &QueueHandle<Self>, source: &wl_data_source::WlDataSource) {
+        crate::debug!("wayland drag cancelled");
+        self.end_drag(source);
+    }
+
+    fn dnd_dropped(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource) {}
+
+    fn dnd_finished(&mut self, _: &Connection, _: &QueueHandle<Self>, source: &wl_data_source::WlDataSource) {
+        crate::debug!("wayland drag finished");
+        self.end_drag(source);
+    }
+
+    fn action(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource, _: DndAction) {}
+}
+
+// Find is never a drop target; offers from other clients are ignored.
+impl DataDeviceHandler for Wl {
+    fn enter(
+        &mut self,
+        _: &Connection,
+        _: &QueueHandle<Self>,
+        _: &wl_data_device::WlDataDevice,
+        _: f64,
+        _: f64,
+        _: &wl_surface::WlSurface,
+    ) {
+    }
+    fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
+    fn motion(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64) {}
+    fn selection(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
+    fn drop_performed(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
+}
+
+impl DataOfferHandler for Wl {
+    fn source_actions(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &mut DragOffer, _: DndAction) {}
+    fn selected_action(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &mut DragOffer, _: DndAction) {}
+}
+
 delegate_compositor!(Wl);
+delegate_data_device!(Wl);
 delegate_output!(Wl);
 delegate_shm!(Wl);
 delegate_seat!(Wl);

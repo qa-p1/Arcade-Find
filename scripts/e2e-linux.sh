@@ -149,6 +149,10 @@ J
   $shot "$OUT/$name-shelf-entry.png" || true
   if [[ -n "${ARCADE_SHELF_BIN:-}" ]]; then
     real_shelf_checks "$name" "$shot" "$typer" "$texter"
+    if [[ -n "${DRAG_ARGS:-}" ]]; then
+      # shellcheck disable=SC2086
+      real_shelf_drag_checks "$name" "$shot" "$typer" $DRAG_ARGS
+    fi
   else
     $typer Return
     sleep 1
@@ -227,6 +231,45 @@ real_shelf_checks() {
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
 }
 
+# Dragging results out of the overlay onto a visible Shelf window
+# ($platform: wayland or xcb): both files land on the shelf by reference.
+# $win_rect prints "x y w h" of Shelf's window; $dragger X0 Y0 X1 Y1 presses,
+# moves and releases the left button; $find_top prints the overlay's top edge.
+real_shelf_drag_checks() {
+  local name="$1" shot="$2" typer="$3" platform="$4" win_rect="$5" dragger="$6" find_top="$7"
+  SHELF_HOME="$ARCADE_SHELF_HOME"
+  QT_QPA_PLATFORM="$platform" "$ARCADE_SHELF_BIN" >"$OUT/$name-shelf-drag.log" 2>&1 &
+  local sp=$!
+  PIDS+=("$sp")
+  local rect=""
+  for _ in $(seq 1 50); do rect=$($win_rect 2>/dev/null) && [[ -n "$rect" ]] && break; sleep 0.1; done
+  if [[ -z "$rect" ]]; then
+    echo "  skip  $name: drag to Shelf (no visible Shelf window on $platform)"
+    kill "$sp" 2>/dev/null || true
+    return
+  fi
+  read -r sx sy sw sh <<<"$rect"
+  echo a >"$TREE/Documents/drag-$name-a.txt"
+  echo b >"$TREE/Documents/drag-$name-b.txt"
+  sleep 0.8
+  af --show "drag-$name"
+  sleep 0.8
+  $typer FOCUS
+  $typer shift+Down
+  sleep 0.3
+  local top; top=$($find_top)
+  # Press inside the two-row selection (the first row), drag onto Shelf.
+  $dragger 640 $((top + 58 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
+  sleep 1.5
+  shelf_rows >"$T/rows" 2>/dev/null || true
+  check "$name: dragging two results onto Shelf adds both by reference" 'grep -q "|$TREE/Documents/drag-$name-a.txt|0$" "$T/rows" && grep -q "|$TREE/Documents/drag-$name-b.txt|0$" "$T/rows"'
+  check "$name: Find stays open after the drop" '"$BIN" --status | grep -q "\"visible\": true"'
+  $shot "$OUT/$name-drag-done.png" || true
+  $typer Escape
+  "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || kill "$sp" 2>/dev/null || true
+  sleep 0.5
+}
+
 overlay_checks() {
   local name="$1" shot="$2" typer="$3"
   af --show report
@@ -273,6 +316,33 @@ EOF
     if [[ "$1" == shift+* ]]; then wtype -s 400 -M shift -k "${1#shift+}" -m shift; else wtype -s 400 -k "$1"; fi
   }
   wl_text() { wtype -s 400 "$1"; }
+  # Drag checks: a virtual pointer (examples/e2e-pointer) on the seat.
+  POINTER="${ARCADE_E2E_POINTER:-$(dirname "$BIN")/examples/e2e-pointer}"
+  DRAG_ARGS=""
+  if [[ -x "$POINTER" ]]; then
+    export SWAYSOCK=$(ls "$XDG_RUNTIME_DIR"/sway-ipc.*.sock 2>/dev/null | head -1)
+    mkfifo "$T/pointer"
+    "$POINTER" 1280 800 <"$T/pointer" >"$OUT/pointer.log" 2>&1 &
+    PIDS+=($!)
+    exec 7>"$T/pointer"
+    wl_shelf_rect() {
+      swaymsg -t get_tree | python3 -I -c 'import json,sys
+def walk(n):
+    if n.get("app_id") == "arcade.shelf" and n.get("visible"):
+        r = n["rect"]; print(r["x"], r["y"], r["width"], r["height"]); sys.exit(0)
+    for c in n.get("nodes", []) + n.get("floating_nodes", []): walk(c)
+walk(json.load(sys.stdin)); sys.exit(1)'
+    }
+    wl_drag() {
+      echo "move $1 $2" >&7; sleep 0.2; echo down >&7; sleep 0.2
+      for i in $(seq 1 20); do echo "move $(($1 + ($3 - $1) * i / 20)) $(($2 + ($4 - $2) * i / 20))" >&7; sleep 0.04; done
+      sleep 0.3; echo up >&7
+    }
+    wl_find_top() { "$BIN" --status | python3 -I -c 'import json,sys; print(int((800 - json.load(sys.stdin)["ui"]["height"]) / 2))'; }
+    DRAG_ARGS="wayland wl_shelf_rect wl_drag wl_find_top"
+  else
+    echo "  skip  Wayland drag checks (no $POINTER; cargo build --example e2e-pointer)"
+  fi
   link_checks wayland "grim" wl_key wl_text
   overlay_checks wayland "grim" wl_key
   unset WAYLAND_DISPLAY
@@ -293,6 +363,23 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
     if [[ "$1" == FOCUS ]]; then xdotool search --name '^Arcade Find$' windowfocus --sync 2>/dev/null || true; else xdotool key "$1"; fi
   }
   x_text() { xdotool type "$1"; }
+  x_shelf_rect() {
+    local w; w=$(xdotool search --onlyvisible --name '^Arcade Shelf$' 2>/dev/null | head -1)
+    [[ -n "$w" ]] || return 1
+    eval "$(xdotool getwindowgeometry --shell "$w")"
+    echo "$X $Y $WIDTH $HEIGHT"
+  }
+  x_drag() {
+    xdotool mousemove "$1" "$2"; sleep 0.2; xdotool mousedown 1; sleep 0.2
+    for i in $(seq 1 20); do xdotool mousemove $(($1 + ($3 - $1) * i / 20)) $(($2 + ($4 - $2) * i / 20)); sleep 0.04; done
+    sleep 0.3; xdotool mouseup 1
+  }
+  x_find_top() {
+    local w; w=$(xdotool search --name '^Arcade Find$' | head -1)
+    eval "$(xdotool getwindowgeometry --shell "$w")"
+    echo "$Y"
+  }
+  DRAG_ARGS="xcb x_shelf_rect x_drag x_find_top"
   link_checks x11 x_shot x_key x_text
   overlay_checks x11 x_shot x_key
 else
