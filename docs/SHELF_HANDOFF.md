@@ -121,7 +121,7 @@ Written 2026-10-09 by the Arcade Find implementer; updated the same day after Fi
 ```
 
 **`find.search`**, version 1:
-- Title "Search files", verb `search`.
+- Title "Find matching files", verb `search`.
 - Accepts `text/plain`, which is the query; `options.query` is used if there is no input.
 - Produces `file/*[]` and `folder/reference`.
 - Effects `[]`, interactive `false`, privacy `local`. **One-shot supported** (`launch.invoke = ["--arcade-invoke"]`).

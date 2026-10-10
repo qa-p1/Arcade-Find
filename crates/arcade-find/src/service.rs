@@ -269,7 +269,9 @@ impl Service {
             Mode::ConfirmTrash { .. } => "confirm-trash",
             Mode::Details { .. } => "details",
         };
-        let v = json!({ "visible": o.visible, "mode": mode, "rows": o.rows.len(), "selected": o.sel, "height": o.height() });
+        let selected_path = o.rows.get(o.sel).map(|r| r.path.to_string_lossy().into_owned());
+        let v = json!({ "visible": o.visible, "mode": mode, "query": o.input.text, "rows": o.rows.len(),
+                        "selected": o.sel, "selectedPath": selected_path, "height": o.height() });
         *self.ui_state.lock().unwrap_or_else(|e| e.into_inner()) = v;
     }
 

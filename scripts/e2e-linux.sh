@@ -64,6 +64,9 @@ check "--status reports not running (exit 3)" '! af --status >/dev/null; [[ $? -
 run_session() {
   local name="$1"
   echo "== $name: resident instance"
+  # A real Shelf started by Find (launch.background) inherits Find's
+  # environment: give each session its own Shelf profile, offscreen.
+  export ARCADE_SHELF_HOME="$T/shelf-$name" QT_QPA_PLATFORM=offscreen QT_QUICK_BACKEND=software
   ARCADE_FIND_DEBUG=1 "$BIN" --background >"$OUT/$name.log" 2>&1 &
   PIDS+=($!)
   check "$name: index ready" wait_ready
@@ -96,7 +99,8 @@ run_session() {
 
 # Real Arcade Link calls from the overlay, against `arcade-link mock` peers
 # (set ARCADE_LINK_CLI to the CLI from Arcade Link v0.1.0): a mock Look,
-# and a mock peer publishing the proposed `shelf.add` contract.
+# and either the real Arcade Shelf (ARCADE_SHELF_BIN) or a mock publishing
+# its `shelf.add` contract.
 link_checks() {
   local name="$1" shot="$2" typer="$3" texter="$4"
   [[ -n "${ARCADE_LINK_CLI:-}" && -x "${ARCADE_LINK_CLI:-}" ]] || { echo "  skip  $name: Link peer checks (ARCADE_LINK_CLI not set)"; return; }
@@ -115,9 +119,13 @@ J
   rm -f "$T/look.log" "$T/shelf.log"
   ARCADE_MOCK_LOG="$T/look.log" "$ARCADE_LINK_CLI" mock --as arcade.look --actions "$T/look.json" >/dev/null 2>&1 &
   local look=$!
-  ARCADE_MOCK_LOG="$T/shelf.log" "$ARCADE_LINK_CLI" mock --as arcade.shelf --actions "$T/shelf.json" >/dev/null 2>&1 &
-  local shelf=$!
-  PIDS+=("$look" "$shelf")
+  PIDS+=("$look")
+  local shelf=""
+  if [[ -z "${ARCADE_SHELF_BIN:-}" ]]; then
+    ARCADE_MOCK_LOG="$T/shelf.log" "$ARCADE_LINK_CLI" mock --as arcade.shelf --actions "$T/shelf.json" >/dev/null 2>&1 &
+    shelf=$!
+    PIDS+=("$shelf")
+  fi
   sleep 1
   # Enter previews the selected result in Look and hides Find.
   af --show "dir: Reports"
@@ -139,14 +147,84 @@ J
   $texter shelf
   sleep 0.4
   $shot "$OUT/$name-shelf-entry.png" || true
-  $typer Return
-  sleep 1
-  check "$name: shelf.add received a folder and a file by reference" 'grep -q "\"shelf.add\"" "$T/shelf.log" && grep -q "\"type\":\"file/any\[\]\"" "$T/shelf.log" && grep -q "\"type\":\"folder/reference\"" "$T/shelf.log" && grep -q "\"source\":\"arcade.find\"" "$T/shelf.log"'
-  check "$name: Find stays open after a non-interactive peer action" '"$BIN" --status | grep -q "\"visible\": true"'
-  $shot "$OUT/$name-shelf-done.png" || true
+  if [[ -n "${ARCADE_SHELF_BIN:-}" ]]; then
+    real_shelf_checks "$name" "$shot" "$typer" "$texter"
+  else
+    $typer Return
+    sleep 1
+    check "$name: shelf.add received a folder and a file by reference" 'grep -q "\"shelf.add\"" "$T/shelf.log" && grep -q "\"type\":\"file/any\[\]\"" "$T/shelf.log" && grep -q "\"type\":\"folder/reference\"" "$T/shelf.log" && grep -q "\"source\":\"arcade.find\"" "$T/shelf.log"'
+    check "$name: Find stays open after a non-interactive peer action" '"$BIN" --status | grep -q "\"visible\": true"'
+    $shot "$OUT/$name-shelf-done.png" || true
+  fi
   $typer Escape
-  kill "$look" "$shelf" 2>/dev/null || true
+  kill "$look" $shelf 2>/dev/null || true
   sleep 0.3
+}
+
+# The real Arcade Shelf (ARCADE_SHELF_BIN, offscreen Qt) in place of the mock:
+# items land in its SQLite store as references; a stopped Shelf is started
+# through its manifest's launch.background; and Shelf's own find.show request
+# (one file, "Search in Find") opens Find with that file selected.
+shelf_rows() {  # prints "type|path|owned" per item in the Quick Shelf
+  python3 -I - "$SHELF_HOME/shelf.sqlite3" <<'PY'
+import sqlite3, sys
+db = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+for t, p, o in db.execute("SELECT type, path, owned FROM items WHERE shelf='quick' ORDER BY position"):
+    print(f"{t}|{p}|{o}")
+PY
+}
+shelf_ready() {
+  for _ in $(seq 1 50); do "$ARCADE_LINK_CLI" status arcade.shelf >/dev/null 2>&1 && return 0; sleep 0.1; done
+  return 1
+}
+real_shelf_checks() {
+  local name="$1" shot="$2" typer="$3" texter="$4"
+  SHELF_HOME="$ARCADE_SHELF_HOME"
+  "$ARCADE_SHELF_BIN" --background >"$OUT/$name-shelf.log" 2>&1 &
+  PIDS+=($!)
+  check "$name: real Shelf resident and published" 'shelf_ready && [[ -f "$ARCADE_HOME/apps/arcade.shelf.json" ]]'
+  sleep 0.5  # Find's registry watch picks the new manifest up
+  # The action list was opened before Shelf registered: reopen it.
+  $typer Escape
+  sleep 0.3
+  $typer Tab
+  sleep 0.4
+  $texter shelf
+  sleep 0.4
+  $shot "$OUT/$name-real-shelf-entry.png" || true
+  $typer Return
+  sleep 1.5
+  shelf_rows >"$T/rows" 2>/dev/null || true
+  check "$name: real Shelf stored the folder and files as references" 'grep -q "^folder/reference|$TREE/" "$T/rows" && grep -q "^file/[a-z]*|$TREE/" "$T/rows" && ! grep -q "|1$" "$T/rows"'
+  check "$name: Find stays open after shelf.add" '"$BIN" --status | grep -q "\"visible\": true"'
+  $shot "$OUT/$name-real-shelf-done.png" || true
+  # Stopped Shelf: Find starts it with --background and the add still lands.
+  "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
+  for _ in $(seq 1 30); do "$ARCADE_LINK_CLI" status arcade.shelf >/dev/null 2>&1 || break; sleep 0.1; done
+  echo x >"$TREE/Pictures/shelf-launch-$name.png"  # not on the shelf yet
+  sleep 0.6
+  $typer Escape
+  sleep 0.3
+  af --show "shelf-launch-$name"
+  sleep 0.6
+  $typer FOCUS
+  $typer Tab
+  sleep 0.4
+  $texter shelf
+  sleep 0.4
+  $typer Return
+  sleep 3
+  shelf_rows >"$T/rows" 2>/dev/null || true
+  check "$name: stopped Shelf launched in the background and took the add" 'shelf_ready && grep -q "|$TREE/Pictures/shelf-launch-$name.png|0$" "$T/rows"'
+  # Shelf → Find: exactly what Shelf's "Search in Find" sends for one file.
+  $typer Escape
+  sleep 0.4
+  local target="$TREE/Documents/Reports/report-2024-q3.pdf"
+  "$ARCADE_LINK_CLI" invoke arcade.find find.show --input-json "{\"type\":\"file/document\",\"path\":\"$target\"}" >/dev/null 2>&1 || true
+  sleep 1
+  check "$name: Shelf's find.show opens Find on that file" '"$BIN" --status | grep -q "\"visible\": true" && "$BIN" --status | grep -q "\"selectedPath\": \"$target\""'
+  $shot "$OUT/$name-find-show-from-shelf.png" || true
+  "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
 }
 
 overlay_checks() {

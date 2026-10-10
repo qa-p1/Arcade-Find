@@ -35,7 +35,7 @@ const BOX_FEATURED_MAX: usize = 5;
 /// The actions Find exposes.
 pub fn actions() -> Vec<Action> {
     vec![
-        Action::new("find.search", "Search files", "search").accepts(&["text/plain"]).produces(&["file/*[]", "folder/reference"]),
+        Action::new("find.search", "Find matching files", "search").accepts(&["text/plain"]).produces(&["file/*[]", "folder/reference"]),
         Action::new("find.show", "Search in Find", "search")
             .accepts(&["text/plain", "file/*", "folder/reference"])
             .effects(&["opens-ui"])

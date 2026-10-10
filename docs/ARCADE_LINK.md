@@ -27,7 +27,7 @@ actions and nothing listens.
 
 | Action | v | Accepts | Produces | Effects | Interactive | One-shot |
 |---|---|---|---|---|---|---|
-| `find.search` "Search files" | 1 | `text/plain` (the query), or `options.query` | `file/*[]`, `folder/reference` | — | no | yes |
+| `find.search` "Find matching files" | 1 | `text/plain` (the query), or `options.query` | `file/*[]`, `folder/reference` | — | no | yes |
 | `find.show` "Search in Find" | 1 | nothing, `text/plain`, `file/*`, `folder/reference` | — | `opens-ui` | yes | no |
 
 **`find.search`** options: `query`, `limit` (1–1000, default 50), `hidden`
