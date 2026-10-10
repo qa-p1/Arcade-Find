@@ -89,7 +89,7 @@ fn read_u32s(r: &mut impl Read, n: usize) -> io::Result<Vec<u32>> {
     while left > 0 {
         let take = left.min(buf.len() / 4);
         r.read_exact(&mut buf[..take * 4])?;
-        out.extend(buf[..take * 4].chunks_exact(4).map(|c| u32::from_le_bytes([c[0], c[1], c[2], c[3]])));
+        out.extend(buf[..take * 4].as_chunks::<4>().0.iter().map(|c| u32::from_le_bytes(*c)));
         left -= take;
     }
     Ok(out)
@@ -102,7 +102,7 @@ fn read_u16s(r: &mut impl Read, n: usize) -> io::Result<Vec<u16>> {
     while left > 0 {
         let take = left.min(buf.len() / 2);
         r.read_exact(&mut buf[..take * 2])?;
-        out.extend(buf[..take * 2].chunks_exact(2).map(|c| u16::from_le_bytes([c[0], c[1]])));
+        out.extend(buf[..take * 2].as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)));
         left -= take;
     }
     Ok(out)

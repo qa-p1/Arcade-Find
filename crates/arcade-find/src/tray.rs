@@ -76,7 +76,7 @@ mod imp {
         let rgba = crate::ui::icons::app_icon_rgba(px);
         // Straight RGBA → ARGB32, network byte order.
         let mut data = Vec::with_capacity(rgba.len());
-        for p in rgba.chunks_exact(4) {
+        for p in rgba.as_chunks::<4>().0 {
             data.extend_from_slice(&[p[3], p[0], p[1], p[2]]);
         }
         ksni::Icon { width: px as i32, height: px as i32, data }

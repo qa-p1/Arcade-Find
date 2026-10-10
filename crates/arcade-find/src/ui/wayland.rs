@@ -298,11 +298,8 @@ impl Wl {
         let Some(s) = self.shown.as_ref() else { return };
         let Ok((buffer, canvas)) = self.pool.create_buffer(w, h, w * 4, wl_shm::Format::Argb8888) else { return };
         // tiny-skia: premultiplied RGBA; ARGB8888 little-endian: B, G, R, A.
-        for (dst, src) in canvas.chunks_exact_mut(4).zip(pm.data().chunks_exact(4)) {
-            dst[0] = src[2];
-            dst[1] = src[1];
-            dst[2] = src[0];
-            dst[3] = src[3];
+        for (dst, src) in canvas.as_chunks_mut::<4>().0.iter_mut().zip(pm.data().as_chunks::<4>().0) {
+            *dst = [src[2], src[1], src[0], src[3]];
         }
         let surface = s.layer.wl_surface();
         match &s.viewport {

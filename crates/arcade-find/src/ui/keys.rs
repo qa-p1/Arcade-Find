@@ -74,6 +74,14 @@ pub fn from_winit(logical: &winit::keyboard::Key, text: Option<&str>, mods: Mods
 mod tests {
     use super::*;
 
+    #[test]
+    fn printable_drops_control_text() {
+        assert_eq!(printable(Some("a")).as_deref(), Some("a"));
+        assert_eq!(printable(Some("\u{3}")), None);
+        assert_eq!(printable(Some("")), None);
+        assert_eq!(printable(None), None);
+    }
+
     #[cfg(target_os = "linux")]
     #[test]
     fn keysyms() {
