@@ -49,8 +49,16 @@ fn fill_round(pm: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, r: f32, c: Rgba) 
     }
 }
 
+/// Fills a rectangle snapped to whole pixels: carets, separators and
+/// selections stay crisp, and tiny-skia's anti-aliased rect path never sees a
+/// fractional sliver narrower than a pixel (it debug-asserts on those).
 fn fill_rect(pm: &mut Pixmap, x: f32, y: f32, w: f32, h: f32, c: Rgba) {
-    if let Some(r) = Rect::from_xywh(x, y, w.max(0.0), h.max(0.0)) {
+    if w <= 0.0 || h <= 0.0 {
+        return;
+    }
+    let (l, t) = (x.round(), y.round());
+    let (r, b) = ((x + w).round().max(l + 1.0), (y + h).round().max(t + 1.0));
+    if let Some(r) = Rect::from_ltrb(l, t, r, b) {
         pm.fill_rect(r, &paint(c), Transform::identity(), None);
     }
 }
@@ -447,6 +455,17 @@ impl Default for Renderer {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn thin_fractional_rects_are_snapped() {
+        let mut pm = Pixmap::new(64, 32).unwrap();
+        let c = Rgba::hex(0xff0000);
+        for i in 0..40 {
+            let x = 3.0 + i as f32 * 0.37;
+            super::fill_rect(&mut pm, x, 2.3, 1.5, 20.6, c);
+            super::fill_rect(&mut pm, x, 4.1, 2.0 * 1.25, 0.6, c);
+        }
+    }
+
     use super::*;
     use crate::ui::model::{ResultsInfo, Row};
     use find_core::kind::Kind;
