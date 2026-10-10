@@ -693,6 +693,11 @@ mod tests {
             e.search_hits(&Query::parse(q), &SearchOptions { limit: 10, now: crate::now_secs(), ..Default::default() }).0
         };
         assert_eq!(find(&e, "alpha").len(), 1);
+        // Ready comes just before the save that ends the first crawl.
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while !index_file.exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(10));
+        }
         assert!(index_file.exists(), "saved after the first crawl");
 
         // A new file appears through the watcher (Linux) or a requested rescan.

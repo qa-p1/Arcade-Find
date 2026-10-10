@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # End-to-end checks of the real binary in isolated headless sessions:
-# Wayland (headless sway, layer shell) and X11 (Xvfb). Nothing touches the
+# Wayland (headless sway: layer shell, then the winit window GNOME gets) and
+# X11 (Xvfb). Nothing touches the
 # live desktop: private profile roots, private runtime dirs, private D-Bus.
 #
 #   scripts/e2e-linux.sh [path/to/arcade-find] [out-dir]
@@ -178,7 +179,7 @@ for t, p, o in db.execute("SELECT type, path, owned FROM items WHERE shelf='quic
 PY
 }
 shelf_ready() {
-  for _ in $(seq 1 50); do "$ARCADE_LINK_CLI" status arcade.shelf >/dev/null 2>&1 && return 0; sleep 0.1; done
+  for _ in $(seq 1 150); do "$ARCADE_LINK_CLI" status arcade.shelf >/dev/null 2>&1 && return 0; sleep 0.1; done
   return 1
 }
 real_shelf_checks() {
@@ -229,20 +230,24 @@ real_shelf_checks() {
   check "$name: Shelf's find.show opens Find on that file" '"$BIN" --status | grep -q "\"visible\": true" && "$BIN" --status | grep -q "\"selectedPath\": \"$target\""'
   $shot "$OUT/$name-find-show-from-shelf.png" || true
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
+  # The next Shelf must not find this one still holding its instance lock.
+  for _ in $(seq 1 50); do pgrep -f "^$ARCADE_SHELF_BIN" >/dev/null || break; sleep 0.1; done
 }
 
 # Dragging results out of the overlay onto a visible Shelf window
 # ($platform: wayland or xcb): both files land on the shelf by reference.
 # $win_rect prints "x y w h" of Shelf's window; $dragger X0 Y0 X1 Y1 presses,
-# moves and releases the left button; $find_top prints the overlay's top edge.
+# moves and releases the left button; $find_top prints the overlay's
+# horizontal center and top edge. With $8 = single, one result is dragged
+# instead of a two-row selection.
 real_shelf_drag_checks() {
-  local name="$1" shot="$2" typer="$3" platform="$4" win_rect="$5" dragger="$6" find_top="$7"
+  local name="$1" shot="$2" typer="$3" platform="$4" win_rect="$5" dragger="$6" find_top="$7" single="${8:-}"
   SHELF_HOME="$ARCADE_SHELF_HOME"
   QT_QPA_PLATFORM="$platform" "$ARCADE_SHELF_BIN" >"$OUT/$name-shelf-drag.log" 2>&1 &
   local sp=$!
   PIDS+=("$sp")
   local rect=""
-  for _ in $(seq 1 50); do rect=$($win_rect 2>/dev/null) && [[ -n "$rect" ]] && break; sleep 0.1; done
+  for _ in $(seq 1 150); do rect=$($win_rect 2>/dev/null) && [[ -n "$rect" ]] && break; sleep 0.1; done
   if [[ -z "$rect" ]]; then
     echo "  skip  $name: drag to Shelf (no visible Shelf window on $platform)"
     kill "$sp" 2>/dev/null || true
@@ -255,14 +260,18 @@ real_shelf_drag_checks() {
   af --show "drag-$name"
   sleep 0.8
   $typer FOCUS
-  $typer shift+Down
+  [[ -n "$single" ]] || $typer shift+Down
   sleep 0.3
-  local top; top=$($find_top)
+  local fx top; read -r fx top <<<"$($find_top)"
   # Press inside the two-row selection (the first row), drag onto Shelf.
-  $dragger 640 $((top + 58 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
+  $dragger "$fx" $((top + 58 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
   sleep 1.5
   shelf_rows >"$T/rows" 2>/dev/null || true
-  check "$name: dragging two results onto Shelf adds both by reference" 'grep -q "|$TREE/Documents/drag-$name-a.txt|0$" "$T/rows" && grep -q "|$TREE/Documents/drag-$name-b.txt|0$" "$T/rows"'
+  if [[ -n "$single" ]]; then
+    check "$name: dragging a result onto Shelf adds it by reference" 'grep -q "|$TREE/Documents/drag-$name-a.txt|0$" "$T/rows" && ! grep -q "drag-$name-b.txt" "$T/rows"'
+  else
+    check "$name: dragging two results onto Shelf adds both by reference" 'grep -q "|$TREE/Documents/drag-$name-a.txt|0$" "$T/rows" && grep -q "|$TREE/Documents/drag-$name-b.txt|0$" "$T/rows"'
+  fi
   check "$name: Find stays open after the drop" '"$BIN" --status | grep -q "\"visible\": true"'
   $shot "$OUT/$name-drag-done.png" || true
   $typer Escape
@@ -290,7 +299,7 @@ overlay_checks() {
   $shot "$OUT/$name-hidden.png" || true
   check "$name: Esc hides the overlay" '! "$BIN" --status | grep -q "\"visible\": true"'
   af --quit
-  sleep 0.5
+  for _ in $(seq 1 30); do "$BIN" --status >/dev/null 2>&1 || break; sleep 0.1; done
   check "$name: --quit stops the instance" '! "$BIN" --status >/dev/null 2>&1'
 }
 
@@ -298,6 +307,8 @@ overlay_checks() {
 if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
   cat >"$T/sway.conf" <<'EOF'
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
+# The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
+for_window [title="^Arcade Find$"] floating enable
 EOF
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman dbus-run-session -- sway -c "$T/sway.conf" >"$OUT/sway.log" 2>&1 &
   PIDS+=($!)
@@ -338,13 +349,37 @@ walk(json.load(sys.stdin)); sys.exit(1)'
       for i in $(seq 1 20); do echo "move $(($1 + ($3 - $1) * i / 20)) $(($2 + ($4 - $2) * i / 20))" >&7; sleep 0.04; done
       sleep 0.3; echo up >&7
     }
-    wl_find_top() { "$BIN" --status | python3 -I -c 'import json,sys; print(int((800 - json.load(sys.stdin)["ui"]["height"]) / 2))'; }
+    wl_find_top() { "$BIN" --status | python3 -I -c 'import json,sys; print(640, int((800 - json.load(sys.stdin)["ui"]["height"]) / 2))'; }
+    # The winit window: a floating toplevel titled "Arcade Find".
+    wl_winit_find_top() {
+      swaymsg -t get_tree | python3 -I -c 'import json,sys
+def walk(n):
+    if n.get("name") == "Arcade Find" and n.get("visible"):
+        r = n["rect"]; print(r["x"] + r["width"] // 2, r["y"]); sys.exit(0)
+    for c in n.get("nodes", []) + n.get("floating_nodes", []): walk(c)
+walk(json.load(sys.stdin)); sys.exit(1)'
+    }
     DRAG_ARGS="wayland wl_shelf_rect wl_drag wl_find_top"
   else
     echo "  skip  Wayland drag checks (no $POINTER; cargo build --example e2e-pointer)"
   fi
   link_checks wayland "grim" wl_key wl_text
   overlay_checks wayland "grim" wl_key
+  # GNOME has no layer shell: Find falls back to its winit window there.
+  # Same compositor, winit backend forced: the drag source shares winit's
+  # Wayland connection.
+  export ARCADE_FIND_BACKEND=winit
+  run_session wayland-winit
+  if [[ -n "$DRAG_ARGS" && -n "${ARCADE_SHELF_BIN:-}" && -x "${ARCADE_LINK_CLI:-}" ]]; then
+    # One result: modifiers from wtype's short-lived virtual keyboards don't
+    # reach winit's window on headless sway, so Shift+Down can't extend the
+    # selection here (the selection itself is covered by the other sessions).
+    real_shelf_drag_checks wayland-winit "grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
+  else
+    echo "  skip  wayland-winit: drag to Shelf (needs the pointer helper, ARCADE_SHELF_BIN and ARCADE_LINK_CLI)"
+  fi
+  overlay_checks wayland-winit "grim" wl_key
+  unset ARCADE_FIND_BACKEND
   unset WAYLAND_DISPLAY
 else
   echo "  skip  Wayland (sway, grim or wtype missing)"
@@ -377,7 +412,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   x_find_top() {
     local w; w=$(xdotool search --name '^Arcade Find$' | head -1)
     eval "$(xdotool getwindowgeometry --shell "$w")"
-    echo "$Y"
+    echo "$((X + WIDTH / 2)) $Y"
   }
   DRAG_ARGS="xcb x_shelf_rect x_drag x_find_top"
   link_checks x11 x_shot x_key x_text
