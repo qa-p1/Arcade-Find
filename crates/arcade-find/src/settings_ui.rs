@@ -297,7 +297,8 @@ impl SettingsApp {
         });
         ui.add_space(6.0);
         let allowed = autostart::allowed(&self.paths);
-        let mut login = self.settings.start_at_login.unwrap_or(false);
+        // The login entry is the truth (Arcade Tools can switch it too).
+        let mut login = if allowed { autostart::enabled() } else { self.settings.start_at_login.unwrap_or(false) };
         let r = ui.add_enabled(allowed, egui::Checkbox::new(&mut login, "Start at login"));
         if r.changed() {
             match autostart::set(login) {

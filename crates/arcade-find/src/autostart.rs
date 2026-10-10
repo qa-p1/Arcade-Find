@@ -29,14 +29,24 @@ pub fn allowed(paths: &AppPaths) -> bool {
     !paths.isolated && installed_executable().is_some()
 }
 
-/// Applies the setting. On first run of an installed build the default is
-/// on (visible and reversible in Settings → General).
+/// On first run of an installed build, registers (the default is on, visible
+/// and reversible in Settings → General). Afterwards the login entry itself is
+/// the truth: Arcade Tools can switch it too, so the setting follows it, and
+/// an existing entry is refreshed in case the executable moved.
 pub fn sync(paths: &AppPaths, settings: &mut Settings) -> Result<(), String> {
     if !allowed(paths) {
         return Ok(());
     }
-    let want = *settings.start_at_login.get_or_insert(true);
-    set(want)
+    let on = match settings.start_at_login {
+        None => true,
+        Some(_) => enabled(),
+    };
+    settings.start_at_login = Some(on);
+    if on {
+        set(true)
+    } else {
+        Ok(())
+    }
 }
 
 pub fn set(enabled: bool) -> Result<(), String> {
