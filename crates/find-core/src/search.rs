@@ -673,7 +673,7 @@ mod tests {
     fn frecency_boost_reorders() {
         let ix = build();
         let q = Query::parse_at("report", 10_000, 0);
-        let gen = ix.lookup(Path::new("/home/u/Projects/src/report_gen.rs")).unwrap();
+        let gen = ix.lookup(Path::new(&crate::paths::test_abs("/home/u/Projects/src/report_gen.rs"))).unwrap();
         let mut boosts = IdMap::default();
         boosts.insert(gen, 900);
         let r = search(&ix, &q, &SearchOptions { limit: 5, boosts, now: 10_000, ..Default::default() });
