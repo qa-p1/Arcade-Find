@@ -1,6 +1,6 @@
 # Status
 
-Updated 2026-10-10. Version 0.2.0, released from `main` on `qa-p1/Arcade-Find`
+Updated 2026-10-10. Version 0.2.1, released from `main` on `qa-p1/Arcade-Find`
 (AppImage, Windows installer, universal DMG; unsigned).
 
 ## Evidence
@@ -15,8 +15,9 @@ and builds the AppImage, Inno installer and universal DMG.
 | Unit and integration tests | `cargo test --workspace` | 48 (find-core) + 36 (app) + 5 (`tests/link_shelf.rs`) pass; also on Windows and macOS in CI |
 | Lints | `cargo clippy --workspace --all-targets -- -D warnings` for Linux, Windows and macOS targets; `cargo fmt --check` | clean |
 | End to end, Wayland layer shell | `scripts/e2e-linux.sh` in headless Sway 1.9 | pass: indexing, search, filters, hidden files, live add/remove, single instance, one-shot `find.search`, overlay shows centered, keys (Down, Tab, Esc), Enter → `look.preview` and Find hides, mixed selection → `shelf.add` and Find stays open, `--quit` |
+| End to end, Wayland without layer shell (GNOME's path) | same script in headless Sway with `ARCADE_FIND_BACKEND=winit`, the window floating | same checks pass, plus dragging a result onto the real Shelf |
 | End to end, X11 | same script in Xvfb (no window manager) | same checks pass |
-| Link peers | `arcade-link mock` (Arcade Link v0.2.0 CLI) as Look; the **real Arcade Shelf** (`ARCADE_SHELF_BIN`, v0.1.0) | 53/53 (43/43 with mock peers): a mixed selection lands in Shelf's store as references; a stopped Shelf is launched from its manifest and takes the add; Shelf's `find.show` opens Find with that file selected; two results dragged onto Shelf's window land as references on Wayland and X11 ([SHELF.md](SHELF.md)) |
+| Link peers | `arcade-link mock` (Arcade Link v0.2.0 CLI) as Look; the **real Arcade Shelf** (`ARCADE_SHELF_BIN`, v0.1.0) | 71/71 (59/59 with mock peers; debug build): a mixed selection lands in Shelf's store as references; a stopped Shelf is launched from its manifest and takes the add; Shelf's `find.show` opens Find with that file selected; results dragged onto Shelf's window land as references from the layer-shell overlay, the winit window on Wayland, and X11 ([SHELF.md](SHELF.md)) |
 | Ecosystem runner | Arcade Link `tools/e2e.py --only find` (onboarding branch) | 3/3: `find.search` resident and one-shot, `find.show` as Shelf sends it, results into the real Shelf |
 | Shelf's own UI | Arcade Shelf `tst_Ui::actionsMenuDrivesFind` | Clicking Shelf's Actions menu sends `find.show` and `find.search` to a peer serving Find's real manifest; the match lands on the shelf |
 | Settings window | launched under Xvfb, General and Connected apps pages inspected | renders; ripgrep detected |
@@ -52,7 +53,10 @@ measured together.
 ## Not verified
 
 - Real desktops: Hyprland, KDE, GNOME, other X11 window managers, Windows,
-  macOS (nothing was run interactively). The Windows installer and macOS DMG
+  macOS (nothing was run interactively). GNOME's path (the winit window on
+  Wayland, dragging included) ran on headless Sway, not on Mutter. In that
+  session the selection was not extended by keyboard: modifiers from
+  `wtype`'s short-lived virtual keyboards don't reach winit there. The Windows installer and macOS DMG
   are built only by CI.
 - Global shortcut registration (native and Hyprland runtime bind) on a real
   session; tray on a real StatusNotifier host; start-at-login entries at an
@@ -68,8 +72,7 @@ measured together.
 
 - Windows USN-journal helper (optional in the brief): not implemented;
   Windows uses ReadDirectoryChangesW plus rescans.
-- Dragging out on GNOME Wayland (the winit fallback has no drag source); no
-  exe icon resource on Windows (the installer and shortcuts carry the icon);
+- No exe icon resource on Windows (the installer and shortcuts carry the icon);
   macOS app not signed or notarized.
 - Cancelling a running peer call from Find.
 

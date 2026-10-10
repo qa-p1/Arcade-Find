@@ -21,6 +21,9 @@ use crate::service::{Outcome, Service, UiMsg};
 use crate::theme::Palette;
 
 const DOUBLE_CLICK: Duration = Duration::from_millis(400);
+/// How long focus may be gone before the overlay hides: compositors and X
+/// servers drop and restore it briefly (a keyboard device change, a grab).
+const FOCUS_GRACE: Duration = Duration::from_millis(150);
 
 type Surface = softbuffer::Surface<Rc<Window>, Rc<Window>>;
 
@@ -36,8 +39,13 @@ struct App {
     last_click: Option<(Instant, usize)>,
     /// A left press on a row that may become a drag.
     press: Option<dnd::Press>,
+    /// The drag source on Wayland (winit has none of its own).
+    #[cfg(target_os = "linux")]
+    wl_drag: Option<super::wl_drag::Dragger>,
     /// The window had focus since it was shown (so losing it means "hide").
     focused: bool,
+    /// Focus left at this moment's deadline; hide then unless it came back.
+    leave_at: Option<Instant>,
     /// The screen center the window stays centered on while shown.
     center: Option<PhysicalPosition<i32>>,
     on_start: Option<Box<dyn FnOnce()>>,
@@ -74,7 +82,10 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
         cursor: (0.0, 0.0),
         last_click: None,
         press: None,
+        #[cfg(target_os = "linux")]
+        wl_drag: None,
         focused: false,
+        leave_at: None,
         center: None,
         on_start,
         initial,
@@ -137,6 +148,7 @@ impl App {
         }
         self.place(&w);
         self.focused = false;
+        self.leave_at = None;
         w.set_visible(true);
         w.focus_window();
     }
@@ -151,6 +163,7 @@ impl App {
             w.set_visible(false);
         }
         self.focused = false;
+        self.leave_at = None;
         return_focus();
     }
 
@@ -238,6 +251,16 @@ impl App {
         let n = paths.len();
         let rows = self.overlay.drag_rows(press.row);
         let palette = Palette::for_theme(self.svc.settings().theme, false);
+        #[cfg(target_os = "linux")]
+        if let Some(dragger) = self.wl_drag.as_ref() {
+            // Wayland buffers have an integer scale.
+            let scale = w.scale_factor().ceil().max(1.0) as u32;
+            let image = self.renderer.drag_image(&rows, &palette, scale as f32).and_then(|i| wayland_drag_image(&i, scale));
+            if let Err(e) = dragger.drag(paths, image) {
+                crate::debug!("drag of {n} item(s) not started: {e}");
+            }
+            return;
+        }
         let image = self.renderer.drag_image(&rows, &palette, w.scale_factor() as f32);
         if let Err(e) = drag_out(&w, paths, image.as_ref(), [palette.panel.r, palette.panel.g, palette.panel.b]) {
             crate::debug!("drag of {n} item(s) not started: {e}");
@@ -261,10 +284,29 @@ impl App {
     }
 }
 
+impl App {
+    /// A drag out of the window is in flight.
+    fn dragging(&self) -> bool {
+        #[cfg(target_os = "linux")]
+        if let Some(dragger) = self.wl_drag.as_ref() {
+            return dragger.dragging();
+        }
+        false
+    }
+}
+
 impl ApplicationHandler<UiMsg> for App {
     fn new_events(&mut self, _el: &ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
-            self.overlay.tick(Instant::now());
+            let now = Instant::now();
+            if self.leave_at.is_some_and(|t| t <= now) {
+                self.leave_at = None;
+                if self.overlay.visible && !self.dragging() {
+                    self.hide();
+                    return;
+                }
+            }
+            self.overlay.tick(now);
             if let Some(w) = self.window() {
                 w.request_redraw();
             }
@@ -285,6 +327,10 @@ impl ApplicationHandler<UiMsg> for App {
             return;
         };
         self.surface = softbuffer::Surface::new(&ctx, w.clone()).ok();
+        #[cfg(target_os = "linux")]
+        {
+            self.wl_drag = wayland_dragger(&w);
+        }
         self.window = Some(w);
         if let Some(f) = self.on_start.take() {
             f();
@@ -312,10 +358,13 @@ impl ApplicationHandler<UiMsg> for App {
         match event {
             WindowEvent::RedrawRequested => self.draw(),
             WindowEvent::CloseRequested => self.hide(),
-            WindowEvent::Focused(true) => self.focused = true,
+            WindowEvent::Focused(true) => {
+                self.focused = true;
+                self.leave_at = None;
+            }
             WindowEvent::Focused(false) => {
-                if self.focused && self.overlay.visible {
-                    self.hide();
+                if self.focused && self.overlay.visible && !self.dragging() {
+                    self.leave_at = Some(Instant::now() + FOCUS_GRACE);
                 }
             }
             WindowEvent::ScaleFactorChanged { .. } => self.resize_and_redraw(),
@@ -382,11 +431,48 @@ impl ApplicationHandler<UiMsg> for App {
     }
 
     fn about_to_wait(&mut self, el: &ActiveEventLoop) {
-        match self.overlay.toast.as_ref().map(|t| t.until) {
+        let toast = self.overlay.toast.as_ref().map(|t| t.until);
+        match toast.into_iter().chain(self.leave_at).min() {
             Some(until) => el.set_control_flow(ControlFlow::WaitUntil(until)),
             None => el.set_control_flow(ControlFlow::Wait),
         }
     }
+}
+
+/// The Wayland drag source for `w`, when winit runs on Wayland.
+#[cfg(target_os = "linux")]
+fn wayland_dragger(w: &Window) -> Option<super::wl_drag::Dragger> {
+    use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+    let (RawDisplayHandle::Wayland(d), RawWindowHandle::Wayland(s)) = (w.display_handle().ok()?.as_raw(), w.window_handle().ok()?.as_raw())
+    else {
+        return None;
+    };
+    // SAFETY: winit's wl_display and the window's wl_surface; the window is
+    // created once and lives until the process exits.
+    match unsafe { super::wl_drag::Dragger::new(d.display.as_ptr(), s.surface.as_ptr()) } {
+        Ok(dragger) => Some(dragger),
+        Err(e) => {
+            crate::debug!("wayland drag source unavailable: {e}");
+            None
+        }
+    }
+}
+
+/// The drag image for a Wayland icon surface: its top-left is the pointer
+/// hotspot, so the pill sits below and right of the cursor.
+#[cfg(target_os = "linux")]
+fn wayland_drag_image(image: &resvg::tiny_skia::Pixmap, scale: u32) -> Option<super::wl_drag::Image> {
+    let gap = 14 * scale;
+    let mut pm = resvg::tiny_skia::Pixmap::new(image.width() + gap, image.height() + gap)?;
+    pm.draw_pixmap(
+        gap as i32,
+        gap as i32,
+        image.as_ref(),
+        &resvg::tiny_skia::PixmapPaint::default(),
+        resvg::tiny_skia::Transform::identity(),
+        None,
+    );
+    Some(super::wl_drag::Image { width: pm.width(), height: pm.height(), rgba: pm.take(), scale: scale as i32 })
 }
 
 /// Starts the platform drag of `paths` from the overlay window.

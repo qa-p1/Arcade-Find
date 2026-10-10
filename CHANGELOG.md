@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.1 — 2026-10-10
+
+- Dragging out works on GNOME Wayland (and any Wayland session without
+  layer shell, where Find uses its winit window): Find runs a second client
+  on winit's own Wayland connection, with its own pointer for the press
+  serial, and drags a `wl_data_source` from the window, with the drag image.
+- The winit window no longer hides when focus drops and returns within
+  150 ms (a keyboard device change, a grab); it still hides when another
+  window keeps focus. Same rule as the layer-shell overlay.
+- `scripts/e2e-linux.sh` adds a `wayland-winit` session (headless Sway,
+  `ARCADE_FIND_BACKEND=winit`, the window floating as on GNOME): a result
+  dragged onto the real Shelf lands by reference. Waits for Shelf's start
+  and stop and for `--quit` poll instead of sleeping.
+
 ## 0.2.0 — 2026-10-10
 
 - Drag results out of the overlay: one row, or the whole multi-selection

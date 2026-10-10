@@ -55,7 +55,7 @@ All on Linux, in isolated profiles (no real desktop, files or keyring):
 | Arcade Link `tools/e2e.py --only shelf` | 3/3 (Shelf's resident adds, background relaunch, picker cancellation) |
 | Shelf `tst_PeerHub::findManifestOffersShowAndSearch` | Shelf's offer rules against Find's real manifest (`arcade-find --arcade-manifest`) |
 | Shelf `tst_Ui::actionsMenuDrivesFind` | Shelf's real window, clicked: Actions → "Search in Find" sends `find.show` with the selected file; "Find matching files" on a text item sends `find.search` and the returned file lands on the shelf by reference |
-| Drag and drop | `scripts/e2e-linux.sh` with the real Shelf as a visible window: two results dragged from Find's overlay onto Shelf land as references, in headless Sway (Wayland data device, virtual pointer) and on Xvfb (XDND); Find stays open |
+| Drag and drop | `scripts/e2e-linux.sh` with the real Shelf as a visible window: two results dragged from Find's overlay onto Shelf land as references, in headless Sway (Wayland data device, virtual pointer) and on Xvfb (XDND); one result dragged from the winit window (GNOME's path, forced on Sway) lands the same way; Find stays open |
 | File kinds | Find's extension table equals Link's Rust and Qt tables (142 entries), so Shelf never rejects a Find result as `type_mismatch` |
 | Find `tests/link_shelf.rs` | Offer rules, payloads, standard errors and background launch against an in-process peer with Shelf's contract |
 
@@ -66,7 +66,8 @@ on Windows and macOS (built and type-checked by CI, never run interactively).
 
 - Drag a result (or the selection) from Find's overlay onto Shelf; it
   arrives as `text/uri-list` and is stored by reference. On GNOME (no layer
-  shell) dragging out isn't available yet.
+  shell) the drag comes from Find's winit window through the same Wayland
+  data device (tested on Sway, not on Mutter).
 - Both apps are in Link's shared catalogs since `v0.2.0`; Tools installs them
   and Wheel slots can hold their actions ([ARCADE_LINK.md](ARCADE_LINK.md#family-onboarding)).
 - On Hyprland, Find's overlay takes exclusive keyboard focus while open;

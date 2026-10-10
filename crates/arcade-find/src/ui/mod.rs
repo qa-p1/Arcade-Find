@@ -15,4 +15,6 @@ pub mod text;
 #[cfg(target_os = "linux")]
 pub mod wayland;
 #[cfg(target_os = "linux")]
+pub mod wl_drag;
+#[cfg(target_os = "linux")]
 pub mod xdnd;

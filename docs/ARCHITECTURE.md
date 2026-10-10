@@ -90,7 +90,11 @@ pixmap: no GPU context. Backends:
   `wp_fractional_scale_v1` + `wp_viewporter`.
 - `desktop.rs`: winit + softbuffer (X11, Windows, macOS, GNOME Wayland): a
   borderless always-on-top window, centered and re-centered as it grows,
-  hidden on focus loss.
+  hidden when focus stays away for 150 ms. Dragging out: `xdnd.rs` (X11),
+  `drag_win.rs`, `drag_mac.rs`, and on Wayland `wl_drag.rs`, a second
+  client on winit's `wl_display` (its own queue and thread, its own
+  `wl_pointer` for the press serial) that drags a `wl_data_source` from
+  winit's surface.
 
 `--snapshot DIR` renders every state to PNG without a window.
 

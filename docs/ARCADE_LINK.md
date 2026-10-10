@@ -106,7 +106,8 @@ page), and diagnostics (registry, runtime, endpoint, last error).
   the **real Arcade Shelf**: a mixed selection lands in Shelf's store as
   references, a stopped Shelf is launched and takes the add, and Shelf's
   `find.show` request opens Find on that file, and two results dragged onto
-  Shelf's window land as references on Wayland and X11 (53/53).
+  Shelf's window land as references on Wayland (layer shell and the winit
+  window GNOME gets) and X11 (71/71).
 - Arcade Link's ecosystem runner (`tools/e2e.py --only find`) runs the real
   Find and Shelf: 3/3.
 - Not yet run against the real Look, Box, Wheel, Clipboard or Lens builds.

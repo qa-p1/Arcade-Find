@@ -103,7 +103,7 @@ register one itself (see [docs/HYPRLAND.md](docs/HYPRLAND.md) for Hyprland).
 |---|---|
 | Linux, Wayland with layer shell (Hyprland, Sway, KDE, …) | Overlay, shortcut (Hyprland runtime binding; elsewhere bind `arcade-find --toggle`), tray. Tested in headless Sway. |
 | Linux, X11 | Overlay, native shortcut, tray. Tested in Xvfb. |
-| Linux, GNOME Wayland (no layer shell) | Normal window; bind `arcade-find --toggle` in Settings → Keyboard. Not tested. |
+| Linux, GNOME Wayland (no layer shell) | Normal window; bind `arcade-find --toggle` in Settings → Keyboard. The same window path (dragging out included) is tested on headless Sway; not tested on GNOME itself. |
 | Windows 10/11 | Builds (CI); not tested interactively. |
 | macOS 11+ | Builds (CI); not tested interactively. |
 
