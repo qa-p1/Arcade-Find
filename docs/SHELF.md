@@ -54,11 +54,12 @@ All on Linux, in isolated profiles (no real desktop, files or keyring):
 | Arcade Link `tools/e2e.py --only find` (onboarding branch) | 3/3: `find.search` resident and one-shot; `find.show` as Shelf sends it (file and folder); Find's results added to the real Shelf by reference |
 | Arcade Link `tools/e2e.py --only shelf` | 3/3 (Shelf's resident adds, background relaunch, picker cancellation) |
 | Shelf `tst_PeerHub::findManifestOffersShowAndSearch` | Shelf's offer rules against Find's real manifest (`arcade-find --arcade-manifest`) |
+| Shelf `tst_Ui::actionsMenuDrivesFind` | Shelf's real window, clicked: Actions → "Search in Find" sends `find.show` with the selected file; "Find matching files" on a text item sends `find.search` and the returned file lands on the shelf by reference |
+| File kinds | Find's extension table equals Link's Rust and Qt tables (142 entries), so Shelf never rejects a Find result as `type_mismatch` |
 | Find `tests/link_shelf.rs` | Offer rules, payloads, standard errors and background launch against an in-process peer with Shelf's contract |
 
-Not verified: real desktops (Hyprland, KDE, GNOME, Windows, macOS), Shelf's
-GUI menu driving `find.show` (the request it sends is tested), and drag and
-drop between the two.
+Not verified: real desktops (Hyprland, KDE, GNOME, Windows, macOS), and drag
+and drop between the two.
 
 ## Limits and next steps
 
