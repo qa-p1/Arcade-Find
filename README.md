@@ -15,7 +15,7 @@ and file contents are read only when you search inside files with `/`.
 |---|---|---|
 | Linux (x86_64) | `Arcade-Find-x86_64.AppImage` | `~/Applications/Arcade/Arcade-Find.AppImage` (what Arcade Tools uses) |
 | Windows (x64) | `Arcade-Find-<version>-x64-setup.exe` (per-user, no admin) | `%LOCALAPPDATA%\Programs\Arcade Find` |
-| macOS 11+ (universal) | `Arcade-Find-<version>-universal.dmg` | `/Applications/Arcade Find.app` |
+| macOS 11+ (universal) | `Arcade-Find-<version>-universal.dmg` | `/Applications/Arcade Find.app` (Arcade Tools: `~/Applications`) |
 
 Packages are built by CI as artifacts; there is no published release yet.
 The macOS app isn't signed or notarized. Content search needs
@@ -107,9 +107,11 @@ See [docs/STATUS.md](docs/STATUS.md) for what was verified and how.
 ## Arcade apps
 
 Find works on its own. With other Arcade apps installed it adds their
-actions for your results (Tab), e.g. Box's tools, Wheel's "Add to Wheel",
-Clipboard's "Send to my devices ↗", and exposes `find.search` and
-`find.show` to them. See [docs/ARCADE_LINK.md](docs/ARCADE_LINK.md).
+actions for your results (Tab), e.g. Shelf's "Add to Shelf", Box's tools,
+Wheel's "Add to Wheel", Clipboard's "Send to my devices ↗", and exposes
+`find.search` and `find.show` to them: in Arcade Shelf, "Search in Find"
+opens Find on an item. See [docs/ARCADE_LINK.md](docs/ARCADE_LINK.md) and
+[docs/SHELF.md](docs/SHELF.md).
 
 ## Build
 

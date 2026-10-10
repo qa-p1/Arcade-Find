@@ -66,6 +66,7 @@ interactive, no file outputs, e.g. `look.inspect`) aren't listed.
 |---|---|---|
 | Look | **Enter**, Space, "Quick Look" | `look.preview` with the selection; falls back to the default app when Look can't take it |
 | Box | Tab: featured tools for the selection's type, pipelines, "More in Arcade Box…" | `box:<tool>` (`#preset`), `box.pipeline.run` with `options.pipeline`, `box.open`; `box.pipelines` is read only while Box is running |
+| Shelf | Tab: "Add to Shelf" for any selection, with a payload preview; Find stays open | `shelf.add` (see [SHELF.md](SHELF.md)) |
 | Wheel | Tab: "Add to Wheel" (single file) | `wheel.add_action` |
 | Clipboard | Tab: "Send to my devices ↗" with a payload preview | `clipboard.add` |
 | Lens | Tab, for one image: its analyze / pin actions | `lens.analyze`, `lens.pin` |
@@ -86,8 +87,8 @@ are left out and reported (JSON can't carry them exactly).
 
 ## Connected apps (Settings)
 
-Master switch, one row per Arcade app (the five family apps plus any other
-installed `arcade.*` app) with its state and a "Use with Arcade Find" toggle,
+Master switch, one row per Arcade app (the family apps, Shelf included, plus
+any other installed `arcade.*` app) with its state and a "Use with Arcade Find" toggle,
 "Get" (Arcade Tools' `tools.install` when installed, otherwise the releases
 page), and diagnostics (registry, runtime, endpoint, last error).
 
@@ -95,27 +96,34 @@ page), and diagnostics (registry, runtime, endpoint, last error).
 
 - `cargo test -p arcade-find`: offer rules, encoding, `find.search`/`find.show`
   argument handling.
-- `crates/arcade-find/tests/link_shelf.rs`: against an in-process mock peer
-  (real `arcade_link::Server`): discovery, toggles, `linkEnabled`, missing
-  executables, `maxBytes`, by-reference payloads, standard errors, launching a
-  stopped peer with `launch.background`.
+- `crates/arcade-find/tests/link_shelf.rs`: against an in-process peer with
+  Shelf's contract (real `arcade_link::Server`): discovery, toggles,
+  `linkEnabled`, missing executables, `maxBytes`, by-reference payloads,
+  standard errors, launching a stopped peer with `launch.background`.
 - `scripts/e2e-linux.sh` with `ARCADE_LINK_CLI` (the v0.1.0 `arcade-link`
   CLI): the real binary in headless Sway and Xvfb sends `look.preview` on
-  Enter and a mixed selection to a mock `shelf.add` peer; one-shot
-  `find.search`.
-- Not yet run against the real Look, Box, Wheel, Clipboard or Lens builds,
-  or in Arcade Link's ecosystem runner (`tools/e2e.py`), which doesn't know
-  `arcade.find` yet.
+  Enter (mock Look); one-shot `find.search`. With `ARCADE_SHELF_BIN` it runs
+  the **real Arcade Shelf**: a mixed selection lands in Shelf's store as
+  references, a stopped Shelf is launched and takes the add, and Shelf's
+  `find.show` request opens Find on that file (49/49).
+- Arcade Link's ecosystem runner (`tools/e2e.py --only find`, on the
+  onboarding branch below) runs the real Find and Shelf: 3/3.
+- Not yet run against the real Look, Box, Wheel, Clipboard or Lens builds.
 
-## Family onboarding (pending)
+## Family onboarding (open for review)
 
-Link's shared lists don't include `arcade.find` yet: `ids`, display name,
-pitch and releases URL, a glyph in `assets/glyphs/`, an accent in
-`assets/tokens.json` (Find uses `#22C55E`), fixtures, the action and shortcut
-catalog, e2e and benchmark app lists; Arcade Tools' app list and install
-mappings; and peers that list apps explicitly. Until then Find works with
-peers through its manifest alone, but peers' Connected apps pages won't list
-it. None of these changes exist yet (deferred by the owner: "we will wire
-this app into other apps later"). When they're made, they go on reviewable
-branches; tagging a Link release, bumping consumers and releasing need the
-owner's approval.
+Reviewable branches, pushed 2026-10-10, nothing merged, tagged or released:
+
+| Repository | Branch / review | Find's part |
+|---|---|---|
+| Arcade Link | `feature/shelf-find-onboarding`, [#1](https://github.com/qa-p1/Arcade-Link/pull/1) | `ids::FIND`, name, pitch, releases URL (Rust and Qt), glyph `arcade.find.svg`, accent `#22C55E`, `fixtures/find.json`, `find.search`/`find.show` in the SPEC catalog, Find in `tools/e2e.py` and the benchmarks |
+| Arcade Tools | `feature/shelf-onboarding`, [#1](https://github.com/qa-p1/Arcade-tools/pull/1) | Install (AppImage, Inno, universal DMG), data folders, login entries, `tools.install` |
+| Arcade Wheel | `feature/shelf-action-onboarding`, [#5](https://github.com/qa-p1/Arcade-wheel/pull/5) | Connected apps row, glyph, accent; slots can hold Find's actions |
+
+Until a new Link tag ships these (and consumers bump to it), Find works with
+peers through manifests alone; Find itself carries local metadata for apps
+newer than its Link pin (`link::apps`, currently Shelf). Box, Look, Lens and
+Clipboard list apps from Link's `ids::APPS`, so their Connected apps pages
+show Find and Shelf only after that bump; their action menus already offer
+Find's actions generically. Tagging Link, merging the branches and releasing
+are the owner's decisions.

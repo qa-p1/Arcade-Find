@@ -26,7 +26,12 @@ First version.
   Windows and macOS windows.
 - Settings: General, Locations, Shortcut (clash warnings, Hyprland runtime
   binding), Index (status, watch health), Connected apps, About.
-- Arcade Link: `find.search` (also one-shot) and `find.show`; peers'
-  actions offered generically.
+- Arcade Link: `find.search` "Find matching files" (also one-shot) and
+  `find.show` "Search in Find"; peers' actions offered generically.
+- Works with Arcade Shelf both ways: "Add to Shelf" for a selection (a
+  stopped Shelf starts in the background), and Shelf's "Search in Find".
+  Connected apps lists Shelf with a Get button before it's installed.
+- Start at login: after the first run the login entry is the truth, so
+  Arcade Tools and Find's Settings can both switch it.
 - Tray menu, start at login (installed copies only), single instance,
   standard command line.
