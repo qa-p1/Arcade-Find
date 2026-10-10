@@ -20,7 +20,8 @@ path = "src/main.rs"
 find-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v0.2.0", features = ["watch"] }
+semver = "1"
+arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", branch = "arcade/tools-hub", features = ["watch", "install", "trayhost"] }
 interprocess = "2.4"
 getrandom = "0.4"
 # Overlay rendering (software; no GPU context is created for the overlay).
@@ -29,7 +30,7 @@ cosmic-text = { version = "0.15", default-features = false, features = ["std", "
 winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
 softbuffer = { version = "0.4", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "x11-dlopen"] }
 # Settings window (a separate process, started on demand).
-eframe = { version = "0.36", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
+eframe = { version = "0.33", default-features = false, features = ["glow", "x11", "wayland", "default_fonts"] }
 global-hotkey = "0.8"
 arboard = { version = "3.6", default-features = false, features = ["wayland-data-control"] }
 trash = "5"

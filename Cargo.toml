@@ -3,11 +3,11 @@ resolver = "2"
 members = ["crates/find-core", "crates/arcade-find"]
 
 [workspace.package]
-version = "0.2.1"
+version = "0.3.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/qa-p1/Arcade-Find"
-rust-version = "1.89"
+rust-version = "1.88"
 
 [workspace.dependencies]
 find-core = { path = "crates/find-core" }

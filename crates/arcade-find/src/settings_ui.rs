@@ -238,9 +238,9 @@ fn path_valid(p: &Path) -> bool {
 }
 
 impl eframe::App for SettingsApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.drain();
-        let ctx = ui.ctx().clone();
+        let ctx = ctx.clone();
         // While indexing, keep the Index page current (only while it's open).
         if self.page == Page::Index && self.status_at.is_some_and(|t| t.elapsed() > Duration::from_secs(2)) {
             self.status_at = Some(Instant::now());
@@ -249,7 +249,7 @@ impl eframe::App for SettingsApp {
         if self.page == Page::Index {
             ctx.request_repaint_after(Duration::from_secs(2));
         }
-        egui::Panel::left("nav").exact_size(170.0).show(ui, |ui| {
+        egui::SidePanel::left("nav").exact_width(170.0).show(&ctx, |ui| {
             ui.add_space(10.0);
             ui.label(egui::RichText::new("Arcade Find").size(16.0).strong());
             ui.add_space(10.0);
@@ -265,7 +265,7 @@ impl eframe::App for SettingsApp {
                 }
             }
         });
-        egui::CentralPanel::default_margins().show(ui, |ui| {
+        egui::CentralPanel::default().show(&ctx, |ui| {
             egui::ScrollArea::vertical().show(ui, |ui| match self.page {
                 Page::General => self.general(ui, &ctx),
                 Page::Locations => self.locations_page(ui, &ctx),
