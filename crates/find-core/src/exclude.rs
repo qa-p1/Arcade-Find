@@ -139,12 +139,13 @@ mod tests {
 
     #[test]
     fn paths_respect_opt_in_roots() {
-        let s = Settings { exclude_paths: vec!["/mnt".into()], skip_network_mounts: false, ..Settings::default() };
+        use crate::paths::test_abs as abs;
+        let s = Settings { exclude_paths: vec![abs("/mnt")], skip_network_mounts: false, ..Settings::default() };
         let e = Excludes::from_settings(&s);
-        let roots = vec![PathBuf::from("/home/u"), PathBuf::from("/mnt/Data")];
-        assert!(e.path_excluded(Path::new("/mnt/Other"), &roots));
-        assert!(!e.path_excluded(Path::new("/mnt/Data"), &roots));
-        assert!(!e.path_excluded(Path::new("/mnt/Data/x"), &roots));
+        let roots = vec![PathBuf::from(abs("/home/u")), PathBuf::from(abs("/mnt/Data"))];
+        assert!(e.path_excluded(Path::new(&abs("/mnt/Other")), &roots));
+        assert!(!e.path_excluded(Path::new(&abs("/mnt/Data")), &roots));
+        assert!(!e.path_excluded(Path::new(&abs("/mnt/Data/x")), &roots));
         #[cfg(target_os = "linux")]
         assert!(e.path_excluded(Path::new("/proc/1"), &roots));
     }

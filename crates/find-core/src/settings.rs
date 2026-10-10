@@ -318,7 +318,8 @@ mod tests {
 
     #[test]
     fn nested_roots_collapse() {
-        let s = Settings { roots: vec!["/a/b".into(), "/a".into(), "/c/./d/../e".into(), "/a".into()], ..Settings::default() };
-        assert_eq!(s.root_paths(), vec![PathBuf::from("/a"), PathBuf::from("/c/e")]);
+        use crate::paths::test_abs as abs;
+        let s = Settings { roots: vec![abs("/a/b"), abs("/a"), abs("/c/./d/../e"), abs("/a")], ..Settings::default() };
+        assert_eq!(s.root_paths(), vec![PathBuf::from(abs("/a")), PathBuf::from(abs("/c/e"))]);
     }
 }

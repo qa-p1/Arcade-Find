@@ -179,6 +179,17 @@ pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     }
 }
 
+/// An absolute path for tests: `/a/b` on Unix, `C:\a\b` on Windows (where a
+/// path without a drive isn't absolute).
+#[cfg(test)]
+pub(crate) fn test_abs(p: &str) -> String {
+    if cfg!(windows) {
+        format!("C:{}", p.replace('/', "\\"))
+    } else {
+        p.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

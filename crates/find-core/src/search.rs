@@ -587,7 +587,8 @@ mod tests {
 
     fn build() -> Index {
         let mut ix = Index::new();
-        let root = Path::new("/home/u");
+        let root_s = crate::paths::test_abs("/home/u");
+        let root = Path::new(&root_s);
         let rk = key_root(root);
         let r = ix.add_root(root, Meta::default());
         let dir = |ix: &mut Index, p: u32, pk: u64, n: &str, hidden: bool| {
@@ -625,7 +626,8 @@ mod tests {
         assert_eq!(names(&ix, "report ext:pdf", false), ["annual-report.pdf"]);
         assert_eq!(names(&ix, "report size:>100mb", false), ["annual-report.pdf"]);
         assert_eq!(names(&ix, "dir: proj", false), ["Projects"]);
-        assert_eq!(names(&ix, "report in:/home/u/Projects", false), ["report_gen.rs"]);
+        let projects = crate::paths::test_abs("/home/u/Projects");
+        assert_eq!(names(&ix, &format!("report in:{projects}"), false), ["report_gen.rs"]);
         assert_eq!(names(&ix, "report modified:>2h", false), ["report_gen.rs"]);
         assert_eq!(names(&ix, "projects/src/ma", false), ["main.rs"]);
         assert_eq!(names(&ix, "src/", false), ["main.rs", "report_gen.rs"]);

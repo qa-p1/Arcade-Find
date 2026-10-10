@@ -448,11 +448,12 @@ mod tests {
 
     #[test]
     fn quoted_and_paths_and_globs() {
-        let q = p(r#""my notes" proj/src *.rs in:"/tmp/a b""#);
+        let tmp = crate::paths::test_abs("/tmp/a b");
+        let q = p(&format!(r#""my notes" proj/src *.rs in:"{tmp}""#));
         assert_eq!(q.terms[0], Term { text: "my notes".into(), kind: TermKind::Name, exact: true });
         assert_eq!(q.terms[1].kind, TermKind::Path);
         assert_eq!(q.terms[2].kind, TermKind::Glob);
-        assert_eq!(q.within, vec![PathBuf::from("/tmp/a b")]);
+        assert_eq!(q.within, vec![PathBuf::from(&tmp)]);
     }
 
     #[test]
