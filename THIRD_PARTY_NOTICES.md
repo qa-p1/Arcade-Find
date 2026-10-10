@@ -2,7 +2,7 @@
 
 Arcade Find is licensed MIT OR Apache-2.0. It is built from the Rust crates below (all platforms; each build includes only its platform's subset). License texts follow the table.
 
-Also included: Arcade Link v0.1.0 glyphs and integration tokens (`assets/`, MIT OR Apache-2.0) and Hyprland binding code adapted from Arcade Lens (MIT OR Apache-2.0); see `VENDORED.md`.
+Also included: Arcade Link v0.2.0 glyphs and integration tokens (`assets/`, MIT OR Apache-2.0) and Hyprland binding code adapted from Arcade Lens (MIT OR Apache-2.0); see `VENDORED.md`.
 
 | Crate | Version | License | Source |
 |---|---|---|---|

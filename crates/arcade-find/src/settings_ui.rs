@@ -692,7 +692,7 @@ impl SettingsApp {
             });
         }
         ui.add_space(8.0);
-        note(ui, "License: MIT OR Apache-2.0. Third-party licenses are listed in THIRD_PARTY_NOTICES.md, shipped with the app. Glyphs and tokens from Arcade Link v0.1.0; Hyprland binding code adapted from Arcade Lens.");
+        note(ui, "License: MIT OR Apache-2.0. Third-party licenses are listed in THIRD_PARTY_NOTICES.md, shipped with the app. Glyphs and tokens from Arcade Link v0.2.0; Hyprland binding code adapted from Arcade Lens.");
         if ui.link("github.com/qa-p1/Arcade-Find").clicked() {
             let _ = open::that_detached("https://github.com/qa-p1/Arcade-Find");
         }

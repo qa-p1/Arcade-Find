@@ -1,7 +1,7 @@
 # Arcade Find and Arcade Link
 
 Canonical ID `arcade.find`, protocol 1, manifest schema 1, using
-`arcade-link` v0.1.0 (`Cargo.lock` pins commit `337b85f`). Code:
+`arcade-link` v0.2.0 (`Cargo.lock` pins commit `bedee71`). Code:
 `crates/arcade-find/src/link.rs` (actions, offers, encoding) and
 `crates/arcade-find/src/service.rs` (presence, registry, calls).
 
@@ -100,7 +100,7 @@ page), and diagnostics (registry, runtime, endpoint, last error).
   Shelf's contract (real `arcade_link::Server`): discovery, toggles,
   `linkEnabled`, missing executables, `maxBytes`, by-reference payloads,
   standard errors, launching a stopped peer with `launch.background`.
-- `scripts/e2e-linux.sh` with `ARCADE_LINK_CLI` (the v0.1.0 `arcade-link`
+- `scripts/e2e-linux.sh` with `ARCADE_LINK_CLI` (the v0.2.0 `arcade-link`
   CLI): the real binary in headless Sway and Xvfb sends `look.preview` on
   Enter (mock Look); one-shot `find.search`. With `ARCADE_SHELF_BIN` it runs
   the **real Arcade Shelf**: a mixed selection lands in Shelf's store as

@@ -54,7 +54,7 @@ def main():
     out.write("# Third-party notices\n\n")
     out.write("Arcade Find is licensed MIT OR Apache-2.0. It is built from the Rust crates below ")
     out.write("(all platforms; each build includes only its platform's subset). License texts follow the table.\n\n")
-    out.write("Also included: Arcade Link v0.1.0 glyphs and integration tokens (`assets/`, MIT OR Apache-2.0) ")
+    out.write("Also included: Arcade Link v0.2.0 glyphs and integration tokens (`assets/`, MIT OR Apache-2.0) ")
     out.write("and Hyprland binding code adapted from Arcade Lens (MIT OR Apache-2.0); see `VENDORED.md`.\n\n")
     out.write("| Crate | Version | License | Source |\n|---|---|---|---|\n")
     for name, ver, lic, repo, _ in rows:

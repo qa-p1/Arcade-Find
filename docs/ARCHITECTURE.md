@@ -116,5 +116,5 @@ the UI thread are `UiMsg`s through a channel the backend owns.
 Rust core; `resvg`/tiny-skia and cosmic-text for drawing; smithay-client-toolkit
 (Wayland), winit + softbuffer (others); eframe/egui for Settings only;
 `global-hotkey`, `ksni`/`tray-icon`, `arboard`, `trash`, `open`, `interprocess`;
-`arcade-link` v0.1.0 for Link. No browser engine, no runtime downloads.
+`arcade-link` v0.2.0 for Link. No browser engine, no runtime downloads.
 ripgrep is optional and detected.

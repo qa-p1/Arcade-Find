@@ -1,5 +1,5 @@
 //! What kind of thing a file is, for icons and Link content types. The
-//! extension table mirrors Arcade Link's `file_kind_for_extension` (v0.1.0).
+//! extension table mirrors Arcade Link's `file_kind_for_extension` (v0.2.0).
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Kind {

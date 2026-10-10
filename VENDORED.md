@@ -5,9 +5,9 @@ drift check is `scripts/check-vendored.sh` (compares against the pinned tag).
 
 | Files here | Source | Pin | License |
 |---|---|---|---|
-| `assets/glyphs/*.svg` | [Arcade Link](https://github.com/qa-p1/Arcade-Link) `assets/glyphs/` | tag `v0.1.0` (commit `337b85f`) | MIT OR Apache-2.0 |
-| `assets/link-tokens.json` | Arcade Link `assets/tokens.json` | tag `v0.1.0` (commit `337b85f`) | MIT OR Apache-2.0 |
-| `tools/arcade-release.py` | Arcade Link `tools/arcade-release.py` | tag `v0.1.0` (commit `337b85f`) | MIT OR Apache-2.0 |
+| `assets/glyphs/*.svg` | [Arcade Link](https://github.com/qa-p1/Arcade-Link) `assets/glyphs/` | tag `v0.2.0` (commit `bedee71`) | MIT OR Apache-2.0 |
+| `assets/link-tokens.json` | Arcade Link `assets/tokens.json` | tag `v0.2.0` (commit `bedee71`) | MIT OR Apache-2.0 |
+| `tools/arcade-release.py` | Arcade Link `tools/arcade-release.py` | tag `v0.2.0` (commit `bedee71`) | MIT OR Apache-2.0 |
 
 Adapted (not verbatim):
 

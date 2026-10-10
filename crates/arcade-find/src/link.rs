@@ -21,39 +21,25 @@ use serde_json::{json, Value};
 use find_core::kind::Kind;
 use find_core::{Hit, Query, Settings};
 
-/// Arcade apps newer than the pinned Link v0.1.0, whose shared lists don't
-/// know them yet (drop an entry once a Link tag ships it).
+/// The other Arcade apps, from Arcade Link's shared metadata (v0.2.0 lists
+/// Shelf and Find).
 pub mod apps {
     use arcade_link::manifest::{self, ids};
 
-    pub const SHELF: &str = "arcade.shelf";
+    pub const SHELF: &str = ids::SHELF;
 
     /// The apps Connected apps always lists (with "Get" when missing).
     pub fn known() -> Vec<&'static str> {
-        let mut v = ids::APPS.to_vec();
-        v.push(SHELF);
-        v
+        ids::APPS.iter().copied().filter(|&id| id != ids::FIND).collect()
     }
     pub fn name(id: &str) -> &str {
-        if id == SHELF {
-            "Arcade Shelf"
-        } else {
-            manifest::app_name(id)
-        }
+        manifest::app_name(id)
     }
     pub fn pitch(id: &str) -> &'static str {
-        if id == SHELF {
-            "Collect, organize and transfer desktop content."
-        } else {
-            manifest::app_pitch(id)
-        }
+        manifest::app_pitch(id)
     }
     pub fn releases_url(id: &str) -> &'static str {
-        if id == SHELF {
-            "https://github.com/qa-p1/Arcade-Shelf/releases"
-        } else {
-            manifest::releases_url(id)
-        }
+        manifest::releases_url(id)
     }
 }
 

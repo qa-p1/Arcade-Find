@@ -98,7 +98,7 @@ run_session() {
 }
 
 # Real Arcade Link calls from the overlay, against `arcade-link mock` peers
-# (set ARCADE_LINK_CLI to the CLI from Arcade Link v0.1.0): a mock Look,
+# (set ARCADE_LINK_CLI to the CLI from Arcade Link v0.2.0): a mock Look,
 # and either the real Arcade Shelf (ARCADE_SHELF_BIN) or a mock publishing
 # its `shelf.add` contract.
 link_checks() {

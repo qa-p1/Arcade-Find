@@ -16,14 +16,14 @@ and builds the AppImage, Inno installer and universal DMG.
 | Lints | `cargo clippy --workspace --all-targets -- -D warnings` for Linux, Windows and macOS targets; `cargo fmt --check` | clean |
 | End to end, Wayland layer shell | `scripts/e2e-linux.sh` in headless Sway 1.9 | pass: indexing, search, filters, hidden files, live add/remove, single instance, one-shot `find.search`, overlay shows centered, keys (Down, Tab, Esc), Enter → `look.preview` and Find hides, mixed selection → `shelf.add` and Find stays open, `--quit` |
 | End to end, X11 | same script in Xvfb (no window manager) | same checks pass |
-| Link peers | `arcade-link mock` (Arcade Link v0.1.0 CLI) as Look; the **real Arcade Shelf** (`ARCADE_SHELF_BIN`, `feature/shelf-v0.1`) | 49/49: a mixed selection lands in Shelf's store as references; a stopped Shelf is launched from its manifest and takes the add; Shelf's `find.show` opens Find with that file selected ([SHELF.md](SHELF.md)) |
+| Link peers | `arcade-link mock` (Arcade Link v0.2.0 CLI) as Look; the **real Arcade Shelf** (`ARCADE_SHELF_BIN`, `feature/shelf-v0.1`) | 49/49: a mixed selection lands in Shelf's store as references; a stopped Shelf is launched from its manifest and takes the add; Shelf's `find.show` opens Find with that file selected ([SHELF.md](SHELF.md)) |
 | Ecosystem runner | Arcade Link `tools/e2e.py --only find` (onboarding branch) | 3/3: `find.search` resident and one-shot, `find.show` as Shelf sends it, results into the real Shelf |
 | Shelf's own UI | Arcade Shelf `tst_Ui::actionsMenuDrivesFind` | Clicking Shelf's Actions menu sends `find.show` and `find.search` to a peer serving Find's real manifest; the match lands on the shelf |
 | Settings window | launched under Xvfb, General and Connected apps pages inspected | renders; ripgrep detected |
 | Overlay design | `arcade-find --snapshot DIR` (18 PNGs, dark and light, 1× and 1.5×) | inspected |
 | AppImage | `packaging/linux/build-appimage.sh` (appimagetool 1.9.0, SHA-256 pinned) | built (8.2 MB); `--version` and `--arcade-manifest` run from it; the manifest advertises the AppImage path |
 | Release manifest | vendored `tools/arcade-release.py` | `arcade-release.json` + `SHA256SUMS.txt` generated for the AppImage |
-| Vendored files | `scripts/check-vendored.sh` | match Arcade Link v0.1.0 |
+| Vendored files | `scripts/check-vendored.sh` | match Arcade Link v0.2.0 |
 
 ## Performance (1M files)
 

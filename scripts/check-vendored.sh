@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fails if a vendored file differs from Arcade Link at the pinned tag.
 set -euo pipefail
-TAG=v0.1.0
+TAG=v0.2.0
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 git -c advice.detachedHead=false clone -q --depth 1 --branch "$TAG" https://github.com/qa-p1/Arcade-Link "$T/link"

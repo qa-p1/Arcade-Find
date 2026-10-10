@@ -51,9 +51,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool imagemagick dbus
       - name: Build
         run: cargo build --release --locked -p arcade-find
-      - name: Arcade Link CLI (mock peers), v0.1.0
+      - name: Arcade Link CLI (mock peers), v0.2.0
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.1.0 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.2.0 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           cargo build --release --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
       - name: Vendored files match Arcade Link
         run: scripts/check-vendored.sh

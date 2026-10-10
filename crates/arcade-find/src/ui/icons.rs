@@ -1,5 +1,5 @@
 //! Vector icons: file kinds, actions, and the Arcade apps' glyphs (vendored
-//! from Arcade Link `assets/glyphs`, v0.1.0). Rendered once per size and
+//! from Arcade Link `assets/glyphs`, v0.2.0). Rendered once per size and
 //! color with resvg and cached.
 
 use std::collections::HashMap;
@@ -10,7 +10,7 @@ use resvg::tiny_skia::{Pixmap, Transform};
 use super::model::{AppGlyph, Glyph};
 use crate::theme::Rgba;
 
-pub const FIND_GLYPH: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.75"/><path d="M10.5 10.5 14.25 14.25"/></svg>"##;
+pub const FIND_GLYPH: &str = include_str!("../../../../assets/glyphs/arcade.find.svg");
 
 const BOX: &str = include_str!("../../../../assets/glyphs/arcade.box.svg");
 const LOOK: &str = include_str!("../../../../assets/glyphs/arcade.look.svg");
@@ -18,9 +18,7 @@ const WHEEL: &str = include_str!("../../../../assets/glyphs/arcade.wheel.svg");
 const CLIPBOARD: &str = include_str!("../../../../assets/glyphs/arcade.clipboard.svg");
 const LENS: &str = include_str!("../../../../assets/glyphs/arcade.lens.svg");
 const TOOLS: &str = include_str!("../../../../assets/glyphs/arcade.tools.svg");
-/// Arcade Shelf's glyph, from Arcade Link's onboarding branch
-/// (`assets/glyphs/arcade.shelf.svg`) until a Link tag ships it.
-const SHELF: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.75 10.75h12.5v3.5H1.75z"/><rect x="3.25" y="4.75" width="3.5" height="4" rx=".75"/><rect x="8.75" y="2" width="4" height="6.75" rx=".75"/></svg>"##;
+const SHELF: &str = include_str!("../../../../assets/glyphs/arcade.shelf.svg");
 /// Apps the vendored Link assets have no glyph for yet: a neutral app tile.
 const OTHER_APP: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="2.25" width="11.5" height="11.5" rx="3"/><path d="M5.5 8h5M8 5.5v5"/></svg>"##;
 
