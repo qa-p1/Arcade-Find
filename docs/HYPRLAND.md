@@ -26,12 +26,8 @@ example with uwsm or `dex`). Add:
 exec-once = arcade-find --background
 ```
 
-## Optional: blur behind the overlay
+## Appearance
 
 The overlay is a layer surface with the namespace `arcade-find` and a
-translucent background. Hyprland can blur it. For the classic config syntax (Hyprland 0.4x–0.54; Lua-configured Hyprland uses its own layer-rule syntax):
-
-```ini
-layerrule = blur, arcade-find
-layerrule = ignorezero, arcade-find
-```
+fully opaque background in both light and dark themes. Its corners remain
+rounded.

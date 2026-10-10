@@ -52,10 +52,10 @@ pub struct Palette {
 }
 
 impl Palette {
-    pub fn dark(translucent: bool) -> Palette {
+    pub fn dark() -> Palette {
         Palette {
             dark: true,
-            panel: Rgba::hex(0x14171C).alpha(if translucent { 226 } else { 255 }),
+            panel: Rgba::hex(0x14171C),
             border: Rgba::hex(0x2A2F38),
             separator: Rgba::hex(0x2A2F38).alpha(200),
             text: Rgba::hex(0xE7EAF0),
@@ -71,10 +71,10 @@ impl Palette {
         }
     }
 
-    pub fn light(translucent: bool) -> Palette {
+    pub fn light() -> Palette {
         Palette {
             dark: false,
-            panel: Rgba::hex(0xFFFFFF).alpha(if translucent { 232 } else { 255 }),
+            panel: Rgba::hex(0xFFFFFF),
             border: Rgba::hex(0xDDE1E7),
             separator: Rgba::hex(0xDDE1E7),
             text: Rgba::hex(0x161A20),
@@ -90,16 +90,16 @@ impl Palette {
         }
     }
 
-    pub fn for_theme(theme: Theme, translucent: bool) -> Palette {
+    pub fn for_theme(theme: Theme) -> Palette {
         let dark = match theme {
             Theme::Dark => true,
             Theme::Light => false,
             Theme::System => system_dark(),
         };
         if dark {
-            Palette::dark(translucent)
+            Palette::dark()
         } else {
-            Palette::light(translucent)
+            Palette::light()
         }
     }
 }
@@ -251,7 +251,7 @@ mod tests {
             let (x, y) = (lum(a), lum(b));
             (x.max(y) + 0.05) / (x.min(y) + 0.05)
         }
-        for p in [Palette::dark(false), Palette::light(false)] {
+        for p in [Palette::dark(), Palette::light()] {
             let bg = p.panel.alpha(255);
             assert!(ratio(p.text, bg) >= 7.0);
             assert!(ratio(p.muted, bg) >= 4.5, "muted {:?}", p.dark);

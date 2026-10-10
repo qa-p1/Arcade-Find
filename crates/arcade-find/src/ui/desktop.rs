@@ -196,7 +196,7 @@ impl App {
         let Some(w) = self.window().cloned() else { return };
         let Some(surface) = self.surface.as_mut() else { return };
         let scale = w.scale_factor() as f32;
-        let palette = Palette::for_theme(self.svc.settings().theme, false);
+        let palette = Palette::for_theme(self.svc.settings().theme);
         let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs()) else { return };
         let size = w.inner_size();
         let (Some(bw), Some(bh)) = (NonZeroU32::new(size.width), NonZeroU32::new(size.height)) else { return };
@@ -250,7 +250,7 @@ impl App {
         }
         let n = paths.len();
         let rows = self.overlay.drag_rows(press.row);
-        let palette = Palette::for_theme(self.svc.settings().theme, false);
+        let palette = Palette::for_theme(self.svc.settings().theme);
         #[cfg(target_os = "linux")]
         if let Some(dragger) = self.wl_drag.as_ref() {
             // Wayland buffers have an integer scale.

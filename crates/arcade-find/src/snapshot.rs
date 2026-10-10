@@ -68,7 +68,7 @@ fn results(o: &mut Overlay, rows: Vec<Row>) {
 }
 
 fn save(r: &mut Renderer, o: &Overlay, theme: Theme, scale: f32, dir: &Path, name: &str) -> Result<(), String> {
-    let p = Palette::for_theme(theme, true);
+    let p = Palette::for_theme(theme);
     let pm = r.render(o, &p, scale, find_core::now_secs()).ok_or("render failed")?;
     pm.save_png(dir.join(format!("{name}.png"))).map_err(|e| e.to_string())
 }

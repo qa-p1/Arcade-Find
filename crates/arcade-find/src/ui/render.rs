@@ -537,7 +537,7 @@ mod tests {
             row("a very long file name that will certainly need to be truncated somewhere.txt", vec![]),
         ];
         o.set_results(o.seq, rows, ResultsInfo { matched: 3, ..Default::default() });
-        for pal in [Palette::dark(true), Palette::light(false)] {
+        for pal in [Palette::dark(), Palette::light()] {
             for scale in [1.0, 1.5, 2.0] {
                 let pm = r.render(&o, &pal, scale, 1_791_000_000).unwrap();
                 assert_eq!(pm.width(), (680.0 * scale) as u32);
@@ -547,6 +547,6 @@ mod tests {
         // Bar only at rest.
         let mut rest = Overlay::default();
         rest.show(None, None);
-        assert_eq!(r.render(&rest, &Palette::dark(true), 1.0, 0).unwrap().height(), 58);
+        assert_eq!(r.render(&rest, &Palette::dark(), 1.0, 0).unwrap().height(), 58);
     }
 }

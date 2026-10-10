@@ -331,7 +331,7 @@ impl Wl {
     fn draw(&mut self) {
         let scale = self.scale();
         let settings = self.svc.settings();
-        let palette = Palette::for_theme(settings.theme, true);
+        let palette = Palette::for_theme(settings.theme);
         let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs()) else { return };
         let (w, h) = (pm.width() as i32, pm.height() as i32);
         let Some(s) = self.shown.as_ref() else { return };
@@ -422,7 +422,7 @@ impl Wl {
     /// pointer hotspot).
     fn paint_drag_icon(&mut self, icon: &wl_surface::WlSurface, rows: &[super::model::Row]) {
         let scale = self.frac_scale.map(|f| f.div_ceil(120) as i32).unwrap_or(self.int_scale).max(1);
-        let palette = Palette::for_theme(self.svc.settings().theme, true);
+        let palette = Palette::for_theme(self.svc.settings().theme);
         let Some(image) = self.renderer.drag_image(rows, &palette, scale as f32) else { return };
         // Below and right of the hotspot, clear of the cursor.
         let gap = 14 * scale as u32;
