@@ -20,7 +20,7 @@ const LENS: &str = include_str!("../../../../assets/glyphs/arcade.lens.svg");
 const TOOLS: &str = include_str!("../../../../assets/glyphs/arcade.tools.svg");
 /// Arcade Shelf's glyph, from Arcade Link's onboarding branch
 /// (`assets/glyphs/arcade.shelf.svg`) until a Link tag ships it.
-const SHELF: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16h16v4H4z"/><rect x="5" y="7" width="5" height="6" rx="1"/><rect x="13" y="4" width="6" height="9" rx="1"/></svg>"##;
+const SHELF: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1.75 10.75h12.5v3.5H1.75z"/><rect x="3.25" y="4.75" width="3.5" height="4" rx=".75"/><rect x="8.75" y="2" width="4" height="6.75" rx=".75"/></svg>"##;
 /// Apps the vendored Link assets have no glyph for yet: a neutral app tile.
 const OTHER_APP: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="2.25" width="11.5" height="11.5" rx="3"/><path d="M5.5 8h5M8 5.5v5"/></svg>"##;
 
