@@ -1,10 +1,12 @@
-# Checks, tests, end-to-end runs and package builds. Nothing is published:
-# packages are uploaded as workflow artifacts only.
+# Checks, tests, end-to-end runs and package builds. Packages are workflow
+# artifacts; a version tag (v<Cargo version>) also publishes them, with
+# arcade-release.json and checksums, as a GitHub release Arcade Tools installs.
 name: CI
 
 on:
   push:
     branches: ["**"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -141,3 +143,32 @@ jobs:
           path: |
             dist/arcade-release.json
             dist/SHA256SUMS.txt
+
+  publish:
+    name: publish release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: release-manifest
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: package-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-manifest
+          path: dist
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
+          test "$GITHUB_REF_NAME" = "v$v" || { echo "tag $GITHUB_REF_NAME does not match version $v"; exit 1; }
+          python3 tools/release-notes.py CHANGELOG.md "$v" > notes.md
+          ls -l dist
+          gh release create "$GITHUB_REF_NAME" dist/*.AppImage dist/*.exe dist/*.dmg dist/arcade-release.json dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "Arcade Find $v" --notes-file notes.md
