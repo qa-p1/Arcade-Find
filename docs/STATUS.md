@@ -58,7 +58,8 @@ measured together.
   session; tray on a real StatusNotifier host; start-at-login entries at an
   actual login.
 - Real peers other than Shelf: Arcade Look, Box, Wheel, Clipboard, Lens
-  builds (mock Look only).
+  builds (mock Look only). Lens's **Search in Find** entry is tested in Lens
+  against a fixture manifest, not against a running Find.
 - A real (cold-cache) crawl of a large home directory; inotify limit
   degradation on a real system (unit-tested only).
 - IME input (no text-input protocol support yet); right-to-left text.

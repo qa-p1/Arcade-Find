@@ -105,9 +105,10 @@ page), and diagnostics (registry, runtime, endpoint, last error).
   Enter (mock Look); one-shot `find.search`. With `ARCADE_SHELF_BIN` it runs
   the **real Arcade Shelf**: a mixed selection lands in Shelf's store as
   references, a stopped Shelf is launched and takes the add, and Shelf's
-  `find.show` request opens Find on that file (49/49).
-- Arcade Link's ecosystem runner (`tools/e2e.py --only find`, on the
-  onboarding branch below) runs the real Find and Shelf: 3/3.
+  `find.show` request opens Find on that file, and two results dragged onto
+  Shelf's window land as references on Wayland and X11 (53/53).
+- Arcade Link's ecosystem runner (`tools/e2e.py --only find`) runs the real
+  Find and Shelf: 3/3.
 - Not yet run against the real Look, Box, Wheel, Clipboard or Lens builds.
 
 ## Family onboarding
@@ -119,9 +120,13 @@ Find is a registered family app since Arcade Link `v0.2.0` (2026-10-10):
 | Arcade Link | `ids::FIND`, name, pitch, releases URL (Rust and Qt), glyph `arcade.find.svg`, accent `#22C55E`, `fixtures/find.json`, `find.search`/`find.show` in the SPEC catalog, Find in `tools/e2e.py` and the benchmarks; tag `v0.2.0` | [#1](https://github.com/qa-p1/Arcade-Link/pull/1) |
 | Arcade Tools | Install (AppImage, Inno, universal DMG), data folders, login entries, `tools.install` | [#1](https://github.com/qa-p1/Arcade-tools/pull/1) |
 | Arcade Wheel | Connected apps row, glyph, accent; slots can hold Find's actions | [#5](https://github.com/qa-p1/Arcade-wheel/pull/5) |
-| Box, Look, Lens, Clipboard | Link pin moved to `v0.2.0`: Find in Connected apps, with their own glyph and accent copies | per repository |
+| Arcade Box | Link `v0.2.0`: Find in Connected apps, glyph, accent (0.1.1) | [#1](https://github.com/qa-p1/Arcade-box/pull/1) |
+| Arcade Lens | Link `v0.2.0`: Find in Connected apps; **Search in Find** for text and paths (0.1.1) | [#1](https://github.com/qa-p1/Arcade-lens/pull/1) |
+| Arcade Look | Link `v0.2.0`: Find in Connected apps, glyph, accent (0.1.1) | [#1](https://github.com/qa-p1/Arcade-look/pull/1) |
+| Arcade Clipboard | Link `v0.2.0`: Find in Connected apps, glyph, accent | [#1](https://github.com/qa-p1/Arcade-clipboard/pull/1) |
 
 Find itself uses Link `v0.2.0`, so `link::apps` and the Shelf glyph come from
-Link. On `v0.1.0`, Look ignored manifests from apps outside Link's list, so
-the bump is what makes Find's actions appear there; Box, Lens and Clipboard
-offered them generically already.
+Link. Each consumer picks the peer actions it shows from its own list, so the
+pin alone adds Find to Connected apps, not to their menus. Of the four, only
+Lens offers one of Find's actions (**Search in Find**); Box, Look and
+Clipboard list Find without an entry.
