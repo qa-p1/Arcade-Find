@@ -21,6 +21,8 @@ find-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 semver = "1"
+notify = "8"
+fs2 = "0.4"
 arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", branch = "arcade/tools-hub", features = ["watch", "install", "trayhost"] }
 interprocess = "2.4"
 getrandom = "0.4"
@@ -49,7 +51,7 @@ ksni = { version = "0.3", features = ["blocking"] }
 zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
 
 [target.'cfg(not(target_os = "linux"))'.dependencies]
-tray-icon = "0.26"
+tray-icon = "0.24"
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Registry", "Win32_UI_Shell", "Win32_System_Com", "Win32_UI_Shell_Common", "Win32_System_Ole", "Win32_System_Memory", "Win32_System_DataExchange", "Win32_Graphics_Gdi", "Win32_System_Console"] }
