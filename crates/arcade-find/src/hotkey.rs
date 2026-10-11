@@ -13,9 +13,27 @@ use serde_json::{json, Value};
 
 use crate::service::{Service, UiMsg};
 
+/// Protocol validation is separate from OS registration. Valid notation that
+/// this backend cannot register answers unavailable, never silently succeeds.
+pub fn validate(input: &str) -> Result<String, arcade_link::LinkError> {
+    let key = arcade_link::accelerator::normalize(input).map_err(|e| arcade_link::LinkError::denied(&e.to_string()))?;
+    if key.contains(' ') || ["Ctrl", "Alt", "Shift", "Super"].contains(&key.as_str()) {
+        return Err(arcade_link::LinkError::unavailable("Find requires a single key chord, not a sequence or modifier tap"));
+    }
+    if !key.contains('+') && !(key.starts_with('F') && key[1..].parse::<u8>().is_ok()) {
+        return Err(arcade_link::LinkError::denied("a global shortcut needs a modifier or function key"));
+    }
+    parse(&key).map_err(arcade_link::LinkError::unavailable)?;
+    if let Some(owner) = known_conflict(&key) {
+        return Err(arcade_link::LinkError::denied(&format!("reserved by {owner}")));
+    }
+    Ok(key)
+}
+
 /// Normalizes user spellings (`Win`, `Meta`, `Cmd`, `Option`) and parses.
 pub fn parse(s: &str) -> Result<HotKey, String> {
-    let norm: Vec<String> = s
+    let canonical = arcade_link::accelerator::normalize(s).map_err(|e| e.to_string())?;
+    let norm: Vec<String> = canonical
         .split('+')
         .map(|t| t.trim())
         .filter(|t| !t.is_empty())
@@ -24,6 +42,11 @@ pub fn parse(s: &str) -> Result<HotKey, String> {
             "control" | "ctrl" => "Ctrl".into(),
             "option" | "alt" => "Alt".into(),
             "esc" => "Escape".into(),
+            "up" => "ArrowUp".into(),
+            "down" => "ArrowDown".into(),
+            "left" => "ArrowLeft".into(),
+            "right" => "ArrowRight".into(),
+            "print" => "PrintScreen".into(),
             _ => t.to_string(),
         })
         .collect();
@@ -89,7 +112,6 @@ impl State {
 
 enum Active {
     Native(global_hotkey::GlobalHotKeyManager, HotKey),
-    Hyprland(hyprland::Binding),
 }
 
 thread_local! {
@@ -98,6 +120,7 @@ thread_local! {
 }
 
 static HYPR_WATCH: Mutex<bool> = Mutex::new(false);
+static HYPR_BINDING: Mutex<Option<hyprland::Binding>> = Mutex::new(None);
 
 fn wayland_session() -> bool {
     cfg!(target_os = "linux") && std::env::var_os("WAYLAND_DISPLAY").is_some()
@@ -108,7 +131,6 @@ fn clear() {
         Some(Active::Native(m, hk)) => {
             let _ = m.unregister(hk);
         }
-        Some(Active::Hyprland(b)) => b.remove(),
         None => {}
     });
 }
@@ -119,31 +141,87 @@ pub fn apply(svc: &Arc<Service>) -> State {
     clear();
     let s = svc.settings();
     let accel = s.shortcut.trim().to_string();
+    // Compositor IPC runs on a worker. Native APIs alone require the UI thread.
+    if wayland_session() || hyprland::active() {
+        let svc = svc.clone();
+        std::thread::spawn(move || {
+            let _change = svc.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
+            let s = svc.settings();
+            let state = set_wayland(&svc, &s.shortcut, s.hyprland_runtime_bind);
+            svc.set_shortcut_state(state.to_json());
+        });
+        return State::Manual { reason: "Registering the shortcut".into(), command: toggle_command() };
+    }
     let state = if accel.is_empty() {
         State::Off
     } else if let Err(e) = parse(&accel) {
         State::Failed(e)
-    } else if hyprland::active() && s.hyprland_runtime_bind {
-        match hyprland::bind(&accel, &toggle_command()) {
-            Ok(b) => {
-                ACTIVE.with(|a| *a.borrow_mut() = Some(Active::Hyprland(b)));
-                watch_hyprland_reloads(svc);
-                State::Hyprland(accel.clone())
-            }
-            Err(e) => State::Failed(e),
-        }
-    } else if wayland_session() {
-        State::Manual {
-            reason:
-                "This Wayland desktop doesn't let apps register global shortcuts. Add a custom shortcut in your desktop settings that runs:"
-                    .into(),
-            command: toggle_command(),
-        }
     } else {
         native(svc, &accel)
     };
     svc.set_shortcut_state(state.to_json());
     state
+}
+
+/// Live change on a Link worker, or marshal the native part to the UI thread.
+pub fn set_live(svc: &Arc<Service>, accelerator: &str) -> Result<State, arcade_link::LinkError> {
+    if wayland_session() || hyprland::active() {
+        return Ok(set_wayland(svc, accelerator, svc.settings().hyprland_runtime_bind));
+    }
+    let (tx, rx) = std::sync::mpsc::sync_channel(1);
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(3);
+    svc.send(UiMsg::Shortcut { accelerator: accelerator.into(), reply: tx, deadline });
+    rx.recv_timeout(std::time::Duration::from_secs(3)).map_err(|_| arcade_link::LinkError::unavailable("the shortcut UI is unavailable"))
+}
+
+/// UI-thread half of a live native rebind. Preserve the old binding on error.
+pub fn replace_native(svc: &Arc<Service>, accelerator: &str) -> State {
+    clear();
+    let state = native(svc, accelerator);
+    if matches!(state, State::Failed(_)) {
+        let old = svc.settings().shortcut;
+        let restored = native(svc, &old);
+        svc.set_shortcut_state(restored.to_json());
+    }
+    state
+}
+
+fn set_wayland(svc: &Arc<Service>, accelerator: &str, runtime_bind: bool) -> State {
+    let mut active = HYPR_BINDING.lock().unwrap_or_else(|e| e.into_inner());
+    if hyprland::active() && runtime_bind {
+        // Bind the successor first; a failed different chord keeps the old one.
+        match hyprland::bind(accelerator, &toggle_command()) {
+            Ok(binding) => {
+                if let Some(old) = active.take() {
+                    if old != binding {
+                        old.remove();
+                    }
+                }
+                *active = Some(binding);
+                watch_hyprland_reloads(svc);
+                State::Hyprland(accelerator.into())
+            }
+            Err(e) => State::Failed(e),
+        }
+    } else {
+        if let Some(old) = active.take() {
+            old.remove();
+        }
+        State::Manual { reason: "Bind this command in Settings → Keyboard".into(), command: toggle_command() }
+    }
+}
+
+pub fn result(state: &State) -> Result<arcade_link::app::ShortcutSetResult, arcade_link::LinkError> {
+    use arcade_link::app::{ShortcutSetResult, ShortcutVia};
+    Ok(match state {
+        State::Native(_) => ShortcutSetResult { applied: true, via: ShortcutVia::Native, hint: None },
+        State::Hyprland(_) => ShortcutSetResult { applied: true, via: ShortcutVia::HyprlandRuntime, hint: None },
+        State::Manual { reason, command } => {
+            ShortcutSetResult { applied: false, via: ShortcutVia::Manual, hint: Some(format!("{reason}: {command}")) }
+        }
+        State::Off => return Err(arcade_link::LinkError::unavailable("global shortcuts are disabled")),
+        State::Failed(e) => return Err(arcade_link::LinkError::unavailable(e.clone())),
+    })
 }
 
 fn native(svc: &Arc<Service>, accel: &str) -> State {
@@ -186,10 +264,10 @@ fn watch_hyprland_reloads(svc: &Arc<Service>) {
     let weak = Arc::downgrade(svc);
     hyprland::on_config_reloaded(move || {
         if let Some(s) = weak.upgrade() {
+            let _change = s.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
             let settings = s.settings();
-            if settings.hyprland_runtime_bind && !settings.shortcut.trim().is_empty() {
-                let _ = hyprland::bind(settings.shortcut.trim(), &toggle_command());
-            }
+            let state = set_wayland(&s, &settings.shortcut, settings.hyprland_runtime_bind);
+            s.set_shortcut_state(state.to_json());
         }
     });
 }
@@ -197,6 +275,9 @@ fn watch_hyprland_reloads(svc: &Arc<Service>) {
 /// Removes the shortcut (on quit), including a Hyprland runtime bind.
 pub fn release() {
     clear();
+    if let Some(b) = HYPR_BINDING.lock().unwrap_or_else(|e| e.into_inner()).take() {
+        b.remove();
+    }
 }
 
 /// Hyprland runtime key bindings. Adapted from Arcade Lens

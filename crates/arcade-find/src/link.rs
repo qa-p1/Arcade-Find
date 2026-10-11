@@ -76,11 +76,43 @@ pub fn manifest(settings: &Settings) -> Manifest {
     m.launch.background = vec!["--background".into()];
     m.launch.invoke = Some(vec![arcade_link::oneshot::FLAG.into()]);
     if !settings.shortcut.trim().is_empty() {
-        m.shortcuts.push(Shortcut { id: "show".into(), accelerator: settings.shortcut.trim().to_string() });
+        m.shortcuts.push(Shortcut {
+            id: "show".into(),
+            accelerator: arcade_link::accelerator::normalize(&settings.shortcut).unwrap_or_else(|_| settings.shortcut.trim().into()),
+        });
     }
     m.settings.link_enabled = settings.link.enabled;
     m.actions = actions();
     m
+}
+
+/// The schema-1 extension wrapper is the common shape Rust apps should use
+/// with Presence::start_document/update_document and --arcade-manifest.
+pub fn document(settings: &Settings, paths: &find_core::paths::AppPaths) -> arcade_link::manifest::ManifestDocument {
+    use arcade_link::manifest::{Docs, ManifestAdditions, ManifestDocument};
+    ManifestDocument {
+        manifest: manifest(settings),
+        additions: ManifestAdditions {
+            menu: menu_items(),
+            logs: Some(paths.log_dir().to_string_lossy().into()),
+            docs: Some(Docs { version: crate::VERSION.into() }),
+            install: Some(crate::installer::method()),
+            ..Default::default()
+        },
+    }
+}
+
+pub const RESCAN_MENU_ID: &str = "rescan";
+pub fn menu_items() -> Vec<arcade_link::manifest::MenuItem> {
+    use arcade_link::manifest::{MenuItem, MenuKind};
+    vec![MenuItem {
+        id: RESCAN_MENU_ID.into(),
+        title: "Rescan index".into(),
+        kind: MenuKind::Action,
+        checked: None,
+        enabled: true,
+        effects: vec!["persists".into()],
+    }]
 }
 
 // ---------------------------------------------------------------------------
@@ -396,6 +428,30 @@ pub trait Host: Send + Sync + 'static {
     fn search(&self, query: &Query, limit: usize, hidden: bool) -> Result<SearchOut, LinkError>;
     /// Shows the overlay with a query, selecting `reveal` when it appears.
     fn show(&self, query: Option<String>, reveal: Option<PathBuf>) -> Result<(), LinkError>;
+    fn methods(&self) -> Vec<String> {
+        Vec::new()
+    }
+    fn settings(&self) -> Result<(), LinkError> {
+        Err(LinkError::unavailable("one-shot mode has no settings window"))
+    }
+    fn restart_ready(&self, _mode: &str) -> Result<(), LinkError> {
+        Err(LinkError::unavailable("one-shot mode cannot restart"))
+    }
+    fn restart(&self, _mode: &str) -> Result<(), LinkError> {
+        Err(LinkError::unavailable("one-shot mode cannot restart"))
+    }
+    fn menu_invoke(&self, _id: &str) -> Result<(), LinkError> {
+        Err(LinkError::unavailable("one-shot mode has no tray"))
+    }
+    fn shortcuts_set(&self, _id: &str, _key: &str) -> Result<arcade_link::app::ShortcutSetResult, LinkError> {
+        Err(LinkError::unavailable("one-shot mode cannot bind shortcuts"))
+    }
+    fn settings_export(&self) -> Result<Vec<Content>, LinkError> {
+        Err(LinkError::unavailable("export requires the resident app"))
+    }
+    fn settings_import(&self, _inputs: &[Content]) -> Result<arcade_link::app::ImportResult, LinkError> {
+        Err(LinkError::unavailable("import requires the resident app"))
+    }
     fn status(&self) -> Value {
         Value::Null
     }
@@ -555,6 +611,33 @@ impl FindHandler {
 }
 
 impl Handler for FindHandler {
+    fn methods(&self) -> Vec<String> {
+        self.host.methods()
+    }
+    fn settings(&self) -> Result<(), LinkError> {
+        self.host.settings()
+    }
+    fn restart_ready(&self, mode: &str) -> Result<(), LinkError> {
+        self.host.restart_ready(mode)
+    }
+    fn restart(&self, mode: &str) -> Result<(), LinkError> {
+        self.host.restart(mode)
+    }
+    fn menu(&self) -> Result<Vec<arcade_link::manifest::MenuItem>, LinkError> {
+        Ok(menu_items())
+    }
+    fn menu_invoke(&self, id: &str) -> Result<(), LinkError> {
+        self.host.menu_invoke(id)
+    }
+    fn shortcuts_set(&self, id: &str, key: &str) -> Result<arcade_link::app::ShortcutSetResult, LinkError> {
+        self.host.shortcuts_set(id, key)
+    }
+    fn settings_export(&self) -> Result<Vec<Content>, LinkError> {
+        self.host.settings_export()
+    }
+    fn settings_import(&self, inputs: &[Content]) -> Result<arcade_link::app::ImportResult, LinkError> {
+        self.host.settings_import(inputs)
+    }
     fn describe(&self) -> Vec<Action> {
         actions()
     }

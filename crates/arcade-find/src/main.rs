@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use arcade_find::instance::{self, Command};
 use arcade_find::service::{Service, UiMsg};
-use arcade_find::{autostart, hotkey, link, theme, VERSION};
+use arcade_find::{hotkey, installer, link, theme, VERSION};
 use find_core::paths::AppPaths;
 use find_core::Settings;
 
@@ -32,6 +32,15 @@ Usage: arcade-find [OPTION]
   --restart            Restart the running instance
   --quit               Quit the running instance
   --version            Print the version
+  --install            Install this AppImage / macOS bundle
+    --silent           Same installation defaults, without a dialog
+    --no-launch        Install without starting the installed copy
+    --channel C        Receipt channel (default: stable)
+  --uninstall          Remove this installation via its receipt
+    --silent           Uninstall without a confirmation dialog
+    --remove-data      Also remove Find's settings, index, history and pins
+  --repair             Repair integration (run from a moved copy to repoint it)
+  --integration-status Print integration JSON without changing anything
   --arcade-manifest    Print the Arcade Link manifest
   --arcade-invoke      Serve one Arcade Link request from stdin
 
@@ -47,6 +56,10 @@ struct Args {
     json: bool,
     successor_of: Option<u32>,
     dir: Option<PathBuf>,
+    silent: bool,
+    no_launch: bool,
+    remove_data: bool,
+    channel: Option<String>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -54,6 +67,12 @@ fn parse_args() -> Result<Args, String> {
     let mut it = std::env::args().skip(1).peekable();
     while let Some(arg) = it.next() {
         match arg.as_str() {
+            "--silent" => a.silent = true,
+            "--no-launch" => a.no_launch = true,
+            "--remove-data" => a.remove_data = true,
+            "--channel" => {
+                a.channel = Some(it.next().filter(|c| !c.is_empty() && !c.starts_with('-')).ok_or("--channel needs a channel name")?)
+            }
             "--size" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--size needs a number")?),
             "--limit" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--limit needs a number")?),
             "--hidden" => a.hidden = true,
@@ -79,6 +98,15 @@ fn parse_args() -> Result<Args, String> {
             }
             other => return Err(format!("unexpected argument \"{other}\" (see --help)")),
         }
+    }
+    if (a.no_launch || a.channel.is_some()) && a.action.as_deref() != Some("--install") {
+        return Err("--no-launch and --channel require --install".into());
+    }
+    if a.remove_data && a.action.as_deref() != Some("--uninstall") {
+        return Err("--remove-data requires --uninstall".into());
+    }
+    if a.silent && !matches!(a.action.as_deref(), Some("--install" | "--uninstall")) {
+        return Err("--silent requires --install or --uninstall".into());
     }
     Ok(a)
 }
@@ -169,6 +197,7 @@ fn main() -> ExitCode {
     };
     let paths = AppPaths::discover();
     let action = args.action.clone().unwrap_or_default();
+    let original_args: Vec<String> = std::env::args().skip(1).collect();
     match action.as_str() {
         "--help" | "-h" => {
             out(HELP);
@@ -179,16 +208,51 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         "--arcade-manifest" => {
-            out(link::manifest(&settings_readonly(&paths)).to_json());
+            out(link::document(&settings_readonly(&paths), &paths).to_json());
             return ExitCode::SUCCESS;
         }
         "--arcade-invoke" => return ExitCode::from(link::serve_oneshot(paths) as u8),
         "--settings-window" => return arcade_find::settings_ui::run(paths),
+        "--install-dialog" => {
+            return match arcade_find::installer_ui::serve_dialog() {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(e) => {
+                    eprintln!("arcade-find: install dialog: {e}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
         "--snapshot" => return arcade_find::snapshot::run(args.dir.unwrap_or_else(|| PathBuf::from("snapshots"))),
         "--export-icon" => {
             return export_icon(&args.dir.unwrap_or_else(|| PathBuf::from("arcade-find.png")), args.limit.unwrap_or(256) as u32)
         }
+        "--install" | "--uninstall" | "--repair" | "--integration-status" => return integration_command(&paths, &args, &original_args),
         _ => {}
+    }
+
+    match installer::automatic_prompt(&paths, &original_args) {
+        Ok(Some((environment, runtime, detection, state))) => {
+            let options = installer::Options::defaults(&environment, &paths);
+            match arcade_find::installer_ui::run_install(environment, runtime, paths.clone(), detection, state, options) {
+                Ok(arcade_find::installer_ui::Outcome::Launch(path)) => {
+                    if let Err(e) =
+                        arcade_link::install::reexec(&path, &original_args.iter().map(std::ffi::OsString::from).collect::<Vec<_>>())
+                    {
+                        eprintln!("arcade-find: relaunch: {e}");
+                        return ExitCode::FAILURE;
+                    }
+                    return ExitCode::SUCCESS;
+                }
+                Ok(arcade_find::installer_ui::Outcome::Exit) => return ExitCode::SUCCESS,
+                Ok(arcade_find::installer_ui::Outcome::Continue) => {}
+                Err(e) => {
+                    eprintln!("arcade-find: install dialog: {e}");
+                    return ExitCode::FAILURE;
+                }
+            }
+        }
+        Ok(None) => {}
+        Err(e) => eprintln!("arcade-find: install detection: {e}"),
     }
 
     // Commands for the running instance.
@@ -253,6 +317,73 @@ fn main() -> ExitCode {
     run_resident(paths, background, initial, open_settings, args.successor_of)
 }
 
+fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) -> ExitCode {
+    let result = (|| -> Result<(), String> {
+        let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
+        let runtime = arcade_link::install::Runtime::discover().map_err(|e| e.to_string())?;
+        match args.action.as_deref().unwrap_or_default() {
+            "--integration-status" => {
+                let status = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
+                    .map_err(|e| e.to_string())?;
+                out(serde_json::to_string_pretty(&status).map_err(|e| e.to_string())?);
+            }
+            "--repair" => {
+                let receipt = installer::repair(&environment, &runtime).map_err(|e| e.to_string())?;
+                out(serde_json::to_string_pretty(&receipt).map_err(|e| e.to_string())?);
+            }
+            "--uninstall" => {
+                if args.silent {
+                    let removed = installer::uninstall(&environment, paths, true, args.remove_data).map_err(|e| e.to_string())?;
+                    out(serde_json::json!({"uninstalled": removed}));
+                } else {
+                    arcade_find::installer_ui::run_uninstall(environment, paths.clone(), args.remove_data)?;
+                }
+            }
+            "--install" => {
+                let mut options = installer::Options::defaults(&environment, paths);
+                if let Some(channel) = &args.channel {
+                    options.channel = channel.clone();
+                }
+                let launch = if args.silent {
+                    let receipt = installer::install_copy(&environment, &runtime, paths, &options).map_err(|e| e.to_string())?;
+                    let status =
+                        arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
+                            .map_err(|e| e.to_string())?;
+                    if let Some(hint) = status.path_hint {
+                        eprintln!("arcade-find: {hint}");
+                    }
+                    out(serde_json::to_string_pretty(&receipt).map_err(|e| e.to_string())?);
+                    Some(installer::launch_path(&receipt))
+                } else {
+                    let detection = arcade_link::install::detect(&environment, link::ME, &runtime).map_err(|e| e.to_string())?;
+                    if detection.state == arcade_link::install::State::DevBuild {
+                        return Err("Development builds cannot be installed".into());
+                    }
+                    let state = installer::dialog_state(&detection, VERSION).unwrap_or(installer::DialogState::Install);
+                    match arcade_find::installer_ui::run_install(environment, runtime, paths.clone(), detection, state, options)? {
+                        arcade_find::installer_ui::Outcome::Launch(path) => Some(path),
+                        _ => None,
+                    }
+                };
+                if !args.no_launch {
+                    if let Some(path) = launch {
+                        arcade_link::install::reexec(&path, &installer::launch_args(original_args)).map_err(|e| e.to_string())?;
+                    }
+                }
+            }
+            _ => unreachable!(),
+        }
+        Ok(())
+    })();
+    match result {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("arcade-find: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
 fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_settings: bool, successor_of: Option<u32>) -> ExitCode {
     let lock = match successor_of {
         Some(_) => instance::acquire_waiting(&paths, Duration::from_secs(15)),
@@ -272,18 +403,6 @@ fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_
             return ExitCode::FAILURE;
         }
     };
-
-    // First run of an installed copy: start at login (shown in Settings).
-    {
-        let (mut s, _) = Settings::load(&paths.settings_file());
-        let before = s.start_at_login;
-        if let Err(e) = autostart::sync(&paths, &mut s) {
-            eprintln!("arcade-find: start at login: {e}");
-        }
-        if s.start_at_login != before {
-            let _ = s.save(&paths.settings_file());
-        }
-    }
 
     let svc = Service::start(paths.clone(), background);
     let handler_svc = Arc::downgrade(&svc);
@@ -366,6 +485,9 @@ fn headless(svc: &Arc<Service>) -> Result<(), String> {
         match m {
             UiMsg::Quit => break,
             UiMsg::Show { .. } | UiMsg::Toggle => eprintln!("arcade-find: no display to show the overlay on"),
+            UiMsg::Shortcut { reply, .. } => {
+                let _ = reply.send(hotkey::State::Failed("No display is available to register a native shortcut".into()));
+            }
             _ => {}
         }
     }

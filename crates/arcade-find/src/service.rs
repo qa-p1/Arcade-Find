@@ -30,7 +30,7 @@ const CONTENT_LIMIT: usize = 500;
 const CONTENT_TIMEOUT: Duration = Duration::from_secs(20);
 
 /// Messages for the UI thread.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub enum UiMsg {
     Show {
         query: Option<String>,
@@ -52,6 +52,12 @@ pub enum UiMsg {
     Settings,
     /// The system theme changed.
     Theme,
+    Tray(arcade_link::trayhost::TrayState),
+    Shortcut {
+        accelerator: String,
+        reply: std::sync::mpsc::SyncSender<crate::hotkey::State>,
+        deadline: Instant,
+    },
     Quit,
 }
 
@@ -148,16 +154,18 @@ struct SearchSlot {
     /// Cancels the running content search.
     cancel: Mutex<Arc<AtomicBool>>,
     latest: AtomicU64,
+    stopped: AtomicBool,
 }
 
 pub struct Service {
     pub paths: AppPaths,
     pub locations: Locations,
     pub background: bool,
-    settings: RwLock<Settings>,
+    pub(crate) settings: RwLock<Settings>,
+    pub(crate) settings_changes: Mutex<()>,
     pub engine: Arc<Engine>,
     frecency: Mutex<Frecency>,
-    pins: Mutex<Pins>,
+    pub(crate) pins: Mutex<Pins>,
     registry: OnceLock<SharedRegistry>,
     presence: Mutex<Option<Arc<Presence>>>,
     pipelines: RwLock<Vec<Pipeline>>,
@@ -168,6 +176,9 @@ pub struct Service {
     ripgrep: OnceLock<Option<Ripgrep>>,
     /// A peer action is running (one at a time).
     peer_busy: AtomicBool,
+    content_busy: AtomicBool,
+    pub(crate) tray_watcher: Mutex<Option<arcade_link::trayhost::TrayHostWatcher>>,
+    tray_state: Mutex<arcade_link::trayhost::TrayState>,
     /// How the global shortcut works now (for Settings and `--status`).
     shortcut: Mutex<Value>,
     /// What the overlay shows (for `--status` and end-to-end tests).
@@ -180,17 +191,23 @@ impl Service {
     /// Loads settings, frecency and pins, and starts the engine (which loads
     /// the saved index synchronously; the crawl runs in the background).
     pub fn start(paths: AppPaths, background: bool) -> Arc<Service> {
+        Self::start_at(paths, background, Locations::discover())
+    }
+
+    /// Explicit Link locations for isolated hosts/tests, without global env.
+    pub fn start_at(paths: AppPaths, background: bool, locations: Locations) -> Arc<Service> {
         let (settings, _) = Settings::load(&paths.settings_file());
         let hub = Arc::new(Hub::default());
         let listener_hub = hub.clone();
         let engine = Engine::start(paths.index_file(), settings.clone(), Arc::new(move |ev| listener_hub.on_engine(ev)));
         let _ = hub.engine.set(Arc::downgrade(&engine));
         let svc = Arc::new(Service {
-            locations: Locations::discover(),
+            locations,
             background,
             frecency: Mutex::new(Frecency::load(&paths.frecency_file())),
             pins: Mutex::new(Pins::load(&paths.pins_file())),
             settings: RwLock::new(settings),
+            settings_changes: Mutex::new(()),
             engine,
             registry: OnceLock::new(),
             presence: Mutex::new(None),
@@ -201,6 +218,9 @@ impl Service {
             boosts: Mutex::new((0, 0, Arc::new(IdMap::default()))),
             ripgrep: OnceLock::new(),
             peer_busy: AtomicBool::new(false),
+            content_busy: AtomicBool::new(false),
+            tray_watcher: Mutex::new(None),
+            tray_state: Mutex::new(arcade_link::trayhost::TrayState::None),
             shortcut: Mutex::new(json!({ "mode": "off" })),
             ui_state: Mutex::new(json!({ "visible": false })),
             narrow: Mutex::new(Default::default()),
@@ -208,6 +228,20 @@ impl Service {
         });
         let worker = Arc::downgrade(&svc);
         let _ = std::thread::Builder::new().name("find-search".into()).spawn(move || search_loop(worker));
+        let worker = Arc::downgrade(&svc);
+        let _ = std::thread::Builder::new().name("find-login".into()).spawn(move || {
+            if let Some(svc) = worker.upgrade() {
+                let _change = svc.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
+                let mut settings = svc.settings();
+                let before = settings.start_at_login;
+                if let Err(e) = crate::autostart::sync(&svc.paths, &mut settings) {
+                    eprintln!("arcade-find: start at login: {e}");
+                }
+                if before != settings.start_at_login && settings.save(&svc.paths.settings_file()).is_ok() {
+                    *svc.settings.write().unwrap_or_else(|e| e.into_inner()) = settings;
+                }
+            }
+        });
         svc
     }
 
@@ -220,6 +254,7 @@ impl Service {
     }
 
     fn start_link(self: &Arc<Self>) {
+        let _ = crate::diagnostics::event(&self.paths, "started");
         let registry = SharedRegistry::load(&self.locations);
         let weak = Arc::downgrade(self);
         registry.watch(move |_| {
@@ -230,7 +265,7 @@ impl Service {
         let _ = self.registry.set(registry);
         let settings = self.settings();
         let handler = Arc::new(link::FindHandler { host: Arc::new(LinkHost(Arc::downgrade(self))), background: self.background });
-        let presence = Presence::start(self.locations.clone(), link::manifest(&settings), handler);
+        let presence = Presence::start_document(self.locations.clone(), link::document(&settings, &self.paths), handler);
         *self.presence.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(presence));
         self.refresh_pipelines();
     }
@@ -281,11 +316,15 @@ impl Service {
 
     /// Re-reads settings from disk (after the settings window saved them).
     pub fn reload_settings(&self) {
+        let _change = self.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
         let (s, _) = Settings::load(&self.paths.settings_file());
         *self.settings.write().unwrap_or_else(|e| e.into_inner()) = s.clone();
         self.engine.set_settings(s.clone());
         if let Some(p) = self.presence() {
-            p.update(link::manifest(&s));
+            p.update_document(link::document(&s, &self.paths));
+        }
+        if let Some(w) = self.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()).as_ref() {
+            w.set_link_enabled(s.link.enabled);
         }
         self.send(UiMsg::Settings);
     }
@@ -428,6 +467,7 @@ impl Service {
             self.send(UiMsg::Results { seq: req.seq, rows: rows.clone(), info });
         };
         send(&rows, true, note.clone());
+        self.content_busy.store(true, Ordering::SeqCst);
         let end = rg::run(&rg, &creq, &cancel, |path| {
             let mut r = row_from_path(&path, None, pins.contains(&path));
             if !content_filters_pass(&q, &r) {
@@ -441,6 +481,7 @@ impl Service {
                 send(&rows, true, None);
             }
         });
+        self.content_busy.store(false, Ordering::SeqCst);
         let note = match end {
             ContentEnd::Cancelled => return,
             ContentEnd::Limit => Some(format!("Showing the first {CONTENT_LIMIT} files")),
@@ -784,14 +825,23 @@ impl Service {
     }
 
     pub fn open_settings(&self) {
-        let exe = std::env::current_exe().unwrap_or_default();
-        if let Err(e) = std::process::Command::new(exe).arg("--settings-window").stdin(std::process::Stdio::null()).spawn().map(|mut c| {
-            std::thread::spawn(move || {
-                let _ = c.wait();
-            })
-        }) {
-            self.toast(format!("Couldn't open Settings: {e}"), ToastKind::Error);
+        if let Err(e) = self.try_open_settings() {
+            self.toast(e.to_string(), ToastKind::Error);
         }
+    }
+
+    pub fn try_open_settings(&self) -> Result<(), arcade_link::LinkError> {
+        let exe = std::env::current_exe().unwrap_or_default();
+        std::process::Command::new(exe)
+            .arg("--settings-window")
+            .stdin(std::process::Stdio::null())
+            .spawn()
+            .map(|mut c| {
+                std::thread::spawn(move || {
+                    let _ = c.wait();
+                });
+            })
+            .map_err(|e| arcade_link::LinkError::unavailable(format!("Couldn't open Settings: {e}")))
     }
 
     // -----------------------------------------------------------------------
@@ -840,6 +890,13 @@ impl Service {
                 crate::hotkey::apply(self);
             }
             UiMsg::Theme => {}
+            UiMsg::Tray(state) => crate::tray::set_state(self, state),
+            UiMsg::Shortcut { accelerator, reply, deadline } => {
+                if Instant::now() < deadline {
+                    let state = crate::hotkey::replace_native(self, &accelerator);
+                    let _ = reply.send(state);
+                }
+            }
             UiMsg::Quit => out.quit = true,
         }
         out
@@ -880,9 +937,8 @@ impl Service {
                 self.send(UiMsg::Quit);
                 json!({ "ok": true })
             }
-            Command::Restart => match restart_successor() {
+            Command::Restart => match self.restart("normal") {
                 Ok(()) => {
-                    self.send(UiMsg::Quit);
                     json!({ "ok": true })
                 }
                 Err(e) => json!({ "ok": false, "error": e }),
@@ -890,7 +946,7 @@ impl Service {
             Command::Status => {
                 let st = self.engine.status();
                 json!({ "ok": true, "version": crate::VERSION, "pid": std::process::id(), "background": self.background,
-                        "engine": st, "shortcut": self.shortcut_state(),
+                        "engine": st, "shortcut": self.shortcut_state(), "tray": self.tray_state().as_str(),
                         "ui": self.ui_state.lock().map(|v| v.clone()).unwrap_or(Value::Null),
                         "link": { "listening": self.presence().map(|p| p.listening()).unwrap_or(false),
                                   "lastError": self.presence().and_then(|p| p.last_error()) } })
@@ -926,6 +982,13 @@ impl Service {
 
     /// Saves frecency and the index before exit.
     pub fn shutdown(&self) {
+        self.search.cancel.lock().unwrap_or_else(|e| e.into_inner()).store(true, Ordering::SeqCst);
+        self.search.stopped.store(true, Ordering::SeqCst);
+        self.search.wake.notify_all();
+        if let Some(w) = self.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()).take() {
+            w.stop();
+        }
+        let _ = crate::diagnostics::event(&self.paths, "stopped");
         if let Ok(f) = self.frecency.lock() {
             let _ = f.save(&self.paths.frecency_file());
         }
@@ -933,6 +996,31 @@ impl Service {
             p.stop();
         }
         self.engine.shutdown();
+    }
+
+    pub fn tray_state(&self) -> arcade_link::trayhost::TrayState {
+        *self.tray_state.lock().unwrap_or_else(|e| e.into_inner())
+    }
+    pub fn note_tray(&self, state: arcade_link::trayhost::TrayState) {
+        *self.tray_state.lock().unwrap_or_else(|e| e.into_inner()) = state;
+    }
+    pub fn busy(&self) -> bool {
+        self.peer_busy.load(Ordering::SeqCst) || self.content_busy.load(Ordering::SeqCst) || self.engine.phase() != Phase::Ready
+    }
+    pub fn restart_ready(&self, mode: &str) -> Result<(), arcade_link::LinkError> {
+        if !["normal", "force"].contains(&mode) {
+            return Err(arcade_link::LinkError::denied("invalid restart mode"));
+        }
+        if mode != "force" && self.busy() {
+            return Err(arcade_link::LinkError::busy());
+        }
+        Ok(())
+    }
+    pub fn restart(&self, mode: &str) -> Result<(), arcade_link::LinkError> {
+        self.restart_ready(mode)?;
+        restart_successor().map_err(arcade_link::LinkError::unavailable)?;
+        self.send(UiMsg::Quit);
+        Ok(())
     }
 }
 
@@ -944,12 +1032,16 @@ impl Context for Service {
 
 /// Starts a successor that waits for this instance to exit.
 pub fn restart_successor() -> Result<(), String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    // AppImages must restart their stable file, not a FUSE mount that vanishes
+    // when the predecessor exits. Clear inherited mount variables.
+    let exe = arcade_link::manifest::current_executable();
     std::process::Command::new(exe)
         .args(["--background", "--successor-of", &std::process::id().to_string()])
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
+        .env_remove("APPIMAGE")
+        .env_remove("APPDIR")
         .spawn()
         .map(|_| ())
         .map_err(|e| format!("Couldn't restart: {e}"))
@@ -965,12 +1057,14 @@ fn search_loop(svc: Weak<Service>) {
         let req = {
             let mut next = s.search.next.lock().unwrap_or_else(|e| e.into_inner());
             loop {
+                if s.search.stopped.load(Ordering::SeqCst) {
+                    return;
+                }
                 if let Some(r) = next.take() {
                     break r;
                 }
                 // Don't keep the service alive while waiting.
-                let (g, _) = s.search.wake.wait_timeout(next, Duration::from_secs(3600)).unwrap_or_else(|e| e.into_inner());
-                next = g;
+                next = s.search.wake.wait(next).unwrap_or_else(|e| e.into_inner());
             }
         };
         if req.seq == s.search.latest.load(Ordering::SeqCst) {
@@ -1081,6 +1175,34 @@ fn content_filters_pass(q: &Query, r: &Row) -> bool {
 struct LinkHost(Weak<Service>);
 
 impl link::Host for LinkHost {
+    fn methods(&self) -> Vec<String> {
+        arcade_link::wire::method::OPTIONAL.iter().map(|m| (*m).into()).collect()
+    }
+    fn settings(&self) -> Result<(), arcade_link::LinkError> {
+        self.service()?.try_open_settings()
+    }
+    fn restart_ready(&self, mode: &str) -> Result<(), arcade_link::LinkError> {
+        self.service()?.restart_ready(mode)
+    }
+    fn restart(&self, mode: &str) -> Result<(), arcade_link::LinkError> {
+        self.service()?.restart(mode)
+    }
+    fn menu_invoke(&self, id: &str) -> Result<(), arcade_link::LinkError> {
+        if id != link::RESCAN_MENU_ID {
+            return Err(arcade_link::LinkError::denied("unknown menu item"));
+        }
+        self.service()?.engine.request_rescan();
+        Ok(())
+    }
+    fn shortcuts_set(&self, id: &str, key: &str) -> Result<arcade_link::app::ShortcutSetResult, arcade_link::LinkError> {
+        self.service()?.set_shortcut(id, key)
+    }
+    fn settings_export(&self) -> Result<Vec<arcade_link::Content>, arcade_link::LinkError> {
+        self.service()?.export_settings()
+    }
+    fn settings_import(&self, inputs: &[arcade_link::Content]) -> Result<arcade_link::app::ImportResult, arcade_link::LinkError> {
+        self.service()?.import_settings(inputs)
+    }
     fn search(&self, query: &Query, limit: usize, hidden: bool) -> Result<link::SearchOut, arcade_link::LinkError> {
         let s = self.0.upgrade().ok_or_else(|| arcade_link::LinkError::new(arcade_link::ErrorCode::NotRunning, "shutting down"))?;
         // No frecency boosts: ranking must not reveal what the user opened.
@@ -1104,7 +1226,7 @@ impl link::Host for LinkHost {
         match self.0.upgrade() {
             Some(s) => {
                 let st = s.engine.status();
-                json!({ "phase": st.phase, "entries": st.entries })
+                json!({ "phase": st.phase, "entries": st.entries, "tray": s.tray_state().as_str(), "busy": s.busy() })
             }
             None => Value::Null,
         }
@@ -1115,5 +1237,38 @@ impl link::Host for LinkHost {
             s.send(UiMsg::Quit);
         }
         Ok(())
+    }
+}
+
+impl LinkHost {
+    fn service(&self) -> Result<Arc<Service>, arcade_link::LinkError> {
+        self.0.upgrade().ok_or_else(|| arcade_link::LinkError::unavailable("shutting down"))
+    }
+}
+
+#[cfg(test)]
+mod hub_tests {
+    use super::*;
+
+    #[test]
+    fn restart_requires_force_while_content_or_peer_work_is_busy() {
+        let root = std::env::temp_dir().join(format!("find-restart-{}", arcade_link::endpoint::new_token().unwrap()));
+        let paths = AppPaths::under(&root.join("find"), "");
+        std::fs::create_dir_all(root.join("files")).unwrap();
+        let settings = Settings { roots: vec![root.join("files").to_string_lossy().into()], ..Settings::default() };
+        settings.save(&paths.settings_file()).unwrap();
+        let svc = Service::start_at(paths, true, Locations::under(&root));
+        assert!(svc.engine.wait_ready(Duration::from_secs(3)));
+        assert!(svc.restart_ready("normal").is_ok());
+        svc.content_busy.store(true, Ordering::SeqCst);
+        assert_eq!(svc.restart_ready("normal").unwrap_err().code, arcade_link::ErrorCode::Busy);
+        assert!(svc.restart_ready("force").is_ok());
+        svc.content_busy.store(false, Ordering::SeqCst);
+        svc.peer_busy.store(true, Ordering::SeqCst);
+        assert_eq!(svc.restart_ready("normal").unwrap_err().code, arcade_link::ErrorCode::Busy);
+        assert!(svc.restart_ready("force").is_ok());
+        assert_eq!(svc.restart_ready("invalid").unwrap_err().code, arcade_link::ErrorCode::Denied);
+        svc.shutdown();
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

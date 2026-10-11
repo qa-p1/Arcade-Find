@@ -12,7 +12,7 @@
 
 use std::path::{Path, PathBuf};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AppPaths {
     pub config: PathBuf,
     pub data: PathBuf,
@@ -106,7 +106,18 @@ impl AppPaths {
         self.data.join("pins.json")
     }
     pub fn log_file(&self) -> PathBuf {
-        self.data.join("arcade-find.log")
+        self.log_dir().join("arcade-find.log")
+    }
+    pub fn log_dir(&self) -> PathBuf {
+        self.data.join("logs")
+    }
+    /// The explicit data allowlist for --uninstall --remove-data. Deduplicated
+    /// because config and data share a directory on macOS.
+    pub fn data_folders(&self) -> Vec<PathBuf> {
+        let mut folders = vec![self.config.clone(), self.data.clone()];
+        folders.sort();
+        folders.dedup();
+        folders
     }
     /// A short name for the instance channel, unique per user and profile.
     pub fn instance_name(&self) -> String {

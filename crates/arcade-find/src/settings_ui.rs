@@ -11,6 +11,7 @@ use arcade_link::client::{app_state, AppState};
 use arcade_link::manifest::ids;
 use arcade_link::{Locations, Registry};
 use eframe::egui;
+use notify::Watcher;
 use serde_json::Value;
 
 use find_core::paths::{expand_tilde, tilde, AppPaths};
@@ -41,6 +42,10 @@ const PAGES: [(Page, &str); 6] = [
 
 /// Results of background work.
 enum Bg {
+    LoginState(Option<bool>),
+    LoginSaved(Result<bool, String>),
+    Settings(Settings),
+    IntegrationHints(Vec<String>),
     Status(Option<Value>),
     Registry(Registry, Vec<(String, AppState)>),
     Ripgrep(Option<find_core::content::Ripgrep>),
@@ -49,6 +54,10 @@ enum Bg {
 }
 
 struct SettingsApp {
+    login_state: Option<bool>,
+    login_pending: bool,
+    _settings_watch: Option<notify::RecommendedWatcher>,
+    integration_hints: Vec<String>,
     paths: AppPaths,
     locations: Locations,
     settings: Settings,
@@ -115,7 +124,26 @@ impl SettingsApp {
     fn new(paths: AppPaths, settings: Settings, ctx: egui::Context) -> SettingsApp {
         let (tx, rx) = channel();
         let exclude_names = settings.exclude_names.join(", ");
+        let (watch_tx, watch_path, watch_ctx) = (tx.clone(), paths.settings_file(), ctx.clone());
+        let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
+            if event.is_ok_and(|e| e.paths.contains(&watch_path)) {
+                if let Some(s) = std::fs::read(&watch_path).ok().and_then(|b| serde_json::from_slice(&b).ok()) {
+                    let _ = watch_tx.send(Bg::Settings(s));
+                    watch_ctx.request_repaint();
+                }
+            }
+        })
+        .ok();
+        if std::fs::create_dir_all(&paths.config).is_ok() {
+            if let Some(w) = &mut watcher {
+                let _ = w.watch(&paths.config, notify::RecursiveMode::NonRecursive);
+            }
+        }
         let app = SettingsApp {
+            login_state: None,
+            login_pending: false,
+            _settings_watch: watcher,
+            integration_hints: Vec::new(),
             locations: Locations::discover(),
             paths,
             settings,
@@ -135,11 +163,33 @@ impl SettingsApp {
             drives: find_core::mounts::MountTable::read().suggested_drives(),
         };
         app.refresh_status(&ctx);
+        app.refresh_login(&ctx);
         app.refresh_registry(&ctx);
         let tx = app.tx.clone();
         let c = ctx.clone();
         std::thread::spawn(move || {
             let _ = tx.send(Bg::Ripgrep(find_core::content::detect(&[])));
+            let mut hints = Vec::new();
+            if let Ok(environment) = arcade_link::install::Environment::discover() {
+                if let Ok(status) =
+                    arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
+                {
+                    if let Some(hint) = status.path_hint {
+                        hints.push(hint);
+                    }
+                    #[cfg(target_os = "macos")]
+                    if let Some(receipt) = status.receipt {
+                        if receipt.integration.cli.is_none() {
+                            hints.push(arcade_link::install::platform::macos::cli_symlink_offer(
+                                &environment,
+                                crate::installer::CLI_NAME,
+                                &crate::installer::launch_path(&receipt),
+                            ));
+                        }
+                    }
+                }
+            }
+            let _ = tx.send(Bg::IntegrationHints(hints));
             c.request_repaint();
         });
         app
@@ -151,6 +201,15 @@ impl SettingsApp {
             let s = instance::send(&p, &Command::Status, Duration::from_secs(2)).ok();
             let _ = tx.send(Bg::Status(s));
             c.request_repaint();
+        });
+    }
+
+    fn refresh_login(&self, ctx: &egui::Context) {
+        let (tx, paths, ctx) = (self.tx.clone(), self.paths.clone(), ctx.clone());
+        std::thread::spawn(move || {
+            let state = autostart::allowed(&paths).then(autostart::enabled);
+            let _ = tx.send(Bg::LoginState(state));
+            ctx.request_repaint();
         });
     }
 
@@ -192,9 +251,30 @@ impl SettingsApp {
         });
     }
 
-    fn drain(&mut self) {
+    fn drain(&mut self, ctx: &egui::Context) {
         while let Ok(m) = self.rx.try_recv() {
             match m {
+                Bg::LoginState(state) => self.login_state = state,
+                Bg::LoginSaved(result) => {
+                    self.login_pending = false;
+                    match result {
+                        Ok(on) => {
+                            self.login_state = Some(on);
+                            self.settings.start_at_login = Some(on);
+                            self.save(ctx);
+                        }
+                        Err(e) => self.message = Some((e, Instant::now())),
+                    }
+                }
+                Bg::Settings(s) => {
+                    if s != self.settings {
+                        self.exclude_names = s.exclude_names.join(", ");
+                        self.settings = s;
+                        apply_visuals(ctx, self.settings.theme);
+                        self.refresh_status(ctx);
+                    }
+                }
+                Bg::IntegrationHints(hints) => self.integration_hints = hints,
                 Bg::Status(s) => {
                     self.status = s;
                     self.status_at = Some(Instant::now());
@@ -239,7 +319,7 @@ fn path_valid(p: &Path) -> bool {
 
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.drain();
+        self.drain(ctx);
         let ctx = ctx.clone();
         // While indexing, keep the Index page current (only while it's open).
         if self.page == Page::Index && self.status_at.is_some_and(|t| t.elapsed() > Duration::from_secs(2)) {
@@ -256,6 +336,9 @@ impl eframe::App for SettingsApp {
             for (p, name) in PAGES {
                 if ui.selectable_label(self.page == p, name).clicked() {
                     self.page = p;
+                    if p == Page::General {
+                        self.refresh_login(&ctx);
+                    }
                     if p == Page::Index || p == Page::Shortcut {
                         self.refresh_status(&ctx);
                     }
@@ -296,18 +379,18 @@ impl SettingsApp {
             }
         });
         ui.add_space(6.0);
-        let allowed = autostart::allowed(&self.paths);
+        let allowed = self.login_state.is_some() && !self.login_pending;
         // The login entry is the truth (Arcade Tools can switch it too).
-        let mut login = if allowed { autostart::enabled() } else { self.settings.start_at_login.unwrap_or(false) };
+        let mut login = self.login_state.unwrap_or(self.settings.start_at_login.unwrap_or(false));
         let r = ui.add_enabled(allowed, egui::Checkbox::new(&mut login, "Start at login"));
         if r.changed() {
-            match autostart::set(login) {
-                Ok(()) => {
-                    self.settings.start_at_login = Some(login);
-                    changed = true;
-                }
-                Err(e) => self.message = Some((e, Instant::now())),
-            }
+            self.login_pending = true;
+            let (tx, ctx) = (self.tx.clone(), ctx.clone());
+            std::thread::spawn(move || {
+                let result = autostart::set(login).map(|_| login);
+                let _ = tx.send(Bg::LoginSaved(result));
+                ctx.request_repaint();
+            });
         }
         if !allowed {
             note(ui, "Available for installed copies (not development builds or test profiles).");
@@ -330,6 +413,14 @@ impl SettingsApp {
             None => note(ui, "Looking for ripgrep…"),
             Some(Some(rg)) => note(ui, &format!("ripgrep {} found at {}", rg.version, rg.path.display())),
             Some(None) => note(ui, "ripgrep isn't installed. Install it from your package manager (package \"ripgrep\") to search file contents; Find never downloads it."),
+        }
+        if !self.integration_hints.is_empty() {
+            egui::CollapsingHeader::new("Terminal command").show(ui, |ui| {
+                for hint in &self.integration_hints {
+                    ui.monospace(hint);
+                }
+                note(ui, "Run the command yourself to enable terminal access. Find never edits shell profiles.");
+            });
         }
         if changed {
             self.save(ctx);
