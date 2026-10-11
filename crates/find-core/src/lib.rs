@@ -39,7 +39,11 @@ pub fn local_offset_secs() -> i64 {
         if unsafe { libc::localtime_r(&now, &mut tm) }.is_null() {
             return 0;
         }
-        tm.tm_gmtoff as i64
+        // libc's c_long is 32 bits on some Unix targets.
+        #[allow(clippy::unnecessary_cast)]
+        {
+            tm.tm_gmtoff as i64
+        }
     }
     #[cfg(windows)]
     {

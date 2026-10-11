@@ -20,7 +20,7 @@ pub fn validate(input: &str) -> Result<String, arcade_link::LinkError> {
     if key.contains(' ') || ["Ctrl", "Alt", "Shift", "Super"].contains(&key.as_str()) {
         return Err(arcade_link::LinkError::unavailable("Find requires a single key chord, not a sequence or modifier tap"));
     }
-    if !key.contains('+') && !(key.starts_with('F') && key[1..].parse::<u8>().is_ok()) {
+    if !(key.contains('+') || key.starts_with('F') && key[1..].parse::<u8>().is_ok()) {
         return Err(arcade_link::LinkError::denied("a global shortcut needs a modifier or function key"));
     }
     parse(&key).map_err(arcade_link::LinkError::unavailable)?;

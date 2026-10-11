@@ -164,7 +164,7 @@ impl MountTable {
         {
             let _ = self;
             std::fs::read_dir("/Volumes")
-                .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir() && macos_is_local(p) && !p.read_link().is_ok()).collect())
+                .map(|rd| rd.flatten().map(|e| e.path()).filter(|p| p.is_dir() && macos_is_local(p) && p.read_link().is_err()).collect())
                 .unwrap_or_default()
         }
         #[cfg(windows)]

@@ -165,7 +165,7 @@ pub fn automatic_prompt(paths: &AppPaths, args: &[String]) -> io::Result<Option<
     #[cfg(windows)]
     {
         let _ = paths;
-        return Ok(None);
+        Ok(None)
     }
     #[cfg(not(windows))]
     {
@@ -201,7 +201,7 @@ pub fn automatic_prompt(paths: &AppPaths, args: &[String]) -> io::Result<Option<
             let state =
                 dialog_state(&detection, crate::VERSION)
                     .map(|s| if s == DialogState::Install { DialogState::MoveToApplications } else { s });
-            return Ok(state.map(|s| (environment, runtime, detection, s)));
+            Ok(state.map(|s| (environment, runtime, detection, s)))
         }
         #[cfg(target_os = "linux")]
         {
