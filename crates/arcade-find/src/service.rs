@@ -170,7 +170,7 @@ pub struct Service {
     presence: Mutex<Option<Arc<Presence>>>,
     pipelines: RwLock<Vec<Pipeline>>,
     hub: Arc<Hub>,
-    search: SearchSlot,
+    search: Arc<SearchSlot>,
     last_query: Mutex<String>,
     boosts: Mutex<(u64, u64, Arc<IdMap<i32>>)>,
     ripgrep: OnceLock<Option<Ripgrep>>,
@@ -213,7 +213,7 @@ impl Service {
             presence: Mutex::new(None),
             pipelines: RwLock::new(Vec::new()),
             hub,
-            search: SearchSlot::default(),
+            search: Arc::new(SearchSlot::default()),
             last_query: Mutex::new(String::new()),
             boosts: Mutex::new((0, 0, Arc::new(IdMap::default()))),
             ripgrep: OnceLock::new(),
@@ -227,7 +227,8 @@ impl Service {
             paths,
         });
         let worker = Arc::downgrade(&svc);
-        let _ = std::thread::Builder::new().name("find-search".into()).spawn(move || search_loop(worker));
+        let search = svc.search.clone();
+        let _ = std::thread::Builder::new().name("find-search".into()).spawn(move || search_loop(worker, search));
         let worker = Arc::downgrade(&svc);
         let _ = std::thread::Builder::new().name("find-login".into()).spawn(move || {
             if let Some(svc) = worker.upgrade() {
@@ -983,8 +984,14 @@ impl Service {
     /// Saves frecency and the index before exit.
     pub fn shutdown(&self) {
         self.search.cancel.lock().unwrap_or_else(|e| e.into_inner()).store(true, Ordering::SeqCst);
-        self.search.stopped.store(true, Ordering::SeqCst);
-        self.search.wake.notify_all();
+        {
+            // The predicate and notification use the same mutex as wait(),
+            // preventing shutdown from landing between its check and wait.
+            let mut next = self.search.next.lock().unwrap_or_else(|e| e.into_inner());
+            self.search.stopped.store(true, Ordering::SeqCst);
+            next.take();
+            self.search.wake.notify_all();
+        }
         if let Some(w) = self.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()).take() {
             w.stop();
         }
@@ -1051,23 +1058,23 @@ fn ms(t: Instant) -> f32 {
     t.elapsed().as_secs_f32() * 1000.0
 }
 
-fn search_loop(svc: Weak<Service>) {
+fn search_loop(svc: Weak<Service>, search: Arc<SearchSlot>) {
     loop {
-        let Some(s) = svc.upgrade() else { return };
         let req = {
-            let mut next = s.search.next.lock().unwrap_or_else(|e| e.into_inner());
+            let mut next = search.next.lock().unwrap_or_else(|e| e.into_inner());
             loop {
-                if s.search.stopped.load(Ordering::SeqCst) {
+                if search.stopped.load(Ordering::SeqCst) {
                     return;
                 }
                 if let Some(r) = next.take() {
                     break r;
                 }
                 // Don't keep the service alive while waiting.
-                next = s.search.wake.wait(next).unwrap_or_else(|e| e.into_inner());
+                next = search.wake.wait(next).unwrap_or_else(|e| e.into_inner());
             }
         };
-        if req.seq == s.search.latest.load(Ordering::SeqCst) {
+        let Some(s) = svc.upgrade() else { return };
+        if req.seq == search.latest.load(Ordering::SeqCst) {
             s.run_search(req);
         }
     }
@@ -1249,6 +1256,31 @@ impl LinkHost {
 #[cfg(test)]
 mod hub_tests {
     use super::*;
+
+    #[test]
+    fn shutdown_releases_the_idle_search_worker_and_service() {
+        let root = std::env::temp_dir().join(format!("find-lifecycle-{}", arcade_link::endpoint::new_token().unwrap()));
+        std::fs::create_dir_all(root.join("files")).unwrap();
+        for i in 0..16 {
+            let paths = AppPaths::under(&root.join(format!("find-{i}")), "");
+            let settings = Settings { roots: vec![root.join("files").to_string_lossy().into()], ..Settings::default() };
+            settings.save(&paths.settings_file()).unwrap();
+            let svc = Service::start_at(paths, true, Locations::under(&root));
+            assert!(svc.engine.wait_ready(Duration::from_secs(3)));
+            let weak_service = Arc::downgrade(&svc);
+            // The search slot is also held by the worker while it waits.
+            // Releasing it proves that shutdown terminates that worker.
+            let weak_search = Arc::downgrade(&svc.search);
+            svc.shutdown();
+            drop(svc);
+            let deadline = Instant::now() + Duration::from_secs(2);
+            while weak_service.strong_count() != 0 || weak_search.strong_count() != 0 {
+                assert!(Instant::now() < deadline, "shutdown retained the service or idle search worker");
+                std::thread::yield_now();
+            }
+        }
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn restart_requires_force_while_content_or_peer_work_is_busy() {
