@@ -10,7 +10,13 @@ Install Find from **Arcade Tools → Apps**, or install it by hand using the [ge
 
 Find can preview with Look, process results with Box, and send or save selections with other Arcade apps. See [how Find works with other Arcade apps](docs/user/with-other-apps.md).
 
+Find 0.3.0 includes a first-run AppImage installer and can share its tray with Tools.
+Use `--install --silent`, `--uninstall`, `--repair`, or `--integration-status` for terminal integration.
+Windows/macOS integration is build/CI only, not verified on a real desktop.
+
 Read the [Arcade Find user guide](docs/user/) for setup, search examples, features, shortcuts, and help.
+
+The [shortcut reference](docs/user/shortcuts.md) is generated from the app’s validated shortcut data.
 
 ## Development
 

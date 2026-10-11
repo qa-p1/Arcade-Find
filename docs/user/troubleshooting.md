@@ -33,3 +33,15 @@ Find’s custom input does not yet support IME text input or right-to-left text.
 ## I am on Windows or macOS
 
 The app builds on both platforms in CI, but it has not been run interactively on a real desktop. If you encounter a platform issue, include the operating-system version, the steps you took, and the relevant status output.
+
+## Find’s tray icon disappeared
+
+If Tools is running and hosting Find, use its Find submenu. Quitting Tools, disabling its hosting option, excluding Find, or turning off Find’s Link switch returns Find’s own icon. A Tools crash triggers immediate hand-back; an announced restart has a five-second grace period. Diagnose with `arcade-find --status` (the **tray** field), or Link’s **status.tray** field. A system without a usable tray service can report **none**.
+
+## The launcher or terminal command points at an old file
+
+Run the moved AppImage with `--repair`, then inspect `--integration-status`. Repair follows the receipt and never edits shell profiles. If icons were manually deleted, rerun the AppImage installer to recreate its bundled icon files. The terminal PATH/symlink hint is also shown in Settings → General → Terminal command. For Hyprland startup and binds, read [the Hyprland guide](../HYPRLAND.md).
+
+## Importing settings failed
+
+Imports accept one Find settings JSON handoff file (at most 1 MiB). Invalid versions of the schema, paths or reserved shortcuts are rejected before changing preferences. A shortcut registration failure reports unavailable. Valid imports keep the previous raw settings and pins under **backups/**; copies of the index and history are never included. Absolute paths marked for another operating system are skipped.

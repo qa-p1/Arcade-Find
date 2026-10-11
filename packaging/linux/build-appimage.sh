@@ -16,6 +16,8 @@ TOOL_SHA256=46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
 TOOL=target/tools/appimagetool-$TOOL_VERSION-$ARCH.AppImage
 
 mkdir -p target/tools "$DIST"
+# appimagetool's extract-and-run runtime may change its working directory.
+DIST=$(realpath "$DIST")
 if [[ ! -x "$TOOL" ]]; then
   curl -fsSL -o "$TOOL.part" "https://github.com/AppImage/appimagetool/releases/download/$TOOL_VERSION/appimagetool-$ARCH.AppImage"
   echo "$TOOL_SHA256  $TOOL.part" | sha256sum -c -

@@ -25,3 +25,11 @@ Only for searches inside file contents. Name and path searches work without ripg
 ## Has Find been run on a real desktop?
 
 No. The current STATUS says no real desktop was used for Hyprland, GNOME, X11 window managers, Windows, or macOS. UI paths were checked in headless or isolated sessions. Windows and macOS are built by CI only, not tested interactively.
+
+## Can I use Find without Tools?
+
+Yes. It retains its own tray, Settings, global shortcut, installer and command line. Tools only hosts the tray and sends requests directly to Find. Turning Link off keeps Find’s tray visible.
+
+## Will Find change my shell or compositor configuration?
+
+No. Installation owns generated launcher/login entries and a terminal symlink/shim, and shows a PATH hint. Hyprland bindings are runtime-only. See [the Hyprland guide](../HYPRLAND.md); user-written configuration stays under your control.

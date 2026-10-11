@@ -316,7 +316,7 @@ overlay_checks() {
 }
 
 # ---- Wayland (headless sway, layer shell) ----
-if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
+if [[ "${ARCADE_E2E_SKIP_WAYLAND:-}" != 1 ]] && command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
   cat >"$T/sway.conf" <<'EOF'
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
