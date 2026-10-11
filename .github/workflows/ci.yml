@@ -15,6 +15,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_BUILD_JOBS: 2
 
 jobs:
   check:
@@ -26,7 +27,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
         with:
           components: rustfmt, clippy
       - name: Linux build dependencies
@@ -37,8 +38,14 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Tests
-        run: cargo test --workspace --locked
+      - name: Documentation, shortcuts and vendored checksums
+        shell: bash
+        run: |
+          python3 scripts/check-docs.py
+          python3 scripts/check-vendored.py
+      - name: Tests (isolated profile)
+        shell: bash
+        run: python3 scripts/isolate.py cargo test --workspace --locked
 
   e2e-linux:
     name: end-to-end (headless sway + Xvfb)
@@ -46,14 +53,14 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - name: Session tools
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool imagemagick dbus
       - name: Build
         run: cargo build --release --locked -p arcade-find
-      - name: Arcade Link CLI (mock peers), v0.2.0
+      - name: Arcade Link CLI (mock peers), hub branch (switch to v0.3.0 at merge)
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.2.0 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch arcade/tools-hub https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           cargo build --release --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
       - name: Vendored files match Arcade Link
         run: scripts/check-vendored.sh
@@ -78,7 +85,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@1.88.0
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev desktop-file-utils
@@ -96,6 +103,9 @@ jobs:
       - name: AppImage
         if: runner.os == 'Linux'
         run: packaging/linux/build-appimage.sh target/release/arcade-find dist
+      - name: AppImage silent integration (isolated profile)
+        if: runner.os == 'Linux'
+        run: python3 scripts/isolate.py dist/Arcade-Find-x86_64.AppImage --appimage-extract-and-run --install --silent --no-launch
       - name: Installer (Inno Setup, per-user)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -104,11 +114,16 @@ jobs:
           target\release\arcade-find.exe --export-icon target\release\arcade-find.ico
           $v = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages | Where-Object name -eq 'arcade-find' | Select-Object -ExpandProperty version
           & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DVersion=$v" "/DSource=..\..\target\release" packaging\windows\arcade-find.iss
+      - name: Windows silent install/uninstall (CI account only)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: packaging/windows/verify.ps1
       - name: App bundle and DMG
         if: runner.os == 'macOS'
         run: |
           v=$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print([p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="arcade-find"][0])')
           packaging/macos/build-app.sh target/release/arcade-find "$v" universal dist
+          packaging/macos/verify.sh "dist/Arcade-Find-$v-universal.dmg"
           rm -rf "dist/Arcade Find.app"
       - name: Smoke test
         shell: bash
@@ -136,6 +151,7 @@ jobs:
           v=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           python3 tools/arcade-release.py --id arcade.find --version "$v" --channel stable \
             --notes "https://github.com/qa-p1/Arcade-Find/blob/${GITHUB_SHA}/CHANGELOG.md" --windows-installer inno dist
+          python3 -c 'import json; m=json.load(open("dist/arcade-release.json")); assert all(a["installArgs"] == ["--install", "--silent"] for a in m["assets"] if a["kind"] == "appimage")'
           cat dist/arcade-release.json
       - uses: actions/upload-artifact@v4
         with:

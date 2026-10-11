@@ -21,6 +21,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Remove every live-desktop route before starting any child or GUI tool.
+unset HYPRLAND_INSTANCE_SIGNATURE WAYLAND_DISPLAY DISPLAY SWAYSOCK APPIMAGE APPDIR
+if [[ -z "${ARCADE_FIND_E2E_PRIVATE_BUS:-}" ]]; then unset DBUS_SESSION_BUS_ADDRESS; fi
+export HOME="$T/home" XDG_CONFIG_HOME="$T/config" XDG_DATA_HOME="$T/data" XDG_CACHE_HOME="$T/cache"
+mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME"
+# A private bus for the whole test; Wayland additionally owns a compositor bus.
+if [[ -z "${ARCADE_FIND_E2E_PRIVATE_BUS:-}" ]]; then
+  ARCADE_FIND_E2E_PRIVATE_BUS=1 dbus-run-session -- "$0" "$BIN" "$OUT"
+  exit $?
+fi
+
+
 pass=0; fail=0
 ok() { echo "  ok    $1"; pass=$((pass + 1)); }
 bad() { echo "  FAIL  $1"; fail=$((fail + 1)); }
@@ -363,8 +375,8 @@ walk(json.load(sys.stdin)); sys.exit(1)'
   else
     echo "  skip  Wayland drag checks (no $POINTER; cargo build --example e2e-pointer)"
   fi
-  link_checks wayland "grim" wl_key wl_text
-  overlay_checks wayland "grim" wl_key
+  link_checks wayland "timeout 5 grim" wl_key wl_text
+  overlay_checks wayland "timeout 5 grim" wl_key
   # GNOME has no layer shell: Find falls back to its winit window there.
   # Same compositor, winit backend forced: the drag source shares winit's
   # Wayland connection.
@@ -374,11 +386,11 @@ walk(json.load(sys.stdin)); sys.exit(1)'
     # One result: modifiers from wtype's short-lived virtual keyboards don't
     # reach winit's window on headless sway, so Shift+Down can't extend the
     # selection here (the selection itself is covered by the other sessions).
-    real_shelf_drag_checks wayland-winit "grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
+    real_shelf_drag_checks wayland-winit "timeout 5 grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
   else
     echo "  skip  wayland-winit: drag to Shelf (needs the pointer helper, ARCADE_SHELF_BIN and ARCADE_LINK_CLI)"
   fi
-  overlay_checks wayland-winit "grim" wl_key
+  overlay_checks wayland-winit "timeout 5 grim" wl_key
   unset ARCADE_FIND_BACKEND
   unset WAYLAND_DISPLAY
 else

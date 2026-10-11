@@ -1,0 +1,2 @@
+# The verbatim shortcut generator emits a final blank line.
+docs/user/shortcuts.md whitespace=-blank-at-eof
