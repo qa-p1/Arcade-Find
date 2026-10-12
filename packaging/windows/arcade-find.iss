@@ -15,6 +15,8 @@
 #define ARCADE_INSTALLER_ID "{{6C0E7A43-3B0B-4F55-9F7A-2E1D8C5B9A11}"
 #define ARCADE_HOMEPAGE "https://github.com/qa-p1/Arcade-Find/tree/main/docs/user"
 #define ARCADE_START_AT_LOGIN_DEFAULT 1
+; Find removes app-specific files only when the shared helper proves ownership.
+#define ARCADE_CUSTOM_EVENTS
 #include "arcade.iss"
 
 [Setup]
@@ -55,5 +57,47 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: 
 
 [UninstallDelete]
 ; The Arcade Link manifest (SPEC §3: uninstallers remove it). User data stays.
-Type: files; Name: "{localappdata}\Arcade\apps\arcade.find.json"; Check: ArcadeOwnsSharedIntegration
+Type: files; Name: "{code:FindArcadeRoot}\apps\arcade.find.json"; Check: ArcadeOwnsSharedIntegration
 Type: files; Name: "{userprograms}\Arcade Find\Arcade Find Settings.lnk"; Check: ArcadeOwnsSharedIntegration
+Type: dirifempty; Name: "{userprograms}\Arcade Find"; Check: ArcadeOwnsSharedIntegration
+
+[Code]
+var
+  FindOwnsIntegration: Boolean;
+
+// Mirrors arcade-integration.ps1: ARCADE_HOME isolates the shared root.
+function FindArcadeRoot(Param: String): String;
+begin
+  Result := GetEnv('ARCADE_HOME');
+  if Result = '' then Result := ExpandConstant('{localappdata}\Arcade');
+end;
+
+function ArcadeOwnsSharedIntegration: Boolean;
+begin
+  Result := FindOwnsIntegration;
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then ArcadeIntegration(True);
+end;
+
+// The helper deletes the receipt only when this copy owns it (exit 0); exit 10
+// leaves a successor's receipt in place, so its files are kept too.
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  Receipt: String;
+  HadReceipt: Boolean;
+begin
+  if CurUninstallStep = usUninstall then begin
+    Receipt := FindArcadeRoot('') + '\installs\arcade.find.json';
+    HadReceipt := FileExists(Receipt);
+    ArcadeIntegration(False);
+    FindOwnsIntegration := HadReceipt and not FileExists(Receipt);
+  end;
+end;
+
+function GetCustomSetupExitCode: Integer;
+begin
+  if ArcadeIntegrationFailed then Result := 1 else Result := 0;
+end;

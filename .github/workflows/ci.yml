@@ -105,7 +105,10 @@ jobs:
         run: packaging/linux/build-appimage.sh target/release/arcade-find dist
       - name: AppImage silent integration (isolated profile)
         if: runner.os == 'Linux'
-        run: python3 scripts/isolate.py dist/Arcade-Find-x86_64.AppImage --appimage-extract-and-run --install --silent --no-launch
+        # Outside the checkout: Link treats anything under a .git tree as a dev build.
+        run: |
+          cp dist/Arcade-Find-x86_64.AppImage "$RUNNER_TEMP/"
+          python3 scripts/isolate.py "$RUNNER_TEMP/Arcade-Find-x86_64.AppImage" --appimage-extract-and-run --install --silent --no-launch
       - name: Installer (Inno Setup, per-user)
         if: runner.os == 'Windows'
         shell: pwsh
