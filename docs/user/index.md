@@ -8,6 +8,8 @@ since: 0.2.1
 
 Arcade Find searches the names and details of files and folders on your computer. It builds a local index and opens a small search overlay when you press its shortcut.
 
+![Arcade Find settings showing theme, search result rows, and content search options](images/settings.png)
+
 ## Three useful things to start with
 
 - **Find files by name or path:** type a few words, an extension, or part of a folder path.
