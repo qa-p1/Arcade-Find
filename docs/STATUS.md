@@ -3,6 +3,26 @@
 Updated 2026-10-10. Version 0.2.1, released from `main` on `qa-p1/Arcade-Find`
 (AppImage, Windows installer, universal DMG; unsigned).
 
+## Arcade Tools hub integration (2026-10-12, branch `arcade/tools-hub`)
+
+Find 0.3.0 (unreleased) uses Arcade Link tag `v0.3.0` (`33650a8`). It implements
+the seven optional hub methods (Rescan index as its tray extra), the
+`TrayHostWatcher` with `status.tray`, the manifest `menu`/`logs`/`docs`/`install`
+fields, the self-installing AppImage with `--install`, `--uninstall`, `--repair`,
+`--integration-status` and `--restart`, the shared per-user Inno installer
+with receipt and PATH shim, the macOS move-to-Applications prompt, portable
+settings export/import, and `docs/user/`.
+
+- CI run [38279371804](https://github.com/qa-p1/Arcade-Find/actions/runs/38279371804),
+  2026-10-12, all green on Rust 1.88: fmt, clippy `-D warnings`, docs/shortcut
+  and vendored-checksum checks and the tests (107 pass on Linux, isolated
+  profile) on Linux, Windows and macOS; the headless sway + Xvfb end-to-end
+  job against Link v0.3.0 mock peers; AppImage silent install in an isolated
+  profile, Windows per-user silent install/uninstall, DMG build and package
+  smoke tests.
+- Windows and macOS were exercised in CI only. The hub features have not been
+  run on a real desktop yet; that check comes with the released packages.
+
 ## Evidence
 
 Local runs: Linux x86_64 container, 4 vCPU, 16 GiB, Rust 1.99, release

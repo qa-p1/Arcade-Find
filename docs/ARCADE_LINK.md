@@ -1,8 +1,7 @@
 # Arcade Find and Arcade Link
 
 Canonical ID `arcade.find`, protocol 1, manifest schema 1, using
-`arcade-link` v0.3.0 from branch `arcade/tools-hub` (`Cargo.lock` pins
-commit `01d50d8` until the orchestrator switches to tag `v0.3.0`). Code:
+`arcade-link` tag `v0.3.0` (commit `33650a8`). Code:
 `crates/arcade-find/src/link.rs` (actions, offers, encoding) and
 `crates/arcade-find/src/service.rs` (presence, registry, calls).
 
