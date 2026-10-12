@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 import re
+import os
 import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
@@ -40,7 +41,8 @@ def main():
     version = re.search(r'^version = "([^"]+)"', (ROOT / "Cargo.toml").read_text(encoding="utf-8"), re.M).group(1)
     if doc["app"] != "arcade.find" or doc["version"] != version:
         errors.append("shortcuts app/version differs from the build")
-    generated = subprocess.check_output([sys.executable, str(ROOT / "tools/validate_shortcuts.py"), str(source), "--markdown"], text=True)
+    generated = subprocess.check_output([sys.executable, str(ROOT / "tools/validate_shortcuts.py"), str(source), "--markdown"],
+                                        encoding="utf-8", env={**os.environ, "PYTHONUTF8": "1"})
     if generated != (ROOT / "docs/user/shortcuts.md").read_text(encoding="utf-8"):
         errors.append("shortcuts.md is stale; regenerate it with tools/validate_shortcuts.py")
     if errors:
