@@ -38,41 +38,34 @@ Name: "arcade_startup"; Description: "Start at login"; Flags: unchecked
 [Files]
 Source: "{#ArcadeHelper}"; DestDir: "{app}"; Flags: ignoreversion
 
+[UninstallDelete]
+Type: files; Name: "{app}\arcade-integration-error.log"
+
 [Icons]
 Name: "{userprograms}\{#ARCADE_NAME}\{#ARCADE_NAME}"; Filename: "{app}\{#ARCADE_EXE}"; Flags: uninsneveruninstall
 Name: "{userdesktop}\{#ARCADE_NAME}"; Filename: "{app}\{#ARCADE_EXE}"; Tasks: arcade_desktop; Flags: uninsneveruninstall
 Name: "{userstartup}\{#ARCADE_NAME}"; Filename: "{app}\{#ARCADE_EXE}"; Parameters: "--background"; Tasks: arcade_startup; Flags: uninsneveruninstall
 
-[UninstallDelete]
-Type: files; Name: "{userdesktop}\{#ARCADE_NAME}.lnk"; Check: ArcadeOwnsSharedIntegration
-Type: files; Name: "{userprograms}\{#ARCADE_NAME}\{#ARCADE_NAME}.lnk"; Check: ArcadeOwnsSharedIntegration
-Type: files; Name: "{userstartup}\{#ARCADE_NAME}.lnk"; Check: ArcadeOwnsSharedIntegration
-Type: dirifempty; Name: "{userprograms}\{#ARCADE_NAME}"; Check: ArcadeOwnsSharedIntegration
-
 [Code]
-var
-  ArcadeUninstallOwnsIntegration: Boolean;
-
-function ArcadeOwnsSharedIntegration: Boolean;
-begin
-  Result := ArcadeUninstallOwnsIntegration;
-end;
-
 function ArcadeQuote(Value: String): String;
 begin
   Result := '"' + Value + '"';
 end;
 
+var
+  ArcadeIntegrationFailed: Boolean;
+
 procedure ArcadeIntegration(Installing: Boolean);
 var
   Params, Autostart, DesktopShortcut: String;
+  Detail: AnsiString;
   ExitCode: Integer;
 begin
   Params := '-NoProfile -NonInteractive -ExecutionPolicy RemoteSigned -File ' +
     ArcadeQuote(ExpandConstant('{app}\arcade-integration.ps1'));
   if Installing then begin
-    Autostart := '-';
-    DesktopShortcut := '-';
+    Autostart := 'none';
+    DesktopShortcut := 'none';
     if WizardIsTaskSelected('arcade_startup') then
       Autostart := ExpandConstant('{userstartup}\{#ARCADE_NAME}.lnk');
     if WizardIsTaskSelected('arcade_desktop') then
@@ -95,11 +88,16 @@ begin
       '', SW_HIDE, ewWaitUntilTerminated, ExitCode) then
     RaiseException('Could not start Arcade installation integration.');
   if not Installing then begin
-    ArcadeUninstallOwnsIntegration := ExitCode = 0;
     if ExitCode = 10 then Exit;
   end;
-  if ExitCode <> 0 then
-    RaiseException('Arcade installation integration failed (exit ' + IntToStr(ExitCode) + ').');
+  if ExitCode <> 0 then begin
+    // Setup reports success after a ssPostInstall exception unless the exit
+    // code is overridden; GetCustomSetupExitCode returns this failure.
+    ArcadeIntegrationFailed := True;
+    Detail := '';
+    LoadStringFromFile(ExpandConstant('{app}\arcade-integration-error.log'), Detail);
+    RaiseException('Arcade installation integration failed (exit ' + IntToStr(ExitCode) + ').' + #13#10 + Detail);
+  end;
 end;
 
 // Apps with existing event handlers call these from their own handlers and
@@ -112,5 +110,9 @@ end;
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
   if CurUninstallStep = usUninstall then ArcadeIntegration(False);
+end;
+function GetCustomSetupExitCode: Integer;
+begin
+  if ArcadeIntegrationFailed then Result := 1 else Result := 0;
 end;
 #endif

@@ -23,7 +23,7 @@ serde_json.workspace = true
 semver = "1"
 notify = "8"
 fs2 = "0.4"
-arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", branch = "arcade/tools-hub", features = ["watch", "install", "trayhost"] }
+arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v0.3.0", features = ["watch", "install", "trayhost"] }
 interprocess = "2.4"
 getrandom = "0.4"
 # Overlay rendering (software; no GPU context is created for the overlay).
