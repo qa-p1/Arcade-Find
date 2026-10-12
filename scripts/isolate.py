@@ -15,6 +15,7 @@ with tempfile.TemporaryDirectory(prefix="find-test-home-") as temporary:
     # Preserve Cargo's download/build cache while HOME is isolated. Never write
     # this (or any generated environment) into a login/startup file.
     env.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
+    env.setdefault("RUSTUP_HOME", str(Path.home() / ".rustup"))
     for key, name in (("HOME", "home"), ("USERPROFILE", "home"), ("XDG_CONFIG_HOME", "config"),
                       ("XDG_DATA_HOME", "data"), ("XDG_CACHE_HOME", "cache"), ("XDG_RUNTIME_DIR", "run"),
                       ("ARCADE_HOME", "arcade"), ("ARCADE_FIND_HOME", "find"), ("APPDATA", "roaming"), ("LOCALAPPDATA", "local")):

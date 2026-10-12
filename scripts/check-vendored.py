@@ -6,7 +6,7 @@ import re
 import sys
 
 root = Path(__file__).resolve().parent.parent
-entries = re.findall(r"^([0-9a-f]{64})  (\S+)$", (root / "VENDORED.md").read_text(), re.M)
+entries = re.findall(r"^([0-9a-f]{64})  (\S+)$", (root / "VENDORED.md").read_text(encoding="utf-8"), re.M)
 if not entries:
     sys.exit("VENDORED.md contains no checksums")
 failed = []

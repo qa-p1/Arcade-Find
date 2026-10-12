@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def anchors(path):
     seen = {}
     result = set()
-    for heading in re.findall(r"^#{1,6}\s+(.+)$", path.read_text(), re.M):
+    for heading in re.findall(r"^#{1,6}\s+(.+)$", path.read_text(encoding="utf-8"), re.M):
         slug = re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-")
         n = seen.get(slug, 0)
         seen[slug] = n + 1
@@ -24,7 +24,7 @@ def main():
     checked = 0
     files = [ROOT / "README.md", ROOT / "CHANGELOG.md", ROOT / "VENDORED.md", *sorted((ROOT / "docs").rglob("*.md"))]
     for file in files:
-        for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", file.read_text()):
+        for target in re.findall(r"\[[^\]]*\]\(([^)]+)\)", file.read_text(encoding="utf-8")):
             target = target.strip().split(' "', 1)[0].strip("<>")
             url = urlsplit(target)
             if url.scheme or url.netloc:
@@ -36,12 +36,12 @@ def main():
             elif url.fragment and path.suffix == ".md" and unquote(url.fragment) not in anchors(path):
                 errors.append(f"{file.relative_to(ROOT)}: missing fragment {target}")
     source = ROOT / "docs/user/shortcuts.json"
-    doc = json.loads(source.read_text())
-    version = re.search(r'^version = "([^"]+)"', (ROOT / "Cargo.toml").read_text(), re.M).group(1)
+    doc = json.loads(source.read_text(encoding="utf-8"))
+    version = re.search(r'^version = "([^"]+)"', (ROOT / "Cargo.toml").read_text(encoding="utf-8"), re.M).group(1)
     if doc["app"] != "arcade.find" or doc["version"] != version:
         errors.append("shortcuts app/version differs from the build")
     generated = subprocess.check_output([sys.executable, str(ROOT / "tools/validate_shortcuts.py"), str(source), "--markdown"], text=True)
-    if generated != (ROOT / "docs/user/shortcuts.md").read_text():
+    if generated != (ROOT / "docs/user/shortcuts.md").read_text(encoding="utf-8"):
         errors.append("shortcuts.md is stale; regenerate it with tools/validate_shortcuts.py")
     if errors:
         sys.exit("\n".join(errors))
