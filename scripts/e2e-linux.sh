@@ -97,7 +97,8 @@ run_session() {
   check "$name: live update drops a deleted file" '! af --search fresh-report | grep -q fresh-report.md'
 
   # Link: the manifest and endpoint exist; find.search answers resident and one-shot.
-  check "$name: Link manifest written" '[[ -f "$ARCADE_HOME/apps/arcade.find.json" ]]'
+  # Presence publishes the manifest off the startup path; allow it 5 s.
+  check "$name: Link manifest written" 'for _ in $(seq 50); do [[ -f "$ARCADE_HOME/apps/arcade.find.json" ]] && break; sleep 0.1; done; [[ -f "$ARCADE_HOME/apps/arcade.find.json" ]]'
   local req='{"v":1,"id":1,"method":"invoke","params":{"action":"find.search","inputs":[{"type":"text/plain","text":"report ext:pdf"}],"options":{"limit":5},"context":{"source":"e2e","interactive":false,"reason":"test"}}}'
   check "$name: one-shot find.search" 'echo "$req" | af --arcade-invoke | grep -q "report-2024-q3.pdf"'
 
