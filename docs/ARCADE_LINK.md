@@ -145,7 +145,7 @@ The manifest uses Link’s `ManifestDocument` wrapper for cached **menu**, **doc
 
 ## Tray hosting
 
-`tray::watch` starts Link’s `TrayHostWatcher` before constructing an icon. Its registry/socket worker delivers the first answer or a 300 ms startup fallback. Linux retains a ksni handle and switches between Active and Passive. Native tray-icon prepares the bitmap/menu on the first answer and delays OS registration until Own because the library has no hidden constructor; once registered, it retains the object and calls set_visible on the UI thread. Hosted startup therefore has no icon flash. EOF/false restores Own immediately; an announced restart permits five seconds of grace. No polling is added. `app.status.status.tray` is **own**, **hosted**, or **none** when tray creation is unavailable; Link off always requests Own.
+`tray::watch` starts Link’s `TrayHostWatcher` before constructing an icon. Its registry/socket worker delivers the first answer or a 300 ms startup fallback. Linux registers a ksni item only while Own and shuts it down when hosted, because hosts such as Caelestia and Waybar still show Passive items; `tests/tray-registration.py` checks this against a real StatusNotifierWatcher. Native tray-icon prepares the bitmap/menu on the first answer and delays OS registration until Own because the library has no hidden constructor; once registered, it retains the object and calls set_visible on the UI thread. Hosted startup therefore has no icon flash. EOF/false restores Own immediately; an announced restart permits five seconds of grace. No polling is added. `app.status.status.tray` is **own**, **hosted**, or **none** when tray creation is unavailable; Link off always requests Own.
 
 ## Copying the Rust reference implementation
 

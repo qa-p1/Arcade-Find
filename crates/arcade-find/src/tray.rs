@@ -44,7 +44,6 @@ mod imp {
     struct FindTray {
         svc: Weak<Service>,
         icon: Vec<ksni::Icon>,
-        visible: bool,
     }
 
     impl ksni::Tray for FindTray {
@@ -56,13 +55,6 @@ mod imp {
         }
         fn category(&self) -> ksni::Category {
             ksni::Category::ApplicationStatus
-        }
-        fn status(&self) -> ksni::Status {
-            if self.visible {
-                ksni::Status::Active
-            } else {
-                ksni::Status::Passive
-            }
         }
         fn icon_pixmap(&self) -> Vec<ksni::Icon> {
             self.icon.clone()
@@ -101,25 +93,27 @@ mod imp {
 
     pub fn start(svc: &Arc<Service>) -> Result<(), String> {
         // Both initial construction and D-Bus changes are off the UI thread.
-        // Passive is SNI's hidden state; keep the handle for instant hand-back.
+        // Only Own registers an item. Hosts such as Caelestia and Waybar still
+        // show Passive items, so a hosted icon is unregistered, not hidden.
         let weak = Arc::downgrade(svc);
         let mut handle: Option<ksni::blocking::Handle<FindTray>> = None;
         let watcher = watch(svc, move |state| {
             let Some(svc) = weak.upgrade() else { return };
-            let visible = state == TrayState::Own;
             // Callback owns its state on the watcher's one worker thread.
-            if let Some(h) = &handle {
-                h.update(|t| t.visible = visible);
-            } else if state != TrayState::None {
-                let tray = FindTray { svc: Arc::downgrade(&svc), icon: vec![icon(22), icon(32), icon(64)], visible };
-                match tray.assume_sni_available(true).spawn() {
-                    Ok(h) => handle = Some(h),
-                    Err(e) => {
-                        eprintln!("arcade-find: tray: {e}");
-                        svc.note_tray(TrayState::None);
-                        return;
+            if state == TrayState::Own {
+                if !matches!(&handle, Some(h) if !h.is_closed()) {
+                    let tray = FindTray { svc: Arc::downgrade(&svc), icon: vec![icon(22), icon(32), icon(64)] };
+                    match tray.assume_sni_available(true).spawn() {
+                        Ok(h) => handle = Some(h),
+                        Err(e) => {
+                            eprintln!("arcade-find: tray: {e}");
+                            svc.note_tray(TrayState::None);
+                            return;
+                        }
                     }
                 }
+            } else if let Some(h) = handle.take() {
+                h.shutdown().wait();
             }
             svc.note_tray(state);
         })?;
