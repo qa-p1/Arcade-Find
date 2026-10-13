@@ -23,7 +23,7 @@ settings export/import, and `docs/user/`.
 - Windows and macOS were exercised in CI only. The hub features have not been
   run on a real desktop yet; that check comes with the released packages.
 
-## Evidence
+## Earlier evidence (0.2.1, Arcade Link v0.2.0)
 
 Local runs: Linux x86_64 container, 4 vCPU, 16 GiB, Rust 1.99, release
 builds unless noted. CI (`.github/workflows/ci.yml`) runs fmt, clippy
