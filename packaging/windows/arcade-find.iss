@@ -55,26 +55,12 @@ Filename: "{app}\arcade-find.exe"; Parameters: "--quit"; Flags: runhidden; RunOn
 ; optional Startup shortcut task, which Find respects through its receipt.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "ArcadeFind"; ValueType: none; Flags: dontcreatekey uninsdeletevalue
 
-[UninstallDelete]
-; The Arcade Link manifest (SPEC §3: uninstallers remove it). User data stays.
-Type: files; Name: "{code:FindArcadeRoot}\apps\arcade.find.json"; Check: ArcadeOwnsSharedIntegration
-Type: files; Name: "{userprograms}\Arcade Find\Arcade Find Settings.lnk"; Check: ArcadeOwnsSharedIntegration
-Type: dirifempty; Name: "{userprograms}\Arcade Find"; Check: ArcadeOwnsSharedIntegration
-
 [Code]
-var
-  FindOwnsIntegration: Boolean;
-
 // Mirrors arcade-integration.ps1: ARCADE_HOME isolates the shared root.
 function FindArcadeRoot(Param: String): String;
 begin
   Result := GetEnv('ARCADE_HOME');
   if Result = '' then Result := ExpandConstant('{localappdata}\Arcade');
-end;
-
-function ArcadeOwnsSharedIntegration: Boolean;
-begin
-  Result := FindOwnsIntegration;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -93,7 +79,14 @@ begin
     Receipt := FindArcadeRoot('') + '\installs\arcade.find.json';
     HadReceipt := FileExists(Receipt);
     ArcadeIntegration(False);
-    FindOwnsIntegration := HadReceipt and not FileExists(Receipt);
+    if HadReceipt and not FileExists(Receipt) then begin
+      // [UninstallDelete] Check functions run during setup, before ownership
+      // is known, so these are removed here. The Arcade Link manifest goes
+      // too (SPEC §3: uninstallers remove it); user data stays.
+      DeleteFile(FindArcadeRoot('') + '\apps\arcade.find.json');
+      DeleteFile(ExpandConstant('{userprograms}\Arcade Find\Arcade Find Settings.lnk'));
+      RemoveDir(ExpandConstant('{userprograms}\Arcade Find'));
+    end;
   end;
 end;
 

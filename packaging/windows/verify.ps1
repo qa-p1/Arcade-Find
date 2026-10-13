@@ -16,12 +16,21 @@ try {
     if (Get-Process arcade-find -ErrorAction SilentlyContinue) { throw 'Silent install launched Find' }
     New-Item -ItemType Directory -Force (Join-Path $env:ARCADE_FIND_HOME 'data') | Out-Null
     Set-Content (Join-Path $env:ARCADE_FIND_HOME 'data\sentinel') 'keep data'
+    # The app writes its Link manifest on first run; stand in for that run.
+    $manifest = Join-Path $env:ARCADE_HOME 'apps\arcade.find.json'
+    New-Item -ItemType Directory -Force (Split-Path $manifest) | Out-Null
+    Set-Content $manifest '{}'
+    $settingsLink = Join-Path ([Environment]::GetFolderPath('Programs')) 'Arcade Find\Arcade Find Settings.lnk'
+    if (!(Test-Path $settingsLink)) { throw 'Install did not create the Settings shortcut' }
     $process = Start-Process $receipt.integration.uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "Inno uninstall exited $($process.ExitCode)" }
     if (Test-Path $receiptFile) { throw 'Uninstall kept receipt' }
     if (Test-Path $receipt.integration.cli) { throw 'Uninstall kept CLI shim' }
+    if (Test-Path $receipt.integration.autostart) { throw 'Uninstall kept the login shortcut' }
+    if (Test-Path $manifest) { throw 'Uninstall kept the Arcade Link manifest' }
+    if (Test-Path (Split-Path $settingsLink)) { throw 'Uninstall kept the Start menu folder' }
     if (!(Test-Path (Join-Path $env:ARCADE_FIND_HOME 'data\sentinel'))) { throw 'Uninstall removed user data' }
-    Write-Output 'Windows silent installer: receipt, per-user files, startup, CLI, no launch, uninstall and data preservation passed'
+    Write-Output 'Windows silent installer: receipt, per-user files, startup, CLI, no launch, uninstall (manifest, shortcuts) and data preservation passed'
 } finally {
     Remove-Item -Recurse -Force $root -ErrorAction SilentlyContinue
 }
