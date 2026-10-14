@@ -15,6 +15,8 @@ import time
 
 
 def main():
+    if os.environ.get("ARCADE_E2E_INNER") != "1":
+        raise SystemExit("Run through Link tools/e2e.py run --")
     artifact = Path(sys.argv[1]).resolve()
     with tempfile.TemporaryDirectory(prefix="find-appimage-") as temporary:
         root = Path(temporary)
@@ -68,6 +70,7 @@ def main():
         assert str(moved) in Path(repaired["integration"]["desktopEntry"]).read_text()
         assert run(moved, "--uninstall", "--silent")["uninstalled"]
         assert not moved.exists(), "receipt uninstall did not remove the moved copy"
+        assert all(not p.exists() and not p.is_symlink() for p in paths), "uninstall retained integration"
 
         # Prove --install --silent re-execs the installed file. --background
         # is retained; installer controls are removed from the relaunch.
@@ -106,6 +109,7 @@ def main():
         assert run(installed, "--uninstall", "--silent")["uninstalled"]
         assert not installed.exists() and not moved.exists()
         assert not (root / "arcade/installs/arcade.find.json").exists()
+        assert all(not p.exists() and not p.is_symlink() for p in paths), "uninstall retained integration"
         assert settings.exists(), "uninstall removed settings without --remove-data"
         print("AppImage: silent install, files/receipt, moved repair, installed re-exec and receipt uninstall passed")
 

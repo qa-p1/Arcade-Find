@@ -24,6 +24,8 @@ try {
     if (!(Test-Path $settingsLink)) { throw 'Install did not create the Settings shortcut' }
     $process = Start-Process $receipt.integration.uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -Wait -PassThru
     if ($process.ExitCode -ne 0) { throw "Inno uninstall exited $($process.ExitCode)" }
+    if (Test-Path $receipt.path) { throw 'Uninstall kept the installed executable' }
+    if (Test-Path $receipt.integration.desktopEntry) { throw 'Uninstall kept the launcher' }
     if (Test-Path $receiptFile) { throw 'Uninstall kept receipt' }
     if (Test-Path $receipt.integration.cli) { throw 'Uninstall kept CLI shim' }
     if (Test-Path $receipt.integration.autostart) { throw 'Uninstall kept the login shortcut' }

@@ -11,6 +11,53 @@ use find_core::Settings;
 
 pub const BACKGROUND_FLAG: &str = "--background";
 
+// Link v0.3.0's typed receipt omits extension fields on serialization. Retain
+// the original JSON when a login toggle updates an existing installation.
+fn read_receipt(
+    environment: &arcade_link::install::Environment,
+) -> Result<Option<(arcade_link::receipt::Receipt, serde_json::Value)>, String> {
+    let path = environment.receipts().path(crate::link::ME).map_err(|e| e.to_string())?;
+    let text = match std::fs::read_to_string(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+        result => result.map_err(|e| e.to_string())?,
+    };
+    let receipt = arcade_link::receipt::Receipt::from_json(&text).map_err(|e| e.to_string())?;
+    receipt.validate_native_paths().map_err(|e| e.to_string())?;
+    if receipt.id != crate::link::ME || receipt.method == arcade_link::receipt::InstallMethod::Dev {
+        return Err("Not a Find installation receipt".into());
+    }
+    Ok(Some((receipt, serde_json::from_str(&text).map_err(|e| e.to_string())?)))
+}
+
+fn write_receipt(
+    environment: &arcade_link::install::Environment,
+    receipt: &arcade_link::receipt::Receipt,
+    mut document: serde_json::Value,
+) -> Result<(), String> {
+    receipt.validate_native_paths().map_err(|e| e.to_string())?;
+    let mut updated = serde_json::to_value(receipt).map_err(|e| e.to_string())?;
+    let integration = updated.as_object_mut().unwrap().remove("integration").unwrap();
+    document["integration"].as_object_mut().unwrap().extend(integration.as_object().unwrap().clone());
+    document.as_object_mut().unwrap().extend(updated.as_object().unwrap().clone());
+    let store = environment.receipts();
+    arcade_link::paths::ensure_private_dir(store.dir()).map_err(|e| e.to_string())?;
+    let bytes = serde_json::to_vec_pretty(&document).map_err(|e| e.to_string())?;
+    arcade_link::paths::write_atomic(&store.path(crate::link::ME).map_err(|e| e.to_string())?, &bytes, true).map_err(|e| e.to_string())
+}
+
+fn disable_in(environment: &arcade_link::install::Environment) -> Result<(), String> {
+    let Some((mut receipt, document)) = read_receipt(environment)? else { return Ok(()) };
+    if let Some(path) = receipt.integration.autostart.take() {
+        match std::fs::remove_file(path) {
+            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.to_string()),
+            _ => {}
+        }
+        receipt.updated_at = arcade_link::manifest::now_rfc3339();
+        write_receipt(environment, &receipt, document)?;
+    }
+    Ok(())
+}
+
 /// The stable executable to start at login, or `None` for development
 /// builds (inside a Cargo `target` folder).
 pub fn installed_executable() -> Option<String> {
@@ -58,13 +105,18 @@ pub fn set(enabled: bool) -> Result<(), String> {
 fn enable(_exe: &str) -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
     let runtime = arcade_link::install::Runtime::discover().map_err(|e| e.to_string())?;
-    let old = environment.receipts().read(crate::link::ME).map_err(|e| e.to_string())?.ok_or("No install receipt")?;
+    enable_linux(&environment, &runtime)
+}
+
+#[cfg(target_os = "linux")]
+fn enable_linux(environment: &arcade_link::install::Environment, runtime: &arcade_link::install::Runtime) -> Result<(), String> {
+    let (old, document) = read_receipt(environment)?.ok_or("No install receipt")?;
     // Shared installer owns all desktop-entry quoting and autostart repair.
-    arcade_link::install::install(
-        &environment,
+    let receipt = arcade_link::install::install(
+        environment,
         arcade_link::install::InstallOptions {
             app: &crate::installer::app_info(),
-            runtime: &runtime,
+            runtime,
             version: &old.version,
             channel: &old.channel,
             managed_by: old.managed_by,
@@ -74,22 +126,14 @@ fn enable(_exe: &str) -> Result<(), String> {
             refresh_caches: false,
         },
     )
-    .map(|_| ())
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    write_receipt(environment, &receipt, document)
 }
 
 #[cfg(target_os = "linux")]
 fn disable() -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
-    let Some(mut receipt) = environment.receipts().read(crate::link::ME).map_err(|e| e.to_string())? else { return Ok(()) };
-    if let Some(path) = receipt.integration.autostart.take() {
-        match std::fs::remove_file(path) {
-            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.to_string()),
-            _ => {}
-        }
-        environment.receipts().write(&receipt).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    disable_in(&environment)
 }
 
 #[cfg(target_os = "linux")]
@@ -116,17 +160,17 @@ pub fn plist(exe: &str) -> String {
 
 #[cfg(target_os = "macos")]
 fn enable(exe: &str) -> Result<(), String> {
+    let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
+    let (mut receipt, document) = read_receipt(&environment)?.ok_or("No install receipt")?;
     let p = plist_path();
     let want = plist(exe);
     if std::fs::read_to_string(&p).ok().as_deref() != Some(want.as_str()) {
         arcade_link::paths::write_atomic(&p, want.as_bytes(), true).map_err(|e| e.to_string())?;
     }
-    let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
-    let mut receipt = environment.receipts().read(crate::link::ME).map_err(|e| e.to_string())?.ok_or("No install receipt")?;
     if receipt.integration.autostart.as_ref() != Some(&p) {
         receipt.integration.autostart = Some(p);
         receipt.updated_at = arcade_link::manifest::now_rfc3339();
-        environment.receipts().write(&receipt).map_err(|e| e.to_string())?;
+        write_receipt(&environment, &receipt, document)?;
     }
     Ok(())
 }
@@ -134,16 +178,7 @@ fn enable(exe: &str) -> Result<(), String> {
 #[cfg(target_os = "macos")]
 fn disable() -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
-    let Some(mut receipt) = environment.receipts().read(crate::link::ME).map_err(|e| e.to_string())? else { return Ok(()) };
-    if let Some(path) = receipt.integration.autostart.take() {
-        match std::fs::remove_file(path) {
-            Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.to_string()),
-            _ => {}
-        }
-        receipt.updated_at = arcade_link::manifest::now_rfc3339();
-        environment.receipts().write(&receipt).map_err(|e| e.to_string())?;
-    }
-    Ok(())
+    disable_in(&environment)
 }
 
 #[cfg(target_os = "macos")]
@@ -192,7 +227,7 @@ mod win {
 #[cfg(windows)]
 fn enable(exe: &str) -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
-    let mut receipt = environment.receipts().read(crate::link::ME).map_err(|e| e.to_string())?.ok_or("No install receipt")?;
+    let (mut receipt, document) = read_receipt(&environment)?.ok_or("No install receipt")?;
     let startup = std::env::var_os("APPDATA")
         .map(PathBuf::from)
         .ok_or("APPDATA isn't available")?
@@ -200,23 +235,14 @@ fn enable(exe: &str) -> Result<(), String> {
     crate::installer::write_windows_shortcut(&startup, std::path::Path::new(exe), BACKGROUND_FLAG).map_err(|e| e.to_string())?;
     receipt.integration.autostart = Some(startup);
     receipt.updated_at = arcade_link::manifest::now_rfc3339();
-    environment.receipts().write(&receipt).map_err(|e| e.to_string())?;
+    write_receipt(&environment, &receipt, document)?;
     win::delete()
 }
 
 #[cfg(windows)]
 fn disable() -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
-    if let Some(mut receipt) = environment.receipts().read(crate::link::ME).map_err(|e| e.to_string())? {
-        if let Some(path) = receipt.integration.autostart.take() {
-            match std::fs::remove_file(path) {
-                Err(e) if e.kind() != std::io::ErrorKind::NotFound => return Err(e.to_string()),
-                _ => {}
-            }
-            receipt.updated_at = arcade_link::manifest::now_rfc3339();
-            environment.receipts().write(&receipt).map_err(|e| e.to_string())?;
-        }
-    }
+    disable_in(&environment)?;
     win::delete()
 }
 
@@ -248,5 +274,56 @@ mod tests {
         let mut s = Settings::default();
         sync(&p, &mut s).unwrap();
         assert_eq!(s.start_at_login, None, "nothing decided for a dev build");
+    }
+
+    #[test]
+    fn login_toggles_preserve_receipt_extensions() {
+        let root = std::env::temp_dir().join(format!("find-login-{}-{}", std::process::id(), arcade_link::endpoint::new_token().unwrap()));
+        let environment = arcade_link::install::Environment::under(&root);
+        let executable = environment.applications.join("Arcade-Find.AppImage");
+        let startup = environment.config.join("autostart/arcade-find.desktop");
+        let document = serde_json::json!({
+            "schema": 1, "id": crate::link::ME, "version": "0.3.0", "channel": "stable",
+            "method": "appimage", "managedBy": "tools", "path": executable,
+            "integration": {"icons": [], "autostart": startup, "futureIntegration": {"keep": true}},
+            "toolsExtension": {"keep": true},
+            "installedAt": arcade_link::manifest::now_rfc3339(), "updatedAt": arcade_link::manifest::now_rfc3339()
+        });
+        let store = environment.receipts();
+        arcade_link::paths::write_atomic(&store.path(crate::link::ME).unwrap(), &serde_json::to_vec(&document).unwrap(), true).unwrap();
+        for _ in 0..2 {
+            arcade_link::paths::write_atomic(&startup, b"login fixture", true).unwrap();
+            let (mut receipt, original) = read_receipt(&environment).unwrap().unwrap();
+            receipt.integration.autostart = Some(startup.clone());
+            write_receipt(&environment, &receipt, original).unwrap();
+            disable_in(&environment).unwrap();
+            let (receipt, changed) = read_receipt(&environment).unwrap().unwrap();
+            assert!(receipt.integration.autostart.is_none());
+            assert!(!startup.exists());
+            assert_eq!(changed["toolsExtension"], document["toolsExtension"]);
+            assert_eq!(changed["integration"]["futureIntegration"], document["integration"]["futureIntegration"]);
+            assert_eq!(changed["managedBy"], "tools");
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                assert_eq!(std::fs::metadata(store.path(crate::link::ME).unwrap()).unwrap().permissions().mode() & 0o777, 0o600);
+            }
+        }
+        #[cfg(target_os = "linux")]
+        {
+            std::fs::create_dir_all(executable.parent().unwrap()).unwrap();
+            std::fs::write(&executable, b"installed fixture").unwrap();
+            // The same installed file is refreshed; no source copying or GUI.
+            let runtime = arcade_link::install::Runtime { executable: executable.clone(), appimage: None, appdir: None, dev_build: false };
+            enable_linux(&environment, &runtime).unwrap();
+            let (receipt, changed) = read_receipt(&environment).unwrap().unwrap();
+            assert_eq!(receipt.integration.autostart.as_ref(), Some(&startup));
+            assert!(startup.is_file());
+            assert_eq!(changed["toolsExtension"], document["toolsExtension"]);
+            assert_eq!(changed["integration"]["futureIntegration"], document["integration"]["futureIntegration"]);
+            disable_in(&environment).unwrap();
+            assert!(!startup.exists());
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 }
