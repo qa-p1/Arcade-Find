@@ -1,139 +1,58 @@
 # Arcade Find
 
-Press a shortcut, type, and any file or folder shows up instantly.
-**Enter** previews it in [Arcade Look](https://github.com/qa-p1/arcade-look)
-(or opens it with the default app when Look isn't there).
-
-Arcade Find keeps an in-memory index of your files (names and metadata only),
-saved to disk so it's ready in well under a second after login, and kept
-current by file-system notifications. It is local only: no network access,
-and file contents are read only when you search inside files with `/`.
+Arcade Find opens a local file search with a shortcut. Type a few letters to find files and folders, preview a result, or send it to another Arcade app.
 
 ## Install
 
-| Platform | Package | Where it goes |
-|---|---|---|
-| Linux (x86_64) | `Arcade-Find-x86_64.AppImage` | `~/Applications/Arcade/Arcade-Find.AppImage` (what Arcade Tools uses) |
-| Windows (x64) | `Arcade-Find-<version>-x64-setup.exe` (per-user, no admin) | `%LOCALAPPDATA%\Programs\Arcade Find` |
-| macOS 11+ (universal) | `Arcade-Find-<version>-universal.dmg` | `/Applications/Arcade Find.app` (Arcade Tools: `~/Applications`) |
+Install Find from **Arcade Tools → Apps**, or install it by hand using the [getting-started guide](docs/user/getting-started.md).
 
-Get them from [Releases](https://github.com/qa-p1/Arcade-Find/releases) or install
-with Arcade Tools. Packages are unsigned; the macOS app isn't notarized. Content search needs
-[ripgrep](https://github.com/BurntSushi/ripgrep) installed (it is detected,
-never bundled or downloaded).
+## Works with other Arcade apps
 
-## Use
+Find can preview with Look, process results with Box, and send or save selections with other Arcade apps. See [how Find works with other Arcade apps](docs/user/with-other-apps.md).
 
-The default shortcut is **Ctrl+Alt+F** (change it in Settings). The overlay
-opens at the center of the screen; at rest it's only the search bar, and it
-grows up and down around the center as results arrive.
+Find 0.3.0 includes a first-run AppImage installer and can share its tray with Tools.
+Use `--install --silent`, `--uninstall`, `--repair`, or `--integration-status` for terminal integration.
+Windows/macOS integration is build/CI only, not verified on a real desktop.
 
-| Key | Does |
-|---|---|
-| type | Search (every keystroke) |
-| ↑ ↓, PgUp PgDn | Move; with Shift, select several |
-| **Enter** | Quick Look in Arcade Look (default app without Look) |
-| Shift+Enter | Open with the default app |
-| Ctrl+Enter | Show in the folder |
-| Space | Quick Look (after moving into the list; while typing it types a space) |
-| Tab | All actions for the selection, including other Arcade apps' |
-| F2 | Rename (never overwrites) |
-| Delete | Move to Trash (asks first; never deletes permanently) |
-| Ctrl+C / Ctrl+Shift+C | Copy path / copy the file |
-| Ctrl+Shift+P | Pin (pinned and recent items show on Down with an empty query) |
-| Ctrl+H | Show hidden files |
-| Ctrl+I | Details |
-| Ctrl+, | Settings |
-| Esc | Close (focus returns to the previous app) |
+Read the [Arcade Find user guide](docs/user/) for setup, search examples, features, shortcuts, and help.
 
-On macOS, Cmd replaces Ctrl.
+The [shortcut reference](docs/user/shortcuts.md) is generated from the app’s validated shortcut data.
 
-With the mouse: click selects, Shift+click extends the selection,
-double-click does what Enter does, and dragging a result (or the whole
-selection) drops the files into another app: a file manager, an editor,
-Arcade Shelf. Files are always copied or linked by the target, never moved.
+## Development
 
-### Query language
+### Build and run
 
-| Example | Finds |
-|---|---|
-| `report 2024` | Names containing both words (any order; fuzzy) |
-| `"q3 report"` | The exact phrase |
-| `src/main` | Paths containing `src/` followed by a name starting with `main` |
-| `*.tar.gz` | Wildcard on the name |
-| `ext:pdf,docx` | By extension |
-| `dir:` / `file:` | Only folders / only files |
-| `in:~/Projects` | Inside a folder |
-| `size:>100mb`, `size:1k..10m` | By size |
-| `modified:<7d`, `modified:today`, `modified:>=2026-01-01` | By date |
-| `hidden:yes` | Include hidden files for this query |
-| `/TODO ext:rs` | Inside files (ripgrep) |
+Requires Rust 1.89 or later. On Linux, install the Wayland and XKB development packages with `sudo apt install libxkbcommon-dev libwayland-dev`.
 
-## Settings
+    cargo build --release -p arcade-find
+    cargo test --workspace
+    scripts/e2e-linux.sh target/release/arcade-find
+    python3 scripts/bench_real.py --files 1000000
 
-General (theme, start at login, rows, content search), Locations (folders to
-index; extra drives such as `/mnt/Data` are opt-in; excluded names and
-folders; network drives skipped), Shortcut, Index (status, live-update
-health, rescan), Connected apps, About.
+The end-to-end script needs Sway, grim, wtype, Xvfb, and xdotool.
 
-Excluded by default: `.git`, `node_modules`, `target`, `.cache`,
-`__pycache__`, `.venv`, `.snapshots` (Btrfs), `/proc`, `/sys`, `/dev`,
-`/run`, the Trash (Linux, macOS) and network mounts. Symbolic links are never
-followed, so nothing is indexed twice.
+### Command line
 
-On Linux, live updates use inotify. If `fs.inotify.max_user_watches` is too
-low for your folders, Find watches what it can, rescans the rest every hour,
-and shows the command to raise the limit (it never changes system settings).
+    arcade-find [--show [QUERY] | --toggle | --hide | --background | --settings |
+                 --search QUERY [--limit N] [--hidden] [--json] | --status |
+                 --rescan | --restart | --quit | --version |
+                 --arcade-manifest | --arcade-invoke]
 
-## Command line
+Use **arcade-find --toggle** for a desktop shortcut on Wayland desktops where Find cannot register a global shortcut. See [Hyprland integration](docs/HYPRLAND.md).
 
-```text
-arcade-find [--show [QUERY] | --toggle | --hide | --background | --settings |
-             --search QUERY [--limit N] [--hidden] [--json] | --status |
-             --rescan | --restart | --quit | --version |
-             --arcade-manifest | --arcade-invoke]
-```
+### Data and configuration
 
-`arcade-find --toggle` is what desktop shortcuts should run where Find can't
-register one itself (see [docs/HYPRLAND.md](docs/HYPRLAND.md) for Hyprland).
+Find indexes file and folder names and metadata locally. It reads file contents only when you search inside files. On Linux its data is under **~/.local/share/arcade-find**; on macOS under **~/Library/Application Support/Arcade Find**; on Windows under **%LOCALAPPDATA%/Arcade/Arcade Find**. **ARCADE_FIND_HOME** overrides the data directory, and **ARCADE_FIND_PROFILE** selects a separate profile.
 
-## Platforms
+The index excludes common build/cache folders, network mounts, and system paths by default. Symbolic links are not followed.
 
-| | Status |
-|---|---|
-| Linux, Wayland with layer shell (Hyprland, Sway, KDE, …) | Overlay, shortcut (Hyprland runtime binding; elsewhere bind `arcade-find --toggle`), tray. Tested in headless Sway. |
-| Linux, X11 | Overlay, native shortcut, tray. Tested in Xvfb. |
-| Linux, GNOME Wayland (no layer shell) | Normal window; bind `arcade-find --toggle` in Settings → Keyboard. The same window path (dragging out included) is tested on headless Sway; not tested on GNOME itself. |
-| Windows 10/11 | Builds (CI); not tested interactively. |
-| macOS 11+ | Builds (CI); not tested interactively. |
+### Technical references
 
-See [docs/STATUS.md](docs/STATUS.md) for what was verified and how.
+- [Architecture](docs/ARCHITECTURE.md): index, query, matching, and overlay.
+- [Arcade Link](docs/ARCADE_LINK.md): actions Find exposes and uses.
+- [Hyprland](docs/HYPRLAND.md): runtime binding and compositor setup.
+- [Status](docs/STATUS.md): verification and known limits.
+- [Shelf integration](docs/SHELF.md): selection handoff details.
+- [Third-party notices](THIRD_PARTY_NOTICES.md) and [vendored files](VENDORED.md).
 
-## Arcade apps
-
-Find works on its own. With other Arcade apps installed it adds their
-actions for your results (Tab), e.g. Shelf's "Add to Shelf", Box's tools,
-Wheel's "Add to Wheel", Clipboard's "Send to my devices ↗", and exposes
-`find.search` and `find.show` to them: in Arcade Shelf, "Search in Find"
-opens Find on an item. See [docs/ARCADE_LINK.md](docs/ARCADE_LINK.md) and
-[docs/SHELF.md](docs/SHELF.md).
-
-## Build
-
-```sh
-# Linux: sudo apt install libxkbcommon-dev libwayland-dev
-cargo build --release -p arcade-find      # target/release/arcade-find
-cargo test --workspace
-scripts/e2e-linux.sh target/release/arcade-find   # needs sway, grim, wtype, Xvfb, xdotool
-python3 scripts/bench_real.py --files 1000000     # whole-app benchmark
-```
-
-Rust 1.89 or later. Data lives in `~/.local/share/arcade-find` (Linux),
-`~/Library/Application Support/Arcade Find` (macOS) or
-`%LOCALAPPDATA%\Arcade\Arcade Find` (Windows). `ARCADE_FIND_HOME` moves
-everything (tests), `ARCADE_FIND_PROFILE` keeps a separate profile.
-
-## License
-
-MIT OR Apache-2.0. Third-party licenses: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-Vendored files: [VENDORED.md](VENDORED.md).
+The project is licensed under MIT OR Apache-2.0.

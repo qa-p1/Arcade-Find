@@ -1,7 +1,7 @@
 # Arcade Find and Arcade Link
 
 Canonical ID `arcade.find`, protocol 1, manifest schema 1, using
-`arcade-link` v0.2.0 (`Cargo.lock` pins commit `bedee71`). Code:
+`arcade-link` tag `v0.3.0` (commit `33650a8`). Code:
 `crates/arcade-find/src/link.rs` (actions, offers, encoding) and
 `crates/arcade-find/src/service.rs` (presence, registry, calls).
 
@@ -10,7 +10,7 @@ Canonical ID `arcade.find`, protocol 1, manifest schema 1, using
 Written by `Presence` off the first-frame path, on a worker thread:
 
 ```json
-{ "schema": 1, "id": "arcade.find", "name": "Arcade Find", "version": "0.1.0",
+{ "schema": 1, "id": "arcade.find", "name": "Arcade Find", "version": "0.3.0",
   "link": { "protocol": [1] },
   "executable": "/home/u/Applications/Arcade/Arcade-Find.AppImage",
   "launch": { "background": ["--background"], "invoke": ["--arcade-invoke"] },
@@ -131,3 +131,28 @@ Link. Each consumer picks the peer actions it shows from its own list, so the
 pin alone adds Find to Connected apps, not to their menus. Of the four, only
 Lens offers one of Find's actions (**Search in Find**); Box, Look and
 Clipboard list Find without an entry.
+
+## Tools hub methods (0.3.0)
+
+`describe.methods` advertises `app.settings`, `app.restart`, `app.menu`, `app.menu.invoke`, `app.shortcuts.set`, `app.settings.export`, and `app.settings.import` for the resident server. The one-shot handler keeps its original headless search capability and advertises no resident controls.
+
+- Settings opens the existing eframe Settings process. Restart uses the same successor/lock handshake as the tray; normal mode reports busy during indexing, a content search or peer action, and force allows it.
+- Menu extras contain **rescan / Rescan index**, also present in Find’s own tray. Invocations validate the ID and trigger the same engine rescan; the standard four entries are implied.
+- The shortcut ID remains **show**. Link’s accelerator parser canonicalizes it, Find rejects invalid/bare/reserved chords, and unsupported sequences/taps report unavailable. Native registration is marshalled to the UI; Hyprland IPC runs on a worker using the existing runtime-bind implementation. Other Wayland desktops persist the requested chord and answer **applied:false, via:manual** with the desktop command hint. There is no portal implementation to advertise. Persistence/manifest failure restores the prior binding/settings. An open Settings window follows file notifications.
+- Export returns a private **file/any** handoff, using a schema-1 allowlist for portable settings and pins. Import accepts exactly one file, validates before mutation, backs up raw settings/pins, applies live, and answers **restartRequired:false**. Absolute paths outside home carry **machineSpecific** and **platform**; another OS’s paths are skipped. Index/history, local login/Hyprland/peer policy and secrets are absent.
+
+The manifest uses Link’s `ManifestDocument` wrapper for cached **menu**, **docs.version**, **logs** (Find’s data/logs directory), and **install** (receipt/detection method). Event-only logs rotate at 1 MiB, keeping two previous files; no query, content, paths or settings payloads are logged.
+
+## Tray hosting
+
+`tray::watch` starts Link’s `TrayHostWatcher` before constructing an icon. Its registry/socket worker delivers the first answer or a 300 ms startup fallback. Linux registers a ksni item only while Own and shuts it down when hosted, because hosts such as Caelestia and Waybar still show Passive items; `tests/tray-registration.py` checks this against a real StatusNotifierWatcher. Native tray-icon prepares the bitmap/menu on the first answer and delays OS registration until Own because the library has no hidden constructor; once registered, it retains the object and calls set_visible on the UI thread. Hosted startup therefore has no icon flash. EOF/false restores Own immediately; an announced restart permits five seconds of grace. No polling is added. `app.status.status.tray` is **own**, **hosted**, or **none** when tray creation is unavailable; Link off always requests Own.
+
+## Copying the Rust reference implementation
+
+- `link::document`, `menu_items`, and `FindHandler` map protocol shapes without toolkit code.
+- `hub.rs` serializes worker-side settings mutations and verifies manifest publication; `portable_settings.rs` owns the allowlist, validation, handoff and backup/rollback helpers.
+- `hotkey::{validate,set_live,result}` split protocol validation from worker registration/UI-thread native registration; `UiMsg` carries native requests and tray state.
+- `installer.rs` owns AppInfo, pure dialog-state selection, prompt/dismissal policy, platform install/repair/uninstall wrappers and re-execution paths. `installer_ui.rs` uses shared strings, a private helper-process pipe, and worker actions so Run once can create the resident event loop afterward.
+- `tray::{watch,start,set_state}` are the small toolkit adapters. Apps should pass their own IDs, menu extras, portable settings and data folders while retaining Link’s watcher/receipt/install machinery.
+
+See [vendoring pins](../VENDORED.md), [user installation guide](user/getting-started.md) and the dated [verification status](STATUS.md). Native platform code is build/CI only until explicitly exercised.

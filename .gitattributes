@@ -1,0 +1,8 @@
+# The verbatim shortcut generator emits a final blank line.
+docs/user/shortcuts.md whitespace=-blank-at-eof
+# Vendored copies are checksummed byte-for-byte; keep LF on every OS.
+tools/*.py -text
+packaging/windows/arcade.iss -text
+packaging/windows/arcade-integration.ps1 -text
+assets/glyphs/*.svg -text
+assets/link-tokens.json -text

@@ -7,11 +7,13 @@ use std::sync::{Arc, Weak};
 
 use crate::instance::Command;
 use crate::service::{Service, UiMsg};
+use arcade_link::trayhost::{TrayHostWatcher, TrayState, WatcherConfig};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Item {
     Open,
     Settings,
+    Rescan,
     Restart,
     Quit,
 }
@@ -21,8 +23,14 @@ fn run(svc: &Weak<Service>, item: Item) {
     match item {
         Item::Open => s.send(UiMsg::Show { query: None, reveal: None }),
         Item::Settings => s.open_settings(),
+        Item::Rescan => {
+            let _ = s.command(Command::Rescan);
+        }
         Item::Restart => {
-            let _ = s.command(Command::Restart);
+            let reply = s.command(Command::Restart);
+            if reply["ok"] != true {
+                s.send(UiMsg::Toast(reply["error"].as_str().unwrap_or("Couldn't restart").into(), crate::ui::model::ToastKind::Error));
+            }
         }
         Item::Quit => s.send(UiMsg::Quit),
     }
@@ -65,6 +73,7 @@ mod imp {
             vec![
                 item("Open Arcade Find", Item::Open),
                 item("Open Settings", Item::Settings),
+                item("Rescan index", Item::Rescan),
                 item("Restart Arcade Find", Item::Restart),
                 ksni::MenuItem::Separator,
                 item("Quit Arcade Find", Item::Quit),
@@ -83,12 +92,36 @@ mod imp {
     }
 
     pub fn start(svc: &Arc<Service>) -> Result<(), String> {
-        let tray = FindTray { svc: Arc::downgrade(svc), icon: vec![icon(22), icon(32), icon(64)] };
-        let handle = tray.assume_sni_available(true).spawn().map_err(|e| e.to_string())?;
-        // The tray lives as long as the process.
-        std::mem::forget(handle);
+        // Both initial construction and D-Bus changes are off the UI thread.
+        // Only Own registers an item. Hosts such as Caelestia and Waybar still
+        // show Passive items, so a hosted icon is unregistered, not hidden.
+        let weak = Arc::downgrade(svc);
+        let mut handle: Option<ksni::blocking::Handle<FindTray>> = None;
+        let watcher = watch(svc, move |state| {
+            let Some(svc) = weak.upgrade() else { return };
+            // Callback owns its state on the watcher's one worker thread.
+            if state == TrayState::Own {
+                if !matches!(&handle, Some(h) if !h.is_closed()) {
+                    let tray = FindTray { svc: Arc::downgrade(&svc), icon: vec![icon(22), icon(32), icon(64)] };
+                    match tray.assume_sni_available(true).spawn() {
+                        Ok(h) => handle = Some(h),
+                        Err(e) => {
+                            eprintln!("arcade-find: tray: {e}");
+                            svc.note_tray(TrayState::None);
+                            return;
+                        }
+                    }
+                }
+            } else if let Some(h) = handle.take() {
+                h.shutdown().wait();
+            }
+            svc.note_tray(state);
+        })?;
+        *svc.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
         Ok(())
     }
+
+    pub fn set_state(_svc: &Arc<Service>, _state: TrayState) {}
 }
 
 #[cfg(not(target_os = "linux"))]
@@ -97,27 +130,44 @@ mod imp {
     use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
     use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
-    /// Call on the main thread once the event loop runs.
+    struct NativeTray {
+        prepared: Option<tray_icon::TrayIconBuilder>,
+        icon: Option<tray_icon::TrayIcon>,
+    }
+    thread_local! { static TRAY: std::cell::RefCell<Option<NativeTray>> = const { std::cell::RefCell::new(None) }; }
+
+    /// Only native tray mutation runs on the UI thread. The watcher gates the
+    /// first icon without delaying the event loop, then uses live IPC events.
     pub fn start(svc: &Arc<Service>) -> Result<(), String> {
+        let weak = Arc::downgrade(svc);
+        let watcher = watch(svc, move |state| {
+            if let Some(s) = weak.upgrade() {
+                s.send(UiMsg::Tray(state));
+            }
+        })?;
+        *svc.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()) = Some(watcher);
+        Ok(())
+    }
+
+    fn prepare(svc: &Arc<Service>) -> Result<tray_icon::TrayIconBuilder, String> {
         let open = MenuItem::new("Open Arcade Find", true, None);
         let settings = MenuItem::new("Open Settings", true, None);
+        let rescan = MenuItem::new("Rescan index", true, None);
         let restart = MenuItem::new("Restart Arcade Find", true, None);
         let quit = MenuItem::new("Quit Arcade Find", true, None);
         let menu = Menu::new();
-        menu.append_items(&[&open, &settings, &restart, &PredefinedMenuItem::separator(), &quit]).map_err(|e| e.to_string())?;
+        menu.append_items(&[&open, &settings, &rescan, &restart, &PredefinedMenuItem::separator(), &quit]).map_err(|e| e.to_string())?;
         let px = 32;
         let icon = Icon::from_rgba(crate::ui::icons::app_icon_rgba(px), px, px).map_err(|e| e.to_string())?;
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
             .with_tooltip("Arcade Find")
             .with_icon(icon)
-            .with_menu_on_left_click(cfg!(target_os = "macos"))
-            .build()
-            .map_err(|e| e.to_string())?;
-        std::mem::forget(tray);
+            .with_menu_on_left_click(cfg!(target_os = "macos"));
         let ids = [
             (open.id().clone(), Item::Open),
             (settings.id().clone(), Item::Settings),
+            (rescan.id().clone(), Item::Rescan),
             (restart.id().clone(), Item::Restart),
             (quit.id().clone(), Item::Quit),
         ];
@@ -135,8 +185,57 @@ mod imp {
                 }
             }
         }));
-        Ok(())
+        Ok(tray)
+    }
+
+    pub fn set_state(svc: &Arc<Service>, state: TrayState) {
+        let result = TRAY.with(|slot| {
+            let mut tray = slot.borrow_mut();
+            // Prepare the menu and bitmap on the first answer, even Hosted.
+            // tray-icon has no hidden constructor: defer OS registration until
+            // Own, then retain the native object for subsequent hide/show.
+            if tray.is_none() && state != TrayState::None {
+                *tray = Some(NativeTray { prepared: Some(prepare(svc)?), icon: None });
+            }
+            if let Some(tray) = tray.as_mut() {
+                if tray.icon.is_none() && state == TrayState::Own {
+                    tray.icon = Some(tray.prepared.take().unwrap().build().map_err(|e| e.to_string())?);
+                }
+                if let Some(icon) = &tray.icon {
+                    icon.set_visible(state == TrayState::Own).map_err(|e| e.to_string())?;
+                }
+            }
+            Ok::<_, String>(())
+        });
+        match result {
+            Ok(()) => svc.note_tray(state),
+            Err(e) => {
+                // A failed native registration consumed its builder. Rebuild
+                // on the next ownership change rather than keeping it empty.
+                TRAY.with(|slot| *slot.borrow_mut() = None);
+                eprintln!("arcade-find: tray: {e}");
+                svc.note_tray(TrayState::None);
+            }
+        }
     }
 }
 
-pub use imp::start;
+/// Toolkit-independent watcher setup; callbacks are worker-owned and must
+/// dispatch native tray updates through UiMsg::Tray on Windows and macOS.
+pub fn watch(svc: &Arc<Service>, callback: impl FnMut(TrayState) + Send + 'static) -> Result<TrayHostWatcher, String> {
+    let callback = std::sync::Mutex::new(callback);
+    TrayHostWatcher::start(
+        WatcherConfig {
+            locations: svc.locations.clone(),
+            app: crate::link::me(),
+            link_enabled: svc.settings().link.enabled,
+            has_tray: true,
+        },
+        move |state| {
+            callback.lock().unwrap_or_else(|e| e.into_inner())(state);
+        },
+    )
+    .map_err(|e| e.to_string())
+}
+
+pub use imp::{set_state, start};

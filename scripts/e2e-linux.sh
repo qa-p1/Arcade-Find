@@ -21,6 +21,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Remove every live-desktop route before starting any child or GUI tool.
+unset HYPRLAND_INSTANCE_SIGNATURE WAYLAND_DISPLAY DISPLAY SWAYSOCK APPIMAGE APPDIR
+if [[ -z "${ARCADE_FIND_E2E_PRIVATE_BUS:-}" ]]; then unset DBUS_SESSION_BUS_ADDRESS; fi
+export HOME="$T/home" XDG_CONFIG_HOME="$T/config" XDG_DATA_HOME="$T/data" XDG_CACHE_HOME="$T/cache"
+mkdir -p "$HOME" "$XDG_CONFIG_HOME" "$XDG_DATA_HOME" "$XDG_CACHE_HOME"
+# A private bus for the whole test; Wayland additionally owns a compositor bus.
+if [[ -z "${ARCADE_FIND_E2E_PRIVATE_BUS:-}" ]]; then
+  ARCADE_FIND_E2E_PRIVATE_BUS=1 dbus-run-session -- "$0" "$BIN" "$OUT"
+  exit $?
+fi
+
+
 pass=0; fail=0
 ok() { echo "  ok    $1"; pass=$((pass + 1)); }
 bad() { echo "  FAIL  $1"; fail=$((fail + 1)); }
@@ -85,7 +97,8 @@ run_session() {
   check "$name: live update drops a deleted file" '! af --search fresh-report | grep -q fresh-report.md'
 
   # Link: the manifest and endpoint exist; find.search answers resident and one-shot.
-  check "$name: Link manifest written" '[[ -f "$ARCADE_HOME/apps/arcade.find.json" ]]'
+  # Presence publishes the manifest off the startup path; allow it 5 s.
+  check "$name: Link manifest written" 'for _ in $(seq 50); do [[ -f "$ARCADE_HOME/apps/arcade.find.json" ]] && break; sleep 0.1; done; [[ -f "$ARCADE_HOME/apps/arcade.find.json" ]]'
   local req='{"v":1,"id":1,"method":"invoke","params":{"action":"find.search","inputs":[{"type":"text/plain","text":"report ext:pdf"}],"options":{"limit":5},"context":{"source":"e2e","interactive":false,"reason":"test"}}}'
   check "$name: one-shot find.search" 'echo "$req" | af --arcade-invoke | grep -q "report-2024-q3.pdf"'
 
@@ -304,7 +317,7 @@ overlay_checks() {
 }
 
 # ---- Wayland (headless sway, layer shell) ----
-if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
+if [[ "${ARCADE_E2E_SKIP_WAYLAND:-}" != 1 ]] && command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
   cat >"$T/sway.conf" <<'EOF'
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
@@ -363,8 +376,8 @@ walk(json.load(sys.stdin)); sys.exit(1)'
   else
     echo "  skip  Wayland drag checks (no $POINTER; cargo build --example e2e-pointer)"
   fi
-  link_checks wayland "grim" wl_key wl_text
-  overlay_checks wayland "grim" wl_key
+  link_checks wayland "timeout 5 grim" wl_key wl_text
+  overlay_checks wayland "timeout 5 grim" wl_key
   # GNOME has no layer shell: Find falls back to its winit window there.
   # Same compositor, winit backend forced: the drag source shares winit's
   # Wayland connection.
@@ -374,11 +387,11 @@ walk(json.load(sys.stdin)); sys.exit(1)'
     # One result: modifiers from wtype's short-lived virtual keyboards don't
     # reach winit's window on headless sway, so Shift+Down can't extend the
     # selection here (the selection itself is covered by the other sessions).
-    real_shelf_drag_checks wayland-winit "grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
+    real_shelf_drag_checks wayland-winit "timeout 5 grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
   else
     echo "  skip  wayland-winit: drag to Shelf (needs the pointer helper, ARCADE_SHELF_BIN and ARCADE_LINK_CLI)"
   fi
-  overlay_checks wayland-winit "grim" wl_key
+  overlay_checks wayland-winit "timeout 5 grim" wl_key
   unset ARCADE_FIND_BACKEND
   unset WAYLAND_DISPLAY
 else

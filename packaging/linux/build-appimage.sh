@@ -16,13 +16,17 @@ TOOL_SHA256=46fdd785094c7f6e545b61afcfb0f3d98d8eab243f644b4b17698c01d06083d1
 TOOL=target/tools/appimagetool-$TOOL_VERSION-$ARCH.AppImage
 
 mkdir -p target/tools "$DIST"
+# appimagetool's extract-and-run runtime may change its working directory.
+DIST=$(realpath "$DIST")
 if [[ ! -x "$TOOL" ]]; then
   curl -fsSL -o "$TOOL.part" "https://github.com/AppImage/appimagetool/releases/download/$TOOL_VERSION/appimagetool-$ARCH.AppImage"
   echo "$TOOL_SHA256  $TOOL.part" | sha256sum -c -
   chmod +x "$TOOL.part" && mv "$TOOL.part" "$TOOL"
 fi
 
-APPDIR=$(mktemp -d)/Arcade-Find.AppDir
+STAGE=$(mktemp -d)
+trap 'rm -rf "$STAGE"' EXIT
+APPDIR="$STAGE/Arcade-Find.AppDir"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/scalable/apps" "$APPDIR/usr/share/icons/hicolor/256x256/apps" "$APPDIR/usr/share/doc/arcade-find"
 install -m755 "$BIN" "$APPDIR/usr/bin/arcade-find"
 install -m644 packaging/linux/arcade-find.desktop "$APPDIR/usr/share/applications/arcade-find.desktop"
@@ -31,6 +35,7 @@ cp packaging/linux/arcade-find.desktop "$APPDIR/arcade-find.desktop"
 "$BIN" --export-icon "$APPDIR/usr/share/icons/hicolor/256x256/apps/arcade-find.png" --size 256
 cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/arcade-find.png" "$APPDIR/arcade-find.png"
 cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md "$APPDIR/usr/share/doc/arcade-find/"
+cp -R docs/user "$APPDIR/usr/share/doc/arcade-find/user"
 cat >"$APPDIR/AppRun" <<'RUN'
 #!/bin/sh
 HERE=$(dirname "$(readlink -f "$0")")

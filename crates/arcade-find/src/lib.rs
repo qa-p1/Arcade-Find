@@ -19,10 +19,15 @@ macro_rules! debug {
 }
 
 pub mod autostart;
+pub mod diagnostics;
 pub mod hotkey;
+pub mod hub;
+pub mod installer;
+pub mod installer_ui;
 pub mod instance;
 pub mod link;
 pub mod os;
+pub mod portable_settings;
 pub mod service;
 pub mod settings_ui;
 pub mod snapshot;

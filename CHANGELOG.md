@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 — Unreleased
+
+- Arcade Tools can open Settings, restart Find (with busy/force handling),
+  rescan from its hosted menu, change the global shortcut live, and export
+  or import portable settings. Imports validate and back up settings/pins;
+  the index, history and local integration preferences are excluded.
+- Live tray hosting with a bounded startup gate and immediate hand-back
+  after Tools exits or crashes; Link off keeps Find’s own icon.
+- A shared first-run AppImage installer, receipt, launcher/actions, hicolor
+  icons, terminal command and optional login integration. Added --install,
+  --uninstall, --repair and read-only --integration-status. Restarts and
+  re-execution use the stable AppImage path. No shell profiles are edited.
+- Per-user Inno installer with optional shortcuts/startup, PATH shim and
+  receipts; macOS move-to-Applications, quarantine-preserving copy and CLI
+  offer. Native Windows/macOS execution is not verified on a real desktop.
+- Manifest menu, docs, logs and install metadata; small rotating event logs.
+- Checksum-pinned shared packaging/release/shortcut tools, generated shortcut
+  docs, local doc-link checks and isolated tests on the Rust 1.88 CI matrix.
+
 ## 0.2.1 — 2026-10-10
 
 - Dragging out works on GNOME Wayland (and any Wayland session without

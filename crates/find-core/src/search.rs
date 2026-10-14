@@ -114,7 +114,7 @@ fn prepare(ix: &Index, q: &Query) -> Prepared {
         }
         for i in 0..ix.len() {
             let p = ix.parent[i];
-            under[i] = (p != NONE && (under[p as usize] || targets.contains(&p))) || false;
+            under[i] = p != NONE && (under[p as usize] || targets.contains(&p));
         }
         within = Some(under);
     }

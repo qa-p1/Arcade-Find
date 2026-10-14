@@ -111,10 +111,10 @@ fn new_token() -> String {
 pub fn acquire(p: &AppPaths) -> std::io::Result<Option<InstanceLock>> {
     ensure_private_dir(&p.runtime)?;
     let file = std::fs::OpenOptions::new().create(true).truncate(false).read(true).write(true).open(lock_path(p))?;
-    match file.try_lock() {
+    match fs2::FileExt::try_lock_exclusive(&file) {
         Ok(()) => {}
-        Err(std::fs::TryLockError::WouldBlock) => return Ok(None),
-        Err(std::fs::TryLockError::Error(e)) => return Err(e),
+        Err(e) if e.raw_os_error() == fs2::lock_contended_error().raw_os_error() => return Ok(None),
+        Err(e) => return Err(e),
     }
     let token = new_token();
     let info = InstanceInfo { pid: std::process::id(), token: token.clone(), version: crate::VERSION.into() };
