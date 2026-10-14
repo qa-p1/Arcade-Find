@@ -1,5 +1,12 @@
 # Status
 
+## Release status (2026-10-15)
+
+- Released: [v0.3.0](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.3.0) with a Linux self-installing AppImage, a per-user Windows installer, a macOS dmg, `arcade-release.json` and `SHA256SUMS.txt`.
+- Merged to `main` from PR #2 (706dad1) after CI passed on Linux, Windows and macOS: [run 38600212984](https://github.com/qa-p1/Arcade-Find/actions/runs/38600212984). That covers the build, tests, clippy or analyzers, installer smoke tests on each OS, and the Linux AppImage install, repair and uninstall check in a temporary profile.
+- Ecosystem e2e (Arcade Link `tools/e2e.py`, real CI builds of all eight apps): install, tray hosting (hosted by Tools, own icon back within 1 s after Tools is killed, no flash on restart) and shortcuts pass. Tools 0.2.0 adopts, updates, rolls back, uninstalls and backs up Find.
+- Not yet verified: a real Windows or macOS desktop (CI runners only), and the owner's real-desktop checks. Builds are unsigned, so SmartScreen and Gatekeeper ask for approval.
+
 Updated 2026-10-10. Version 0.2.1, released from `main` on `qa-p1/Arcade-Find`
 (AppImage, Windows installer, universal DMG; unsigned).
 
