@@ -279,14 +279,14 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
         return Err(io::Error::other("development builds cannot be installed"));
     }
     let bundle = macos::bundle_for(&runtime.executable).ok_or_else(|| io::Error::other("--install requires an app bundle"))?;
-    let root = environment.home.join("Applications");
-    let target = root.join("Arcade Find.app");
-    let mut previous = None;
+    let target = bundle_destination(environment, d.receipt.as_ref(), "Arcade Find.app")?;
+    let root = target.parent().unwrap().to_path_buf();
+    let mut previous = d.receipt.as_ref().and_then(|r| r.previous.clone());
     if fs::canonicalize(&target).ok() != fs::canonicalize(&bundle).ok() || !target.exists() {
         // ditto preserves extended attributes and quarantine. Stage before
         // replacing a receipt-owned bundle; leave the downloaded copy intact.
-        let stage = root.join(format!(".arcade-find-{}", arcade_link::endpoint::new_token()?));
-        let staged = macos::move_to_applications(environment, &bundle, Some(&stage))?;
+        let stage = BundleStage(root.join(format!(".arcade-find-{}", arcade_link::endpoint::new_token()?)));
+        let staged = macos::move_to_applications(environment, &bundle, Some(&stage.0))?;
         if target.exists() {
             let old = d
                 .receipt
@@ -305,10 +305,10 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
             if let Some(prev) = &previous {
                 let _ = fs::rename(&prev.path, &target);
             }
-            let _ = fs::remove_dir_all(&stage);
+            drop(stage);
             return Err(e);
         }
-        let _ = fs::remove_dir_all(stage);
+        drop(stage);
     }
     let exe = target.join("Contents/MacOS/arcade-find");
     if let Some(old) = &d.receipt {
@@ -593,5 +593,62 @@ mod tests {
             Vec::<OsString>::new()
         );
         assert_eq!(launch_args(&["--show", "report"].map(String::from)), [OsString::from("--show"), OsString::from("report")]);
+    }
+}
+
+// Keep an adopted native installation in the Applications folder the user chose.
+#[cfg(any(target_os = "macos", all(test, unix)))]
+fn bundle_destination(environment: &Environment, receipt: Option<&Receipt>, name: &str) -> io::Result<PathBuf> {
+    if let Some(receipt) = receipt.filter(|r| r.method == InstallMethod::MacosBundle) {
+        receipt.validate_native_paths()?;
+        if receipt.path.file_name().is_some_and(|n| n == name)
+            && receipt.path.parent().is_some_and(|p| p == environment.home.join("Applications") || p == Path::new("/Applications"))
+        {
+            return Ok(receipt.path.clone());
+        }
+        return Err(io::Error::other("the recorded bundle is outside its Applications folder"));
+    }
+    Ok(environment.home.join("Applications").join(name))
+}
+
+#[cfg(target_os = "macos")]
+struct BundleStage(PathBuf);
+#[cfg(target_os = "macos")]
+impl Drop for BundleStage {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.0);
+    }
+}
+
+#[cfg(all(test, unix))]
+mod bundle_destination_tests {
+    use super::*;
+
+    #[test]
+    fn native_updates_keep_the_adopted_applications_folder() {
+        let environment = Environment::under(&std::env::temp_dir().join("arcade-bundle-destination"));
+        let name = "Arcade Find.app";
+        let default = environment.home.join("Applications").join(name);
+        assert_eq!(bundle_destination(&environment, None, name).unwrap(), default);
+        let mut receipt = Receipt {
+            schema: 1,
+            id: "arcade.find".into(),
+            version: "0.2.0".into(),
+            channel: "stable".into(),
+            method: InstallMethod::MacosBundle,
+            managed_by: ManagedBy::Tools,
+            path: Path::new("/Applications").join(name),
+            integration: Default::default(),
+            previous: None,
+            installed_at: "2026-01-01T00:00:00Z".into(),
+            updated_at: "2026-01-01T00:00:00Z".into(),
+        };
+        assert_eq!(bundle_destination(&environment, Some(&receipt), name).unwrap(), receipt.path);
+        receipt.path = default.clone();
+        assert_eq!(bundle_destination(&environment, Some(&receipt), name).unwrap(), default);
+        receipt.path = environment.home.join("Downloads").join(name);
+        assert!(bundle_destination(&environment, Some(&receipt), name).is_err());
+        receipt.path = Path::new("/Applications/Other.app").into();
+        assert!(bundle_destination(&environment, Some(&receipt), name).is_err());
     }
 }

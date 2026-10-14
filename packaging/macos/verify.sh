@@ -8,6 +8,7 @@ cleanup() { hdiutil detach "$TEST_ROOT/mount" >/dev/null 2>&1 || true; rm -rf "$
 trap cleanup EXIT
 mkdir -p "$TEST_ROOT/mount" "$TEST_ROOT/download" "$TEST_ROOT/home" "$TEST_ROOT/arcade/.local/bin"
 hdiutil attach "$IMAGE" -readonly -nobrowse -mountpoint "$TEST_ROOT/mount" >/dev/null
+[[ -L "$TEST_ROOT/mount/Applications" && "$(readlink "$TEST_ROOT/mount/Applications")" == /Applications ]]
 export HOME="$TEST_ROOT/home" ARCADE_HOME="$TEST_ROOT/arcade" ARCADE_FIND_HOME="$TEST_ROOT/find"
 export PATH="$ARCADE_HOME/.local/bin:$PATH"
 ditto "$TEST_ROOT/mount/Arcade Find.app" "$TEST_ROOT/download/Arcade Find.app"
