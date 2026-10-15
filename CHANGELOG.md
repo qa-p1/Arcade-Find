@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.3.0 — Unreleased
+## 0.3.0 — 2026-10-14
 
 - Arcade Tools can open Settings, restart Find (with busy/force handling),
   rescan from its hosted menu, change the global shortcut live, and export

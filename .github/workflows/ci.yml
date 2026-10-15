@@ -189,6 +189,7 @@ jobs:
           v=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
           test "$GITHUB_REF_NAME" = "v$v" || { echo "tag $GITHUB_REF_NAME does not match version $v"; exit 1; }
           python3 tools/release-notes.py CHANGELOG.md "$v" > notes.md
+          printf '\nUser guide: https://github.com/qa-p1/Arcade-Find/tree/main/docs/user\n' >> notes.md
           ls -l dist
           gh release create "$GITHUB_REF_NAME" dist/*.AppImage dist/*.exe dist/*.dmg dist/arcade-release.json dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Arcade Find $v" --notes-file notes.md
