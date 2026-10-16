@@ -57,7 +57,7 @@ fn cli_install_status_move_repair_and_receipt_uninstall() {
     assert!(!fixture.root.join("arcade").exists(), "status must have no side effects");
     let receipt = fixture.run(&["--install", "--silent", "--no-launch", "--channel", "nightly"]);
     assert_eq!(receipt["id"], "arcade.find");
-    assert_eq!(receipt["version"], "0.3.0");
+    assert_eq!(receipt["version"], env!("CARGO_PKG_VERSION"));
     assert_eq!(receipt["channel"], "nightly");
     assert_eq!(receipt["method"], "appimage");
     assert_eq!(receipt["managedBy"], "self");

@@ -10,8 +10,12 @@ import shutil
 import signal
 import subprocess
 import sys
+import re
 import tempfile
 import time
+
+ROOT = Path(__file__).resolve().parent.parent
+VERSION = re.search(r'^version = "([^"]+)"', (ROOT / "Cargo.toml").read_text(encoding="utf-8"), re.M).group(1)
 
 
 def main():
@@ -43,7 +47,7 @@ def main():
         assert not (root / "arcade").exists(), "read-only status created integration"
         receipt = run(source, "--install", "--silent", "--no-launch")
         installed = Path(receipt["path"])
-        assert receipt["method"] == "appimage" and receipt["version"] == "0.3.0"
+        assert receipt["method"] == "appimage" and receipt["version"] == VERSION
         assert not source.exists(), "download removal default did not apply"
         assert installed.read_bytes() == artifact.read_bytes()
         paths = [installed, Path(receipt["integration"]["desktopEntry"]), Path(receipt["integration"]["cli"]),

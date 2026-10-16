@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 — 2026-10-16
+
+- On X11, restoring a Tools backup (or saving Settings) with the global
+  shortcut Find already holds no longer fails with "Ctrl+Alt+F is already
+  used by another application". Find keeps its existing registration instead
+  of grabbing the same key again from a new hotkey manager while the old one
+  is still releasing it. Found by the Arcade Link real-fleet backup check.
+
 ## 0.3.0 — 2026-10-14
 
 - Arcade Tools can open Settings, restart Find (with busy/force handling),
