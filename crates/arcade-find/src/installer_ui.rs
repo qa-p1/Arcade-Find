@@ -389,6 +389,7 @@ mod tests {
         assert_eq!(title, "Install Arcade Find?");
         assert_eq!(body.as_deref(), Some("This adds Arcade Find to the app launcher and your apps folder."));
         assert_eq!(buttons, strings::get().not_installed.buttons);
-        assert!(text(&DialogState::Update { from: "0.2.1".into() }).0.contains("0.2.1 → 0.3.0"));
+        let update = text(&DialogState::Update { from: "0.2.1".into() }).0;
+        assert!(update.contains(&format!("0.2.1 → {}", env!("CARGO_PKG_VERSION"))), "{update}");
     }
 }

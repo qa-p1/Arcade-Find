@@ -126,6 +126,17 @@ fn wayland_session() -> bool {
     cfg!(target_os = "linux") && std::env::var_os("WAYLAND_DISPLAY").is_some()
 }
 
+/// Whether this process already holds `accel` as its native hotkey. On X11,
+/// global-hotkey only drops a grab when the old manager's X connection closes,
+/// after a new manager has tried to grab the same key, so registering it again
+/// fails as "already used". Callers keep the existing registration instead.
+fn held(accel: &str) -> bool {
+    let Ok(hotkey) = parse(accel) else {
+        return false;
+    };
+    ACTIVE.with(|a| matches!(&*a.borrow(), Some(Active::Native(_, active)) if *active == hotkey))
+}
+
 fn clear() {
     ACTIVE.with(|a| match a.borrow_mut().take() {
         Some(Active::Native(m, hk)) => {
@@ -138,11 +149,11 @@ fn clear() {
 /// Registers the shortcut from settings (call on the main thread, at start
 /// and after settings change). Records the state in the service.
 pub fn apply(svc: &Arc<Service>) -> State {
-    clear();
     let s = svc.settings();
     let accel = s.shortcut.trim().to_string();
     // Compositor IPC runs on a worker. Native APIs alone require the UI thread.
     if wayland_session() || hyprland::active() {
+        clear();
         let svc = svc.clone();
         std::thread::spawn(move || {
             let _change = svc.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
@@ -152,6 +163,12 @@ pub fn apply(svc: &Arc<Service>) -> State {
         });
         return State::Manual { reason: "Registering the shortcut".into(), command: toggle_command() };
     }
+    if !accel.is_empty() && held(&accel) {
+        let state = State::Native(accel);
+        svc.set_shortcut_state(state.to_json());
+        return state;
+    }
+    clear();
     let state = if accel.is_empty() {
         State::Off
     } else if let Err(e) = parse(&accel) {
@@ -176,6 +193,9 @@ pub fn set_live(svc: &Arc<Service>, accelerator: &str) -> Result<State, arcade_l
 
 /// UI-thread half of a live native rebind. Preserve the old binding on error.
 pub fn replace_native(svc: &Arc<Service>, accelerator: &str) -> State {
+    if held(accelerator) {
+        return State::Native(accelerator.to_string());
+    }
     clear();
     let state = native(svc, accelerator);
     if matches!(state, State::Failed(_)) {
@@ -484,6 +504,21 @@ mod tests {
         assert!(parse("F8").is_ok());
         assert_eq!(known_conflict("Ctrl+Alt+F"), None, "the default has no known desktop owner");
         assert!(known_conflict("ctrl+alt+t").is_some());
+    }
+
+    /// Re-applying the chord this process already grabbed keeps that grab
+    /// (an X11 re-grab from a new manager fails while the old one is closing).
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn held_matches_only_the_active_native_chord() {
+        let manager = global_hotkey::GlobalHotKeyManager::new().unwrap();
+        ACTIVE.with(|a| *a.borrow_mut() = Some(Active::Native(manager, parse("Ctrl+Alt+F").unwrap())));
+        assert!(held("ctrl+alt+f"));
+        assert!(held("Alt+Control+F"));
+        assert!(!held("Ctrl+Alt+G"));
+        assert!(!held("not a shortcut"));
+        ACTIVE.with(|a| *a.borrow_mut() = None);
+        assert!(!held("Ctrl+Alt+F"));
     }
 
     /// The default must not clash with the Arcade family's defaults (SPEC §8.5).
