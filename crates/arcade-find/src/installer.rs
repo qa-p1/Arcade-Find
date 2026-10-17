@@ -583,7 +583,7 @@ pub fn launch_args(args: &[String]) -> Vec<OsString> {
             "--channel" => {
                 it.next();
             }
-            "--install" | "--silent" | "--no-launch" => {}
+            "--install" | "--silent" | "--no-launch" | "--keep-download" => {}
             _ => result.push(OsString::from(arg)),
         }
     }
