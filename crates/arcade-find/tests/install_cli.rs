@@ -63,7 +63,8 @@ fn cli_install_status_move_repair_and_receipt_uninstall() {
     assert_eq!(receipt["managedBy"], "self");
     let installed = PathBuf::from(receipt["path"].as_str().unwrap());
     assert_eq!(std::fs::read(&installed).unwrap(), b"synthetic AppImage bytes");
-    assert!(!fixture.image.exists());
+    // Outside Downloads the user's file stays (only downloads are removed).
+    assert!(fixture.image.exists());
     let desktop = PathBuf::from(receipt["integration"]["desktopEntry"].as_str().unwrap());
     let entry = std::fs::read_to_string(&desktop).unwrap();
     assert!(entry.contains("X-Arcade-Id=arcade.find"));

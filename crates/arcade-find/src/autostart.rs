@@ -142,7 +142,8 @@ pub fn enabled() -> bool {
         .ok()
         .and_then(|e| e.receipts().read(crate::link::ME).ok().flatten())
         .and_then(|r| r.integration.autostart)
-        .is_some_and(|p| p.is_file())
+        // An entry switched off in the desktop's startup settings won't run.
+        .is_some_and(|p| arcade_link::install::autostart_enabled(&p))
 }
 
 #[cfg(target_os = "macos")]

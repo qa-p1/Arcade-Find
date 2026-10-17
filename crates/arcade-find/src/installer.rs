@@ -216,6 +216,16 @@ pub fn automatic_prompt(paths: &AppPaths, args: &[String]) -> io::Result<Option<
 #[cfg(target_os = "linux")]
 pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPaths, options: &Options) -> io::Result<Receipt> {
     if !runtime.is_appimage() {
+        // A second install window, after the first one installed (and removed) this download.
+        if runtime.appimage.as_ref().is_some_and(|p| !p.exists()) {
+            if let Some(receipt) = environment.receipts().read(crate::link::ME)?.filter(|r| r.version == crate::VERSION && r.path.is_file())
+            {
+                return Ok(receipt);
+            }
+            return Err(io::Error::other(
+                "This downloaded file is gone (it may have been installed from another window). Open Arcade Find from the app launcher.",
+            ));
+        }
         return Err(io::Error::other("--install requires a real AppImage, not an ordinary or development binary"));
     }
     // Render the bundled icon into a private, short-lived staging directory.
@@ -443,13 +453,10 @@ pub fn uninstall(environment: &Environment, paths: &AppPaths, silent: bool, remo
     if environment.receipts().read(crate::link::ME)?.is_none() {
         return Ok(false);
     }
-    // Stop only this isolated/profile instance before removing its receipt.
-    if crate::instance::running(paths) {
-        let _ = crate::instance::send(paths, &crate::instance::Command::Quit, std::time::Duration::from_secs(3));
-    }
-    // Retain the lock throughout deletion. A timeout must not uninstall a
+    // Stop only this isolated/profile instance before removing its receipt,
+    // and retain its lock throughout deletion. A timeout must not uninstall a
     // running copy or race a second resident launch.
-    let _lock = crate::instance::acquire_waiting(paths, std::time::Duration::from_secs(15))?
+    let _lock = stop_and_lock(paths, std::time::Duration::from_secs(15))?
         .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "Arcade Find is still running"))?;
     #[cfg(windows)]
     {
@@ -485,6 +492,31 @@ pub fn uninstall(environment: &Environment, paths: &AppPaths, silent: bool, remo
             }
         }
         install::uninstall(environment, crate::link::ME, install::UninstallOptions { remove_data, data_folders: &paths.data_folders() })
+    }
+}
+
+/// Asks the resident instance to quit and takes its lock. A copy that is still
+/// starting (e.g. just restarted by Arcade Tools) holds the lock before it
+/// answers commands, so the request is repeated until it lets go.
+fn stop_and_lock(paths: &AppPaths, timeout: std::time::Duration) -> io::Result<Option<crate::instance::InstanceLock>> {
+    let deadline = std::time::Instant::now() + timeout;
+    loop {
+        if let Some(lock) = crate::instance::acquire(paths)? {
+            return Ok(Some(lock));
+        }
+        if std::time::Instant::now() >= deadline {
+            return Ok(None);
+        }
+        let _ = crate::instance::send(paths, &crate::instance::Command::Quit, std::time::Duration::from_millis(500));
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+}
+
+/// Before the freshly installed copy starts: an older one still running would
+/// otherwise keep the single-instance lock and the new copy would just show it.
+pub fn stop_running_copy(paths: &AppPaths) {
+    if crate::instance::running(paths) {
+        drop(stop_and_lock(paths, std::time::Duration::from_secs(10)));
     }
 }
 

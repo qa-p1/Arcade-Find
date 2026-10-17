@@ -993,7 +993,8 @@ impl Service {
             self.search.wake.notify_all();
         }
         if let Some(w) = self.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()).take() {
-            w.stop();
+            // Quitting: don't show our own icon for the last moments when Tools hosts it.
+            w.finish();
         }
         let _ = crate::diagnostics::event(&self.paths, "stopped");
         if let Ok(f) = self.frecency.lock() {
