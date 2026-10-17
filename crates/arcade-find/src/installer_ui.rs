@@ -170,6 +170,8 @@ struct Dialog {
     busy: bool,
     error: Option<String>,
     completed: Option<Completed>,
+    /// Older pre-installer copies this install replaces (named in the prompt).
+    legacy: Vec<PathBuf>,
 }
 
 fn format(s: &str, version: &str, from: &str) -> String {
@@ -225,11 +227,18 @@ pub fn run_uninstall(environment: Environment, paths: AppPaths, remove_data: boo
 fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
     let result = Arc::new(Mutex::new(None));
     let output = result.clone();
+    #[cfg(target_os = "linux")]
+    let legacy = match &mode {
+        Mode::Install { environment, .. } => install::legacy_copies(environment, &installer::app_info()),
+        _ => Vec::new(),
+    };
+    #[cfg(not(target_os = "linux"))]
+    let legacy = Vec::new();
     let options = eframe::NativeOptions {
         centered: true,
         viewport: egui::ViewportBuilder::default()
             .with_title("Arcade Find — Installation")
-            .with_inner_size([480.0, 300.0])
+            .with_inner_size([480.0, 250.0])
             .with_resizable(false)
             .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
         ..Default::default()
@@ -239,7 +248,7 @@ fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
         options,
         Box::new(move |_cc| {
             let (tx, rx) = mpsc::channel();
-            Ok(Box::new(Dialog { paths, mode, result, tx, rx, busy: false, error: None, completed: None }))
+            Ok(Box::new(Dialog { paths, mode, result, tx, rx, busy: false, error: None, completed: None, legacy }))
         }),
     )
     .map_err(|e| e.to_string())?;
@@ -343,6 +352,9 @@ impl eframe::App for Dialog {
                     }
                     if *managed {
                         ui.label(format(&strings::get().managed_by_tools, crate::VERSION, ""));
+                    }
+                    if let (Some(note), Some(old), DialogState::Install | DialogState::Update { .. }) = (&strings::get().replaces_legacy, self.legacy.first(), &state) {
+                        ui.label(format(note, crate::VERSION, &old.display().to_string()));
                     }
                     ui.add_space(10.0);
                     if matches!(state, DialogState::Install | DialogState::Update { .. } | DialogState::MoveToApplications) {
