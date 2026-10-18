@@ -144,7 +144,7 @@ fn print_search(v: &serde_json::Value, json: bool) -> ExitCode {
 /// `--search` without a running instance: the saved index, read-only.
 fn search_offline(p: &AppPaths, query: &str, limit: usize, hidden: bool) -> serde_json::Value {
     use serde_json::json;
-    let q = find_core::Query::parse_at(query, find_core::now_secs(), find_core::local_offset_secs());
+    let q = find_core::Query::parse_local(query, find_core::now_secs());
     if q.content.is_some() {
         return json!({"ok": false, "error": "Content search isn't available from the command line"});
     }

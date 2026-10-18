@@ -99,9 +99,37 @@ pub struct ContentRequest {
     pub dirs: Vec<PathBuf>,
     pub exts: Vec<String>,
     pub exclude_names: Vec<String>,
+    /// Folders left out, as they are from the name index. A searched folder
+    /// inside one of them is searched (the user named it).
+    pub exclude_paths: Vec<PathBuf>,
     pub hidden: bool,
     pub limit: usize,
     pub timeout: Duration,
+}
+
+impl ContentRequest {
+    /// The content search a query asks for: its own `hidden:` overrides the
+    /// window's hidden-files toggle, `in:` replaces the indexed roots, and
+    /// the folders excluded in Settings stay excluded.
+    pub fn for_query(q: &crate::Query, settings: &crate::Settings, show_hidden: bool, limit: usize, timeout: Duration) -> ContentRequest {
+        let dirs = if q.within.is_empty() { settings.root_paths() } else { q.within.clone() };
+        let exclude_paths = settings
+            .exclude_paths
+            .iter()
+            .map(|p| crate::settings::normalize(&crate::paths::expand_tilde(p)))
+            .filter(|p| p.is_absolute() && !dirs.iter().any(|d| d.starts_with(p)))
+            .collect();
+        ContentRequest {
+            pattern: q.content.clone().unwrap_or_default(),
+            dirs,
+            exts: q.exts.clone(),
+            exclude_names: settings.exclude_names.clone(),
+            exclude_paths,
+            hidden: q.hidden.unwrap_or(show_hidden),
+            limit,
+            timeout,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -196,6 +224,9 @@ pub fn run(rg: &Ripgrep, req: &ContentRequest, cancel: &AtomicBool, mut on_file:
         // Wakes at most every 50 ms while a search runs (to see cancel), never when idle.
         match rx.recv_timeout((deadline - now).min(Duration::from_millis(50))) {
             Ok(Some(p)) => {
+                if req.exclude_paths.iter().any(|x| p.starts_with(x)) {
+                    continue;
+                }
                 on_file(p);
                 count += 1;
                 if count >= req.limit {
@@ -222,6 +253,7 @@ mod tests {
             dirs: vec![PathBuf::from("/a b")],
             exts: vec!["rs".into()],
             exclude_names: vec![".git".into()],
+            exclude_paths: vec![],
             hidden: false,
             limit: 10,
             timeout: Duration::from_secs(1),
@@ -246,6 +278,7 @@ mod tests {
             dirs: vec![dir.clone()],
             exts: vec![],
             exclude_names: vec![],
+            exclude_paths: vec![],
             hidden: false,
             limit: 10,
             timeout: Duration::from_secs(10),
@@ -254,6 +287,55 @@ mod tests {
         let end = run(&rg, &req, &AtomicBool::new(false), |p| found.push(p));
         assert_eq!(end, ContentEnd::Done);
         assert_eq!(found, vec![dir.join("a.txt")]);
+        let cancelled = run(&rg, &req, &AtomicBool::new(true), |_| {});
+        assert_eq!(cancelled, ContentEnd::Cancelled);
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn honors_hidden_overrides_and_excluded_folders() {
+        let Some(rg) = detect(&[]) else { return };
+        let dir = crate::test_dir("content-scope");
+        std::fs::create_dir_all(dir.join("skip")).unwrap();
+        std::fs::write(dir.join(".secret.txt"), "needle").unwrap();
+        std::fs::write(dir.join("shown.txt"), "needle").unwrap();
+        std::fs::write(dir.join("skip/inside.txt"), "needle").unwrap();
+        let settings = crate::Settings {
+            roots: vec![dir.display().to_string()],
+            exclude_names: vec![],
+            exclude_paths: vec![dir.join("skip").display().to_string()],
+            ..Default::default()
+        };
+        let found = |query: &str, toggle: bool| {
+            let q = crate::Query::parse_at(query, 0, 0);
+            let req = ContentRequest::for_query(&q, &settings, toggle, 10, Duration::from_secs(10));
+            let mut found = Vec::new();
+            run(&rg, &req, &AtomicBool::new(false), |p| found.push(p.file_name().unwrap().to_string_lossy().into_owned()));
+            found.sort();
+            found
+        };
+        assert_eq!(found("/needle hidden:yes", false), [".secret.txt", "shown.txt"]);
+        assert_eq!(found("/needle hidden:no", true), ["shown.txt"]);
+        assert_eq!(found("/needle", false), ["shown.txt"]);
+        // Naming the excluded folder searches it.
+        assert_eq!(found(&format!("/needle in:{}", dir.join("skip").display()), false), ["inside.txt"]);
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    #[test]
+    fn cancel_still_works() {
+        let Some(rg) = detect(&[]) else { return };
+        let dir = crate::test_dir("content-cancel");
+        let req = ContentRequest {
+            pattern: "x".into(),
+            dirs: vec![dir.clone()],
+            exts: vec![],
+            exclude_names: vec![],
+            exclude_paths: vec![],
+            hidden: false,
+            limit: 10,
+            timeout: Duration::from_secs(10),
+        };
         let cancelled = run(&rg, &req, &AtomicBool::new(true), |_| {});
         assert_eq!(cancelled, ContentEnd::Cancelled);
         std::fs::remove_dir_all(dir).ok();

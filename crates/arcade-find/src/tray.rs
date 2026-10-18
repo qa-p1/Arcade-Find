@@ -130,6 +130,10 @@ mod imp {
     use tray_icon::menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem};
     use tray_icon::{Icon, MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 
+    type MenuTargets = (Vec<(tray_icon::menu::MenuId, Item)>, Weak<Service>);
+    static MENU: std::sync::Mutex<MenuTargets> = std::sync::Mutex::new((Vec::new(), Weak::new()));
+    static HANDLERS: std::sync::Once = std::sync::Once::new();
+
     struct NativeTray {
         prepared: Option<tray_icon::TrayIconBuilder>,
         icon: Option<tray_icon::TrayIcon>,
@@ -171,20 +175,26 @@ mod imp {
             (restart.id().clone(), Item::Restart),
             (quit.id().clone(), Item::Quit),
         ];
-        let weak = Arc::downgrade(svc);
-        MenuEvent::set_event_handler(Some(move |e: MenuEvent| {
-            if let Some((_, it)) = ids.iter().find(|(id, _)| *id == e.id) {
-                run(&weak, *it);
-            }
-        }));
-        let weak = Arc::downgrade(svc);
-        TrayIconEvent::set_event_handler(Some(move |e: TrayIconEvent| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
-                if !cfg!(target_os = "macos") {
-                    run(&weak, Item::Settings);
+        // muda and tray-icon keep their first handler for the process, so a
+        // menu rebuilt after a failed registration would stay dead with a
+        // handler bound to the old item ids. Install once; read the current.
+        *MENU.lock().unwrap_or_else(|e| e.into_inner()) = (ids.to_vec(), Arc::downgrade(svc));
+        HANDLERS.call_once(|| {
+            MenuEvent::set_event_handler(Some(|e: MenuEvent| {
+                let (ids, weak) = MENU.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                if let Some((_, it)) = ids.iter().find(|(id, _)| *id == e.id) {
+                    run(&weak, *it);
                 }
-            }
-        }));
+            }));
+            TrayIconEvent::set_event_handler(Some(|e: TrayIconEvent| {
+                if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
+                    if !cfg!(target_os = "macos") {
+                        let weak = MENU.lock().unwrap_or_else(|e| e.into_inner()).1.clone();
+                        run(&weak, Item::Settings);
+                    }
+                }
+            }));
+        });
         Ok(tray)
     }
 

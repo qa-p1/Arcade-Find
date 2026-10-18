@@ -31,9 +31,15 @@ pub fn now_secs() -> i64 {
 
 /// The local UTC offset in seconds (east positive), for day boundaries.
 pub fn local_offset_secs() -> i64 {
+    local_offset_at(now_secs())
+}
+
+/// The local UTC offset in effect at `time` (Unix seconds): a January date
+/// in New York is UTC−5 even when it's UTC−4 today.
+pub fn local_offset_at(time: i64) -> i64 {
     #[cfg(unix)]
     {
-        let now = now_secs() as libc::time_t;
+        let now = time as libc::time_t;
         let mut tm: libc::tm = unsafe { std::mem::zeroed() };
         // SAFETY: valid pointers; localtime_r is thread-safe.
         if unsafe { libc::localtime_r(&now, &mut tm) }.is_null() {
@@ -47,6 +53,8 @@ pub fn local_offset_secs() -> i64 {
     }
     #[cfg(windows)]
     {
+        // Windows reports the current zone state only; good enough there.
+        let _ = time;
         use windows_sys::Win32::System::Time::{GetTimeZoneInformation, TIME_ZONE_INFORMATION};
         let mut tz: TIME_ZONE_INFORMATION = unsafe { std::mem::zeroed() };
         // SAFETY: valid out pointer.
@@ -56,6 +64,7 @@ pub fn local_offset_secs() -> i64 {
     }
     #[cfg(not(any(unix, windows)))]
     {
+        let _ = time;
         0
     }
 }

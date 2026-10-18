@@ -73,6 +73,7 @@ impl Query {
             && self.within.is_empty()
             && self.size.is_none()
             && self.modified.is_none()
+            && self.hidden.is_none()
             && self.content.is_none()
     }
 
@@ -81,11 +82,21 @@ impl Query {
     }
 
     pub fn parse(input: &str) -> Query {
-        Query::parse_at(input, crate::now_secs(), crate::local_offset_secs())
+        Query::parse_local(input, crate::now_secs())
     }
 
-    /// Parses with an explicit clock (Unix seconds) and UTC offset, for tests.
+    /// Parses in the local time zone, with each date's own UTC offset.
+    pub fn parse_local(input: &str, now: i64) -> Query {
+        Query::parse_with(input, now, &crate::local_offset_at)
+    }
+
+    /// Parses with an explicit clock (Unix seconds) and a fixed UTC offset, for tests.
     pub fn parse_at(input: &str, now: i64, utc_offset: i64) -> Query {
+        Query::parse_with(input, now, &|_| utc_offset)
+    }
+
+    /// Parses with `offset_at(t)`, the UTC offset in effect at time `t`.
+    pub fn parse_with(input: &str, now: i64, offset_at: &dyn Fn(i64) -> i64) -> Query {
         let mut q = Query::default();
         let trimmed = input.trim_start();
         let mut content_words: Option<Vec<String>> = None;
@@ -101,7 +112,7 @@ impl Query {
             let (word, quoted) = token;
             if !quoted {
                 if let Some((key, value)) = split_filter(&word) {
-                    if q.apply_filter(&key, &value, now, utc_offset) {
+                    if q.apply_filter(&key, &value, now, offset_at) {
                         continue;
                     }
                 }
@@ -124,7 +135,7 @@ impl Query {
         q
     }
 
-    fn apply_filter(&mut self, key: &str, value: &str, now: i64, offset: i64) -> bool {
+    fn apply_filter(&mut self, key: &str, value: &str, now: i64, offset: &dyn Fn(i64) -> i64) -> bool {
         match key {
             "ext" => {
                 for e in value.split([',', ';', '|']) {
@@ -331,16 +342,35 @@ pub fn parse_duration(s: &str) -> Option<i64> {
     n.checked_mul(secs)
 }
 
-/// `YYYY-MM-DD` → local midnight as Unix seconds.
+/// `YYYY-MM-DD` → local midnight as Unix seconds, at a fixed UTC offset.
 pub fn parse_date(s: &str, utc_offset: i64) -> Option<i64> {
+    parse_date_with(s, &|_| utc_offset)
+}
+
+/// `YYYY-MM-DD` → local midnight, using the offset in effect on that date.
+/// Impossible dates (`2026-02-31`) are rejected, not rolled over.
+pub fn parse_date_with(s: &str, offset_at: &dyn Fn(i64) -> i64) -> Option<i64> {
     let mut it = s.trim().split('-');
     let y: i64 = it.next()?.parse().ok()?;
     let m: i64 = it.next()?.parse().ok()?;
     let d: i64 = it.next()?.parse().ok()?;
-    if it.next().is_some() || !(1970..=2200).contains(&y) || !(1..=12).contains(&m) || !(1..=31).contains(&d) {
+    if it.next().is_some() || !(1970..=2200).contains(&y) || !(1..=12).contains(&m) || !(1..=days_in_month(y, m)).contains(&d) {
         return None;
     }
-    Some(days_from_civil(y, m, d) * 86_400 - utc_offset)
+    let midnight_utc = days_from_civil(y, m, d) * 86_400;
+    // The offset at local midnight: guess with the offset at UTC midnight,
+    // then take the offset at that guess (a DST change never falls twice).
+    let guess = midnight_utc - offset_at(midnight_utc);
+    Some(midnight_utc - offset_at(guess))
+}
+
+fn days_in_month(y: i64, m: i64) -> i64 {
+    match m {
+        2 if (y % 4 == 0 && y % 100 != 0) || y % 400 == 0 => 29,
+        2 => 28,
+        4 | 6 | 9 | 11 => 30,
+        _ => 31,
+    }
 }
 
 /// Days since 1970-01-01 (Howard Hinnant's algorithm).
@@ -359,8 +389,9 @@ pub fn local_midnight(now: i64, utc_offset: i64) -> i64 {
     (now + utc_offset).div_euclid(86_400) * 86_400 - utc_offset
 }
 
-fn parse_time_filter(v: &str, now: i64, off: i64) -> Option<(i64, i64)> {
+fn parse_time_filter(v: &str, now: i64, offset_at: &dyn Fn(i64) -> i64) -> Option<(i64, i64)> {
     let v = v.trim().to_lowercase();
+    let off = offset_at(now);
     match v.as_str() {
         "today" => return Some((local_midnight(now, off), i64::MAX)),
         "yesterday" => {
@@ -373,8 +404,8 @@ fn parse_time_filter(v: &str, now: i64, off: i64) -> Option<(i64, i64)> {
         _ => {}
     }
     if let Some((a, b)) = v.split_once("..") {
-        let lo = if a.is_empty() { i64::MIN } else { parse_date(a, off)? };
-        let hi = if b.is_empty() { i64::MAX } else { parse_date(b, off)? + 86_399 };
+        let lo = if a.is_empty() { i64::MIN } else { parse_date_with(a, offset_at)? };
+        let hi = if b.is_empty() { i64::MAX } else { end_of_day(b, offset_at)? };
         return Some((lo, hi));
     }
     let (op, rest) = if let Some(r) = v.strip_prefix(">=") {
@@ -390,13 +421,14 @@ fn parse_time_filter(v: &str, now: i64, off: i64) -> Option<(i64, i64)> {
     } else {
         ("", v.as_str())
     };
-    if let Some(day) = parse_date(rest, off) {
+    if let Some(day) = parse_date_with(rest, offset_at) {
+        let end = end_of_day(rest, offset_at)?;
         return Some(match op {
-            ">" => (day + 86_400, i64::MAX),
+            ">" => (end + 1, i64::MAX),
             ">=" => (day, i64::MAX),
             "<" => (i64::MIN, day - 1),
-            "<=" => (i64::MIN, day + 86_399),
-            _ => (day, day + 86_399),
+            "<=" => (i64::MIN, end),
+            _ => (day, end),
         });
     }
     // Relative: `<7d` = newer than 7 days ago; `>7d` = older.
@@ -406,6 +438,15 @@ fn parse_time_filter(v: &str, now: i64, off: i64) -> Option<(i64, i64)> {
         ">" | ">=" => (i64::MIN, edge),
         _ => (edge, i64::MAX),
     })
+}
+
+/// The last second of a local day: the next local midnight minus one, so a
+/// 23- or 25-hour DST day keeps its real length.
+fn end_of_day(date: &str, offset_at: &dyn Fn(i64) -> i64) -> Option<i64> {
+    let start = parse_date_with(date, offset_at)?;
+    let next_utc = start + 86_400 + offset_at(start);
+    let next = next_utc.div_euclid(86_400) * 86_400;
+    Some(next - offset_at(next - offset_at(next)) - 1)
 }
 
 /// Does `path` lie inside any of `within`?
@@ -493,6 +534,35 @@ mod tests {
         assert_eq!(p("mod:today").modified, Some((local_midnight(NOW, 0), i64::MAX)));
         assert_eq!(local_midnight(86_400 + 5, 3600), 86_400 - 3600);
         assert!(p("modified:soon").errors.len() == 1);
+    }
+
+    #[test]
+    fn dates_use_the_offset_of_their_own_season() {
+        // New York: UTC−4 in October (now), UTC−5 in January.
+        let new_york = |t: i64| if (1_772_953_200..1_793_512_800).contains(&t) { -4 * 3600 } else { -5 * 3600 };
+        let q = Query::parse_with("modified:2026-01-01", NOW, &new_york);
+        let jan1_local = 1_767_225_600 + 5 * 3600;
+        assert_eq!(q.modified, Some((jan1_local, jan1_local + 86_399)));
+        // Dec 31 23:30 local is out, Jan 1 23:30 local is in.
+        let (lo, hi) = q.modified.unwrap();
+        assert!(jan1_local - 1800 < lo && (lo..=hi).contains(&(jan1_local + 86_400 - 1800)));
+        // The day DST starts has 23 hours.
+        let q = Query::parse_with("modified:2026-03-08", NOW, &new_york);
+        let (lo, hi) = q.modified.unwrap();
+        assert_eq!(hi - lo + 1, 23 * 3600);
+    }
+
+    #[test]
+    fn impossible_dates_are_errors() {
+        assert!(p("modified:2026-02-31").errors.len() == 1);
+        assert!(p("modified:2026-04-31").errors.len() == 1);
+        assert!(p("modified:2028-02-29").errors.is_empty());
+        assert!(p("modified:2026-02-29").errors.len() == 1);
+    }
+
+    #[test]
+    fn a_hidden_filter_alone_is_a_query() {
+        assert!(!p("hidden:yes").is_empty());
     }
 
     #[test]

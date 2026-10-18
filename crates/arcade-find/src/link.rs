@@ -493,7 +493,7 @@ pub fn search_query(req: &InvokeRequest) -> Result<String, LinkError> {
 /// Runs `find.search` against `host`.
 pub fn run_search(host: &dyn Host, req: &InvokeRequest) -> Result<InvokeResult, LinkError> {
     let text = search_query(req)?;
-    let query = Query::parse_at(&text, find_core::now_secs(), find_core::local_offset_secs());
+    let query = Query::parse_local(&text, find_core::now_secs());
     if query.content.is_some() {
         return Err(LinkError::unsupported("Content search runs only from Arcade Find's own window"));
     }
