@@ -34,8 +34,10 @@ def main():
         (root / "run").mkdir(mode=0o700)
         env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={root}/no-bus"
         env["APPIMAGE_EXTRACT_AND_RUN"] = "1"  # Works without a FUSE mount.
-        source = root / "Downloads/Arcade Find.AppImage"
-        source.parent.mkdir()
+        # --silent removes the downloaded file only from Downloads, which is
+        # under ARCADE_HOME in an isolated install.
+        source = root / "arcade/Downloads/Arcade Find.AppImage"
+        source.parent.mkdir(parents=True)
         shutil.copy2(artifact, source)
 
         def run(binary, *args):
@@ -44,7 +46,7 @@ def main():
             return json.loads(result.stdout) if result.stdout.strip() else None
 
         assert run(source, "--integration-status")["receipt"] is None
-        assert not (root / "arcade").exists(), "read-only status created integration"
+        assert [p.name for p in (root / "arcade").iterdir()] == ["Downloads"], "read-only status created integration"
         receipt = run(source, "--install", "--silent", "--no-launch")
         installed = Path(receipt["path"])
         assert receipt["method"] == "appimage" and receipt["version"] == VERSION
@@ -76,8 +78,10 @@ def main():
         assert not moved.exists(), "receipt uninstall did not remove the moved copy"
         assert all(not p.exists() and not p.is_symlink() for p in paths), "uninstall retained integration"
 
-        # Prove --install --silent re-execs the installed file. --background
-        # is retained; installer controls are removed from the relaunch.
+        # Prove --install --silent hands off to the installed file. --background
+        # is retained; installer controls are removed from the relaunch. From
+        # an AppImage the installer starts the installed copy and exits 0, so
+        # the runtime can unmount the old image.
         source.parent.mkdir(exist_ok=True)
         shutil.copy2(artifact, source)
         settings = root / "find/config/settings.json"
@@ -91,18 +95,18 @@ def main():
                 deadline = time.monotonic() + 20
                 while True:
                     if not installed.exists():
-                        assert child.poll() is None, (root / "resident.log").read_text()
+                        assert child.poll() in (None, 0), (root / "resident.log").read_text()
                         assert time.monotonic() < deadline, "installed copy was not created"
                         time.sleep(0.05)
                         continue
                     result = subprocess.run([str(installed), "--status"], env=env, capture_output=True, text=True, timeout=15)
                     if result.returncode == 0 and json.loads(result.stdout).get("engine", {}).get("phase") == "ready":
                         break
-                    assert child.poll() is None, (root / "resident.log").read_text()
+                    assert child.poll() in (None, 0), (root / "resident.log").read_text()
                     assert time.monotonic() < deadline, "installed successor did not become ready"
                     time.sleep(0.05)
                 run(installed, "--quit")
-                child.wait(timeout=15)
+                assert child.wait(timeout=15) == 0, (root / "resident.log").read_text()
             finally:
                 if child.poll() is None:
                     if installed.exists():
