@@ -191,6 +191,7 @@ fn attach_console() {
 }
 
 fn main() -> ExitCode {
+    arcade_link::childenv::on_startup();
     attach_console();
     let args = match parse_args() {
         Ok(a) => a,

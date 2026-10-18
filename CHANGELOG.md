@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1 — 2026-10-18
+
+- Updating or installing from your Downloads folder, restarting into the
+  background and starting other Arcade apps no longer leave the old AppImage
+  mounted and its runtime (about 20 MB) running. A program the app started
+  inherited an open handle on its AppImage mount and kept it busy.
+
 ## 0.4.0 — 2026-10-18
 
 - Changing Find's shortcut over Arcade Link (for example from Tools) takes effect
