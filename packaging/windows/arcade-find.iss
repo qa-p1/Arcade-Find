@@ -1,7 +1,7 @@
 ; Per-user Inno Setup 6. Shared tasks, PATH shim, receipts and silent parity.
-; iscc /DVersion=0.3.1 /DSource=..\..\target\release packaging\windows\arcade-find.iss
+; iscc /DVersion=0.4.0 /DSource=..\..\target\release packaging\windows\arcade-find.iss
 #ifndef Version
-  #define Version "0.3.1"
+  #define Version "0.4.0"
 #endif
 #ifndef Source
   #define Source "..\..\target\release"

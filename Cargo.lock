@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-find"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "arboard",
  "arcade-link",
@@ -1075,7 +1075,7 @@ dependencies = [
 
 [[package]]
 name = "find-core"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "crc32fast",
  "inotify",
