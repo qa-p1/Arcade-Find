@@ -35,6 +35,8 @@ Usage: arcade-find [OPTION]
   --install            Install this AppImage / macOS bundle
     --silent           Same installation defaults, without a dialog
     --no-launch        Install without starting the installed copy
+    --keep-download    Keep the AppImage in Downloads (by default --silent
+                       removes it there; files elsewhere are never removed)
     --channel C        Receipt channel (default: stable)
   --uninstall          Remove this installation via its receipt
     --silent           Uninstall without a confirmation dialog
@@ -58,6 +60,7 @@ struct Args {
     dir: Option<PathBuf>,
     silent: bool,
     no_launch: bool,
+    keep_download: bool,
     remove_data: bool,
     channel: Option<String>,
 }
@@ -69,6 +72,7 @@ fn parse_args() -> Result<Args, String> {
         match arg.as_str() {
             "--silent" => a.silent = true,
             "--no-launch" => a.no_launch = true,
+            "--keep-download" => a.keep_download = true,
             "--remove-data" => a.remove_data = true,
             "--channel" => {
                 a.channel = Some(it.next().filter(|c| !c.is_empty() && !c.starts_with('-')).ok_or("--channel needs a channel name")?)
@@ -99,8 +103,8 @@ fn parse_args() -> Result<Args, String> {
             other => return Err(format!("unexpected argument \"{other}\" (see --help)")),
         }
     }
-    if (a.no_launch || a.channel.is_some()) && a.action.as_deref() != Some("--install") {
-        return Err("--no-launch and --channel require --install".into());
+    if (a.no_launch || a.keep_download || a.channel.is_some()) && a.action.as_deref() != Some("--install") {
+        return Err("--no-launch, --keep-download and --channel require --install".into());
     }
     if a.remove_data && a.action.as_deref() != Some("--uninstall") {
         return Err("--remove-data requires --uninstall".into());
@@ -140,7 +144,7 @@ fn print_search(v: &serde_json::Value, json: bool) -> ExitCode {
 /// `--search` without a running instance: the saved index, read-only.
 fn search_offline(p: &AppPaths, query: &str, limit: usize, hidden: bool) -> serde_json::Value {
     use serde_json::json;
-    let q = find_core::Query::parse_at(query, find_core::now_secs(), find_core::local_offset_secs());
+    let q = find_core::Query::parse_local(query, find_core::now_secs());
     if q.content.is_some() {
         return json!({"ok": false, "error": "Content search isn't available from the command line"});
     }
@@ -344,6 +348,9 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
                 if let Some(channel) = &args.channel {
                     options.channel = channel.clone();
                 }
+                if args.keep_download {
+                    options.remove_download = false;
+                }
                 let launch = if args.silent {
                     let receipt = installer::install_copy(&environment, &runtime, paths, &options).map_err(|e| e.to_string())?;
                     let status =
@@ -367,6 +374,8 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
                 };
                 if !args.no_launch {
                     if let Some(path) = launch {
+                        // The installed copy replaces an older one still running.
+                        installer::stop_running_copy(paths);
                         arcade_link::install::reexec(&path, &installer::launch_args(original_args)).map_err(|e| e.to_string())?;
                     }
                 }

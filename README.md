@@ -29,7 +29,7 @@ Download the file for your system from [Releases](https://github.com/qa-p1/Arcad
 | Windows x64 | `Arcade-Find-<version>-x64-setup.exe` | Run Setup. Installs for your user without admin, adds a Start menu entry and an `arcade-find.cmd` shim in `%LOCALAPPDATA%\Arcade\bin` on the user PATH. |
 | macOS (universal) | `Arcade-Find-<version>-universal.dmg` | Open the dmg and drag Arcade Find to Applications. Run from the dmg or Downloads, it offers to move itself to Applications. |
 
-- Scripted Linux install: `Arcade-Find-x86_64.AppImage --install --silent` (add `--no-launch` to not start it, `--channel nightly` to record another channel). `--repair` repoints the launcher and command from a moved AppImage; `--integration-status` prints the integration as JSON without changing anything.
+- Scripted Linux install: `Arcade-Find-x86_64.AppImage --install --silent` (add `--no-launch` to not start it, `--channel nightly` to record another channel). `--repair` repoints the launcher and command from a moved AppImage; `--integration-status` prints the integration as JSON without changing anything. A silent install removes the AppImage it was started from only when that file is in your Downloads folder; add `--keep-download` to keep it there too. Files elsewhere are never removed.
 - Scripted Windows install: `/VERYSILENT /SUPPRESSMSGBOXES /NORESTART`; `/MERGETASKS=arcade-startup` selects start at login.
 - Builds are unsigned. On Windows, SmartScreen may warn: choose **More info → Run anyway**. On macOS the app is not notarized: right-click it and choose **Open** the first time.
 - If FUSE is missing on Linux, run the AppImage with `--appimage-extract-and-run`.

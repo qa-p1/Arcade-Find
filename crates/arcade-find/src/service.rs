@@ -387,7 +387,7 @@ impl Service {
             self.send(UiMsg::Results { seq: req.seq, rows, info });
             return;
         }
-        let q = Query::parse_at(&req.text, now, find_core::local_offset_secs());
+        let q = Query::parse_local(&req.text, now);
         let note = q.errors.first().cloned();
         if q.content.is_some() {
             self.content_search(req, q, note);
@@ -443,16 +443,7 @@ impl Service {
         let Some(rg) = self.ripgrep.get_or_init(|| rg::detect(&[])).clone() else {
             return fail("Content search needs ripgrep (rg). Install it from your package manager");
         };
-        let dirs = if q.within.is_empty() { settings.root_paths() } else { q.within.clone() };
-        let creq = ContentRequest {
-            pattern: q.content.clone().unwrap_or_default(),
-            dirs,
-            exts: q.exts.clone(),
-            exclude_names: settings.exclude_names.clone(),
-            hidden: req.hidden,
-            limit: CONTENT_LIMIT,
-            timeout: CONTENT_TIMEOUT,
-        };
+        let creq = ContentRequest::for_query(&q, &settings, req.hidden, CONTENT_LIMIT, CONTENT_TIMEOUT);
         let cancel = Arc::new(AtomicBool::new(false));
         *self.search.cancel.lock().unwrap_or_else(|e| e.into_inner()) = cancel.clone();
         if self.search.latest.load(Ordering::SeqCst) != req.seq {
@@ -961,7 +952,7 @@ impl Service {
                 json!({ "ok": true })
             }
             Command::Search { query, limit, hidden } => {
-                let q = Query::parse_at(&query, find_core::now_secs(), find_core::local_offset_secs());
+                let q = Query::parse_local(&query, find_core::now_secs());
                 if q.content.is_some() {
                     return json!({ "ok": false, "error": "Content search isn't available from the command line" });
                 }
@@ -993,7 +984,8 @@ impl Service {
             self.search.wake.notify_all();
         }
         if let Some(w) = self.tray_watcher.lock().unwrap_or_else(|e| e.into_inner()).take() {
-            w.stop();
+            // Quitting: don't show our own icon for the last moments when Tools hosts it.
+            w.finish();
         }
         let _ = crate::diagnostics::event(&self.paths, "stopped");
         if let Ok(f) = self.frecency.lock() {

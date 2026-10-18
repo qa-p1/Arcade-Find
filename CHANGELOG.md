@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0 — 2026-10-18
+
+- Changing Find's shortcut over Arcade Link (for example from Tools) takes effect
+  right away; before, the new chord did nothing until Find was restarted.
+- Date filters stay correct across daylight-saving changes, and content search
+  keeps to the folders you chose.
+- Installer: updating replaces the running copy, uninstalling right after start
+  works, and the install prompt matches the other Arcade apps (centred, Install
+  on the right, closing it installs nothing, Start at login ticked). Upgrading
+  from a copy installed before the shared installer names that copy and takes
+  over its menu and login entries.
+- Built against Arcade Link commit `2fc7c91`.
+
 ## 0.3.1 — 2026-10-16
 
 - On X11, restoring a Tools backup (or saving Settings) with the global

@@ -94,7 +94,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-find"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "arboard",
  "arcade-link",
@@ -131,7 +131,7 @@ dependencies = [
 [[package]]
 name = "arcade-link"
 version = "0.3.0"
-source = "git+https://github.com/qa-p1/Arcade-Link?tag=v0.3.0#33650a87b6999fbd553ac678cc7bde7a308cb852"
+source = "git+https://github.com/qa-p1/Arcade-Link?rev=2fc7c91b7578ca424264627b82174bedc176e511#2fc7c91b7578ca424264627b82174bedc176e511"
 dependencies = [
  "getrandom 0.4.3",
  "interprocess",
@@ -1075,7 +1075,7 @@ dependencies = [
 
 [[package]]
 name = "find-core"
-version = "0.3.1"
+version = "0.4.0"
 dependencies = [
  "crc32fast",
  "inotify",

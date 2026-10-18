@@ -120,6 +120,30 @@ thread_local! {
 }
 
 static HYPR_WATCH: Mutex<bool> = Mutex::new(false);
+
+/// global-hotkey keeps the first event handler for the life of the process
+/// (a `OnceCell`), so a handler that captured the first chord's id ignored
+/// every later chord until Find restarted. One handler is installed and
+/// reads the current chord and service from here.
+static NATIVE_ID: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+static NATIVE_TARGET: Mutex<Option<std::sync::Weak<Service>>> = Mutex::new(None);
+static NATIVE_HANDLER: std::sync::Once = std::sync::Once::new();
+
+fn install_native_handler(svc: &Arc<Service>, id: u32) {
+    use std::sync::atomic::Ordering;
+    *NATIVE_TARGET.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::downgrade(svc));
+    NATIVE_ID.store(id, Ordering::SeqCst);
+    NATIVE_HANDLER.call_once(|| {
+        global_hotkey::GlobalHotKeyEvent::set_event_handler(Some(|e: global_hotkey::GlobalHotKeyEvent| {
+            if e.id == NATIVE_ID.load(Ordering::SeqCst) && e.state == global_hotkey::HotKeyState::Pressed {
+                let target = NATIVE_TARGET.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                if let Some(s) = target.and_then(|w| w.upgrade()) {
+                    s.send(UiMsg::Toggle);
+                }
+            }
+        }));
+    });
+}
 static HYPR_BINDING: Mutex<Option<hyprland::Binding>> = Mutex::new(None);
 
 fn wayland_session() -> bool {
@@ -261,15 +285,7 @@ fn native(svc: &Arc<Service>, accel: &str) -> State {
             e => e.to_string(),
         });
     }
-    let weak = Arc::downgrade(svc);
-    let id = hk.id();
-    global_hotkey::GlobalHotKeyEvent::set_event_handler(Some(move |e: global_hotkey::GlobalHotKeyEvent| {
-        if e.id == id && e.state == global_hotkey::HotKeyState::Pressed {
-            if let Some(s) = weak.upgrade() {
-                s.send(UiMsg::Toggle);
-            }
-        }
-    }));
+    install_native_handler(svc, hk.id());
     ACTIVE.with(|a| *a.borrow_mut() = Some(Active::Native(manager, hk)));
     State::Native(accel.to_string())
 }
