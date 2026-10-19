@@ -2,7 +2,8 @@
 
 ## Release status (2026-10-18)
 
-- Latest release: [v0.4.2](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.4.2), published 2026-10-19 (releases every descriptor an AppImage start inherits; see CHANGELOG.md). The CI and e2e notes below were recorded for the earlier v0.3.0.
+- Latest release: [v0.4.3](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.4.3), published 2026-10-19 (only programs from another image drop the AppImage's descriptors; see CHANGELOG.md). The CI and e2e notes below were recorded for the earlier v0.3.0.
+- Previously released: [v0.4.2](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.4.2), published 2026-10-19 (released every inherited descriptor at start, which also cut off helpers from the app's own image).
 - Previously released: [v0.4.1](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.4.1), published 2026-10-18 (fixes for what verifying the release before it found).
 - Previously released: [v0.4.0](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.4.0), published 2026-10-18 (fixes from the October audit and stress test).
 - Previously released: [v0.3.1](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.3.1), published 2026-10-16.
