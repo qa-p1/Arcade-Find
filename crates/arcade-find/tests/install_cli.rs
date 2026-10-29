@@ -104,8 +104,7 @@ fn remove_data_is_explicit_and_dev_or_inherited_appimage_never_installs() {
     fixture.run(&["--uninstall", "--silent", "--remove-data"]);
     assert!(!fixture.root.join("find/config").exists());
     assert!(!fixture.root.join("find/data").exists());
-    let output =
-        fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).args(["--install", "--silent", "--no-launch"]).output().unwrap();
+    let output = fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).args(["--install", "--silent", "--no-launch"]).output().unwrap();
     assert!(!output.status.success(), "a dev binary must not install an inherited AppImage");
     assert!(!fixture.root.join("arcade/installs/arcade.find.json").exists());
     let output = fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).arg("--arcade-manifest").output().unwrap();

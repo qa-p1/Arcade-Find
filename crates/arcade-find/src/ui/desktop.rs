@@ -374,9 +374,7 @@ impl ApplicationHandler<UiMsg> for App {
             }
             // Synthetic presses replay keys held while focus arrived (the
             // Enter that opened us, the shortcut's keys): never act on them.
-            WindowEvent::KeyboardInput { event, is_synthetic: false, .. }
-                if event.state == ElementState::Pressed && self.overlay.visible =>
-            {
+            WindowEvent::KeyboardInput { event, is_synthetic: false, .. } if event.state == ElementState::Pressed && self.overlay.visible => {
                 let ev = super::keys::from_winit(&event.logical_key, event.text.as_deref(), self.mods);
                 let svc = self.svc.clone();
                 let effects = self.overlay.key(&ev, &*svc);
@@ -443,8 +441,7 @@ impl ApplicationHandler<UiMsg> for App {
 #[cfg(target_os = "linux")]
 fn wayland_dragger(w: &Window) -> Option<super::wl_drag::Dragger> {
     use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
-    let (RawDisplayHandle::Wayland(d), RawWindowHandle::Wayland(s)) = (w.display_handle().ok()?.as_raw(), w.window_handle().ok()?.as_raw())
-    else {
+    let (RawDisplayHandle::Wayland(d), RawWindowHandle::Wayland(s)) = (w.display_handle().ok()?.as_raw(), w.window_handle().ok()?.as_raw()) else {
         return None;
     };
     // SAFETY: winit's wl_display and the window's wl_surface; the window is
@@ -464,30 +461,17 @@ fn wayland_dragger(w: &Window) -> Option<super::wl_drag::Dragger> {
 fn wayland_drag_image(image: &resvg::tiny_skia::Pixmap, scale: u32) -> Option<super::wl_drag::Image> {
     let gap = 14 * scale;
     let mut pm = resvg::tiny_skia::Pixmap::new(image.width() + gap, image.height() + gap)?;
-    pm.draw_pixmap(
-        gap as i32,
-        gap as i32,
-        image.as_ref(),
-        &resvg::tiny_skia::PixmapPaint::default(),
-        resvg::tiny_skia::Transform::identity(),
-        None,
-    );
+    pm.draw_pixmap(gap as i32, gap as i32, image.as_ref(), &resvg::tiny_skia::PixmapPaint::default(), resvg::tiny_skia::Transform::identity(), None);
     Some(super::wl_drag::Image { width: pm.width(), height: pm.height(), rgba: pm.take(), scale: scale as i32 })
 }
 
 /// Starts the platform drag of `paths` from the overlay window.
 #[allow(unused_variables)]
-fn drag_out(
-    w: &Window,
-    paths: Vec<std::path::PathBuf>,
-    image: Option<&resvg::tiny_skia::Pixmap>,
-    background: [u8; 3],
-) -> Result<(), String> {
+fn drag_out(w: &Window, paths: Vec<std::path::PathBuf>, image: Option<&resvg::tiny_skia::Pixmap>, background: [u8; 3]) -> Result<(), String> {
     use winit::raw_window_handle::{HasWindowHandle, RawWindowHandle};
     let handle = w.window_handle().map_err(|e| e.to_string())?.as_raw();
     #[cfg(target_os = "linux")]
-    let x_image =
-        || image.map(|p| super::xdnd::Image { width: p.width() as u16, height: p.height() as u16, rgba: p.data().to_vec(), background });
+    let x_image = || image.map(|p| super::xdnd::Image { width: p.width() as u16, height: p.height() as u16, rgba: p.data().to_vec(), background });
     // X11: the XDND loop has its own connection, on its own thread, until
     // the button is released.
     #[cfg(target_os = "linux")]

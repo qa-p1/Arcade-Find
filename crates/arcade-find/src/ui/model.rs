@@ -463,9 +463,7 @@ impl Overlay {
     /// Whether the list area is shown at all (the bar alone at rest).
     pub fn shows_list(&self) -> bool {
         match self.mode {
-            Mode::Results => {
-                !self.rows.is_empty() || (self.shown_seq == self.seq && (!self.input.text.trim().is_empty() || self.empty_open))
-            }
+            Mode::Results => !self.rows.is_empty() || (self.shown_seq == self.seq && (!self.input.text.trim().is_empty() || self.empty_open)),
             _ => true,
         }
     }
@@ -624,8 +622,7 @@ impl Overlay {
             ActionId::Rename => {
                 if let Some(i) = self.rows.iter().position(|r| r.path == first.path) {
                     let mut input = TextInput::with(&first.name);
-                    let stem =
-                        if first.is_dir { first.name.len() } else { first.name.rfind('.').filter(|&i| i > 0).unwrap_or(first.name.len()) };
+                    let stem = if first.is_dir { first.name.len() } else { first.name.rfind('.').filter(|&i| i > 0).unwrap_or(first.name.len()) };
                     input.select_range(0, stem);
                     self.sel = i;
                     self.anchor = None;
@@ -1074,10 +1071,7 @@ mod tests {
         let items = vec![
             ActionItem::new(ActionId::CopyPath, "Copy path", Glyph::Copy),
             ActionItem { danger: true, ..ActionItem::new(ActionId::Trash, "Move to Trash", Glyph::Trash) },
-            ActionItem {
-                keywords: "Arcade Shelf".into(),
-                ..ActionItem::new(ActionId::CopyFile, "Add to collection", Glyph::App(AppGlyph::Other))
-            },
+            ActionItem { keywords: "Arcade Shelf".into(), ..ActionItem::new(ActionId::CopyFile, "Add to collection", Glyph::App(AppGlyph::Other)) },
         ];
         o.set_actions(t.clone(), items);
         typed(&mut o, "shel", &Ctx(true));

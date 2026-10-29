@@ -87,19 +87,8 @@ impl From<PromptRuntime> for Runtime {
 }
 #[derive(Serialize, Deserialize)]
 enum Prompt {
-    Install {
-        environment: Box<PromptEnvironment>,
-        runtime: PromptRuntime,
-        paths: AppPaths,
-        detection: Box<Detection>,
-        state: DialogState,
-        options: Options,
-    },
-    Uninstall {
-        environment: Box<PromptEnvironment>,
-        paths: AppPaths,
-        remove_data: bool,
-    },
+    Install { environment: Box<PromptEnvironment>, runtime: PromptRuntime, paths: AppPaths, detection: Box<Detection>, state: DialogState, options: Options },
+    Uninstall { environment: Box<PromptEnvironment>, paths: AppPaths, remove_data: bool },
 }
 
 fn helper(prompt: Prompt) -> Result<Outcome, String> {
@@ -127,13 +116,10 @@ pub fn serve_dialog() -> Result<(), String> {
     let outcome = match prompt {
         Prompt::Install { environment, runtime, paths, detection, state, options } => {
             let environment: Environment = (*environment).into();
-            let managed =
-                detection.receipt.as_ref().is_some_and(|r| r.managed_by == ManagedBy::Tools) && installer::tools_installed(&environment);
+            let managed = detection.receipt.as_ref().is_some_and(|r| r.managed_by == ManagedBy::Tools) && installer::tools_installed(&environment);
             run(paths, Mode::Install { environment: Box::new(environment), runtime: runtime.into(), detection, state, options, managed })?
         }
-        Prompt::Uninstall { environment, paths, remove_data } => {
-            run(paths, Mode::Uninstall { environment: Box::new((*environment).into()), remove_data })?
-        }
+        Prompt::Uninstall { environment, paths, remove_data } => run(paths, Mode::Uninstall { environment: Box::new((*environment).into()), remove_data })?,
     };
     let bytes = serde_json::to_vec(&outcome).map_err(|e| e.to_string())?;
     std::io::stdout().write_all(&bytes).map_err(|e| e.to_string())
@@ -141,18 +127,8 @@ pub fn serve_dialog() -> Result<(), String> {
 
 #[derive(Clone)]
 enum Mode {
-    Install {
-        environment: Box<Environment>,
-        runtime: Runtime,
-        detection: Box<Detection>,
-        state: DialogState,
-        options: Options,
-        managed: bool,
-    },
-    Uninstall {
-        environment: Box<Environment>,
-        remove_data: bool,
-    },
+    Install { environment: Box<Environment>, runtime: Runtime, detection: Box<Detection>, state: DialogState, options: Options, managed: bool },
+    Uninstall { environment: Box<Environment>, remove_data: bool },
 }
 
 struct Completed {
@@ -182,10 +158,7 @@ fn format(s: &str, version: &str, from: &str) -> String {
 pub fn text(state: &DialogState) -> (String, Option<String>, Vec<String>) {
     let all = strings::get();
     let newer = |installed: &str| {
-        semver::Version::parse(installed)
-            .ok()
-            .zip(semver::Version::parse(crate::VERSION).ok())
-            .is_some_and(|(installed, this)| installed > this)
+        semver::Version::parse(installed).ok().zip(semver::Version::parse(crate::VERSION).ok()).is_some_and(|(installed, this)| installed > this)
     };
     let (dialog, version, from) = match state {
         DialogState::Install => (&all.not_installed, crate::VERSION, ""),
@@ -210,14 +183,7 @@ pub fn run_install(
     state: DialogState,
     options: Options,
 ) -> Result<Outcome, String> {
-    helper(Prompt::Install {
-        environment: Box::new(environment.into()),
-        runtime: runtime.into(),
-        paths,
-        detection: Box::new(detection),
-        state,
-        options,
-    })
+    helper(Prompt::Install { environment: Box::new(environment.into()), runtime: runtime.into(), paths, detection: Box::new(detection), state, options })
 }
 
 pub fn run_uninstall(environment: Environment, paths: AppPaths, remove_data: bool) -> Result<Outcome, String> {
@@ -287,11 +253,9 @@ impl Dialog {
                     let r = installer::install_copy(&environment, &runtime, &paths, &options).map_err(|e| e.to_string())?;
                     // The installed copy replaces an older one still running.
                     installer::stop_running_copy(&paths);
-                    let status = install::integration_status(&environment, crate::link::ME, &std::env::var("SHELL").unwrap_or_default())
-                        .map_err(|e| e.to_string())?;
-                    let hint = status
-                        .path_hint
-                        .map(|command| strings::format(&strings::get().path_hint, crate::link::NAME, crate::VERSION, "", &command));
+                    let status =
+                        install::integration_status(&environment, crate::link::ME, &std::env::var("SHELL").unwrap_or_default()).map_err(|e| e.to_string())?;
+                    let hint = status.path_hint.map(|command| strings::format(&strings::get().path_hint, crate::link::NAME, crate::VERSION, "", &command));
                     Ok(Completed { outcome: Outcome::Launch(installer::launch_path(&r)), hint })
                 }
                 Mode::Uninstall { environment, remove_data } => {
@@ -377,8 +341,7 @@ impl eframe::App for Dialog {
                     // The main action sits rightmost, as in the other Arcade prompts.
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         for (i, label) in buttons.iter().enumerate() {
-                            let button =
-                                if i == 0 { egui::Button::new(egui::RichText::new(label).strong()) } else { egui::Button::new(label) };
+                            let button = if i == 0 { egui::Button::new(egui::RichText::new(label).strong()) } else { egui::Button::new(label) };
                             if ui.add(button).clicked() {
                                 clicked = Some(i);
                             }

@@ -92,19 +92,7 @@ impl Dragger {
                 if inserted.is_err() {
                     return;
                 }
-                let mut st = State {
-                    conn,
-                    qh,
-                    compositor,
-                    data_manager,
-                    shm,
-                    pool,
-                    pointer: None,
-                    device: None,
-                    press: None,
-                    drag: None,
-                    dragging: flag,
-                };
+                let mut st = State { conn, qh, compositor, data_manager, shm, pool, pointer: None, device: None, press: None, drag: None, dragging: flag };
                 while event_loop.dispatch(None, &mut st).is_ok() {}
                 crate::debug!("wl-drag: connection closed");
             })
@@ -167,11 +155,7 @@ impl State {
             return;
         };
         crate::debug!("wl-drag: drag of {} item(s)", start.paths.len());
-        let source = self.data_manager.create_drag_and_drop_source(
-            &self.qh,
-            [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"],
-            DndAction::Copy,
-        );
+        let source = self.data_manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
         let icon = self.compositor.create_surface(&self.qh, ());
         source.start_drag(device, &origin, Some(&icon), serial);
         if let Some(image) = start.image {
@@ -209,15 +193,7 @@ impl State {
 }
 
 impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
-    fn event(
-        _: &mut Self,
-        _: &wl_registry::WlRegistry,
-        _: wl_registry::Event,
-        _: &GlobalListContents,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-    ) {
-    }
+    fn event(_: &mut Self, _: &wl_registry::WlRegistry, _: wl_registry::Event, _: &GlobalListContents, _: &Connection, _: &QueueHandle<Self>) {}
 }
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for State {
@@ -269,14 +245,7 @@ impl ShmHandler for State {
 impl DataSourceHandler for State {
     fn accept_mime(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource, _: Option<String>) {}
 
-    fn send_request(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        source: &wl_data_source::WlDataSource,
-        mime: String,
-        mut fd: WritePipe,
-    ) {
+    fn send_request(&mut self, _: &Connection, _: &QueueHandle<Self>, source: &wl_data_source::WlDataSource, mime: String, mut fd: WritePipe) {
         let Some(drag) = self.drag.as_ref().filter(|d| d.source.inner() == source) else { return };
         if let Some(bytes) = dnd::payload(&drag.paths, &mime) {
             if let Err(e) = fd.write_all(&bytes) {
@@ -302,16 +271,7 @@ impl DataSourceHandler for State {
 
 // Find is never a drop target; offers from other clients are ignored.
 impl DataDeviceHandler for State {
-    fn enter(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &wl_data_device::WlDataDevice,
-        _: f64,
-        _: f64,
-        _: &wl_surface::WlSurface,
-    ) {
-    }
+    fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64, _: &wl_surface::WlSurface) {}
     fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
     fn motion(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64) {}
     fn selection(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}

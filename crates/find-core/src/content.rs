@@ -143,19 +143,11 @@ pub enum ContentEnd {
 
 /// The arguments for `rg` (no shell; the pattern is passed after `--`).
 pub fn args(req: &ContentRequest) -> Vec<String> {
-    let mut a: Vec<String> = [
-        "--files-with-matches",
-        "--no-messages",
-        "--smart-case",
-        "--fixed-strings",
-        "--max-filesize",
-        "64M",
-        "--no-config",
-        "--no-ignore-vcs",
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect();
+    let mut a: Vec<String> =
+        ["--files-with-matches", "--no-messages", "--smart-case", "--fixed-strings", "--max-filesize", "64M", "--no-config", "--no-ignore-vcs"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
     if req.hidden {
         a.push("--hidden".into());
     }

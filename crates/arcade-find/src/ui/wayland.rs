@@ -20,14 +20,12 @@ use smithay_client_toolkit::reexports::calloop::channel::{channel, Event as Chan
 use smithay_client_toolkit::reexports::calloop::timer::{TimeoutAction, Timer};
 use smithay_client_toolkit::reexports::calloop::{EventLoop, LoopHandle, RegistrationToken};
 use smithay_client_toolkit::reexports::calloop_wayland_source::WaylandSource;
-use smithay_client_toolkit::reexports::protocols::wp::fractional_scale::v1::client::{
-    wp_fractional_scale_manager_v1, wp_fractional_scale_v1,
-};
+use smithay_client_toolkit::reexports::protocols::wp::fractional_scale::v1::client::{wp_fractional_scale_manager_v1, wp_fractional_scale_v1};
 use smithay_client_toolkit::reexports::protocols::wp::viewporter::client::{wp_viewport, wp_viewporter};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_data_device, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
-    delegate_seat, delegate_shm,
+    delegate_compositor, delegate_data_device, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat,
+    delegate_shm,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
@@ -44,9 +42,7 @@ use smithay_client_toolkit::{
 };
 use wayland_client::globals::{registry_queue_init, GlobalListContents};
 use wayland_client::protocol::wl_data_device_manager::DndAction;
-use wayland_client::protocol::{
-    wl_data_device, wl_data_source, wl_keyboard, wl_output, wl_pointer, wl_registry, wl_seat, wl_shm, wl_surface,
-};
+use wayland_client::protocol::{wl_data_device, wl_data_source, wl_keyboard, wl_output, wl_pointer, wl_registry, wl_seat, wl_shm, wl_surface};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 
 use super::dnd;
@@ -70,15 +66,7 @@ pub fn available() -> bool {
 
 struct Probe;
 impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for Probe {
-    fn event(
-        _: &mut Self,
-        _: &wl_registry::WlRegistry,
-        _: wl_registry::Event,
-        _: &GlobalListContents,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-    ) {
-    }
+    fn event(_: &mut Self, _: &wl_registry::WlRegistry, _: wl_registry::Event, _: &GlobalListContents, _: &Connection, _: &QueueHandle<Self>) {}
 }
 
 struct Shown {
@@ -409,8 +397,7 @@ impl Wl {
         }
         let (Some(manager), Some(device), Some(shown)) = (&self.data_manager, &self.data_device, &self.shown) else { return };
         crate::debug!("wayland drag of {} item(s)", rows.len());
-        let source =
-            manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
+        let source = manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
         let icon = self.compositor.create_surface(&self.qh);
         source.start_drag(device, shown.layer.wl_surface(), Some(&icon), serial);
         self.paint_drag_icon(&icon, &rows);
@@ -427,14 +414,7 @@ impl Wl {
         // Below and right of the hotspot, clear of the cursor.
         let gap = 14 * scale as u32;
         let Some(mut pm) = resvg::tiny_skia::Pixmap::new(image.width() + gap, image.height() + gap) else { return };
-        pm.draw_pixmap(
-            gap as i32,
-            gap as i32,
-            image.as_ref(),
-            &resvg::tiny_skia::PixmapPaint::default(),
-            resvg::tiny_skia::Transform::identity(),
-            None,
-        );
+        pm.draw_pixmap(gap as i32, gap as i32, image.as_ref(), &resvg::tiny_skia::PixmapPaint::default(), resvg::tiny_skia::Transform::identity(), None);
         let (w, h) = (pm.width() as i32, pm.height() as i32);
         let Ok((buffer, canvas)) = self.pool.create_buffer(w, h, w * 4, wl_shm::Format::Argb8888) else { return };
         for (dst, src) in canvas.as_chunks_mut::<4>().0.iter_mut().zip(pm.data().as_chunks::<4>().0) {
@@ -502,8 +482,7 @@ impl SeatHandler for Wl {
         crate::debug!("wayland seat capability + {capability:?}");
         if capability == Capability::Keyboard && self.keyboard.is_none() {
             let handle = self.handle.clone();
-            self.keyboard =
-                self.seat_state.get_keyboard_with_repeat(qh, &seat, None, handle, Box::new(|st: &mut Wl, _, ev| st.key(ev))).ok();
+            self.keyboard = self.seat_state.get_keyboard_with_repeat(qh, &seat, None, handle, Box::new(|st: &mut Wl, _, ev| st.key(ev))).ok();
         }
         if capability == Capability::Pointer && self.pointer.is_none() {
             self.pointer = self.seat_state.get_pointer(qh, &seat).ok();
@@ -529,16 +508,7 @@ impl SeatHandler for Wl {
 }
 
 impl KeyboardHandler for Wl {
-    fn enter(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &wl_keyboard::WlKeyboard,
-        surface: &wl_surface::WlSurface,
-        _: u32,
-        _: &[u32],
-        _: &[Keysym],
-    ) {
+    fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_keyboard::WlKeyboard, surface: &wl_surface::WlSurface, _: u32, _: &[u32], _: &[Keysym]) {
         if self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = true;
             if let Some(t) = self.leave_timer.take() {
@@ -632,8 +602,7 @@ impl PointerHandler for Wl {
                     }
                 }
                 PointerEventKind::Axis { vertical, .. } => {
-                    let lines =
-                        if vertical.discrete != 0 { vertical.discrete as isize } else { (vertical.absolute / 20.0).round() as isize };
+                    let lines = if vertical.discrete != 0 { vertical.discrete as isize } else { (vertical.absolute / 20.0).round() as isize };
                     if lines != 0 {
                         self.overlay.scroll_by(lines);
                         self.update();
@@ -702,14 +671,7 @@ impl Dispatch<wp_viewport::WpViewport, ()> for Wl {
 impl DataSourceHandler for Wl {
     fn accept_mime(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource, _: Option<String>) {}
 
-    fn send_request(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        source: &wl_data_source::WlDataSource,
-        mime: String,
-        mut fd: WritePipe,
-    ) {
+    fn send_request(&mut self, _: &Connection, _: &QueueHandle<Self>, source: &wl_data_source::WlDataSource, mime: String, mut fd: WritePipe) {
         let Some(drag) = self.drag.as_ref().filter(|d| d.source.inner() == source) else { return };
         if let Some(bytes) = dnd::payload(&drag.paths, &mime) {
             if let Err(e) = fd.write_all(&bytes) {
@@ -735,16 +697,7 @@ impl DataSourceHandler for Wl {
 
 // Find is never a drop target; offers from other clients are ignored.
 impl DataDeviceHandler for Wl {
-    fn enter(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &wl_data_device::WlDataDevice,
-        _: f64,
-        _: f64,
-        _: &wl_surface::WlSurface,
-    ) {
-    }
+    fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64, _: &wl_surface::WlSurface) {}
     fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
     fn motion(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64) {}
     fn selection(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}

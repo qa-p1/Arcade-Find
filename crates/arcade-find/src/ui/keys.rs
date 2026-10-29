@@ -93,9 +93,6 @@ mod tests {
         assert_eq!(e.key, Key::Char('ä'));
         assert_eq!(e.text.as_deref(), Some("ä"));
         assert_eq!(from_keysym(smithay_client_toolkit::seat::keyboard::Keysym::KP_Enter, None, Mods::default()).key, Key::Enter);
-        assert_eq!(
-            from_keysym(smithay_client_toolkit::seat::keyboard::Keysym::space, Some(" "), Mods::default()).text.as_deref(),
-            Some(" ")
-        );
+        assert_eq!(from_keysym(smithay_client_toolkit::seat::keyboard::Keysym::space, Some(" "), Mods::default()).text.as_deref(), Some(" "));
     }
 }

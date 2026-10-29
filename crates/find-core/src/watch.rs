@@ -109,13 +109,7 @@ mod linux {
         pub fn start(sink: Arc<dyn Sink>, _index: Arc<RwLock<Index>>) -> Option<Arc<Watcher>> {
             let ino = Inotify::init().ok()?;
             let w = Arc::new(Watcher {
-                state: Mutex::new(State {
-                    watches: ino.watches(),
-                    by_wd: HashMap::new(),
-                    by_dir: IdMap::default(),
-                    full: false,
-                    error: None,
-                }),
+                state: Mutex::new(State { watches: ino.watches(), by_wd: HashMap::new(), by_dir: IdMap::default(), full: false, error: None }),
                 watched: AtomicU64::new(0),
                 unwatched: AtomicU64::new(0),
                 limit: read_inotify_limit(),
@@ -255,7 +249,10 @@ mod linux {
                 unwatched,
                 limit: self.limit,
                 detail: if st.full {
-                    format!("Live updates cover {watched} of {} folders: the inotify watch limit was reached. The rest are rescanned periodically.", watched + unwatched)
+                    format!(
+                        "Live updates cover {watched} of {} folders: the inotify watch limit was reached. The rest are rescanned periodically.",
+                        watched + unwatched
+                    )
                 } else if let Some(e) = &st.error {
                     format!("Some folders can't be watched ({e}); they are rescanned periodically.")
                 } else {

@@ -184,16 +184,7 @@ impl Text {
     /// Draws a shaped line with its top-left at (x, y), clipped to `clip`
     /// (x0, y0, x1, y1). `spans` recolor byte ranges glyph by glyph (the
     /// shaping is the plain line's, so widths never change).
-    pub fn draw(
-        &mut self,
-        pm: &mut Pixmap,
-        text: &str,
-        style: Style,
-        spans: &[(usize, usize, Rgba, u16)],
-        x: f32,
-        y: f32,
-        clip: (i32, i32, i32, i32),
-    ) -> f32 {
+    pub fn draw(&mut self, pm: &mut Pixmap, text: &str, style: Style, spans: &[(usize, usize, Rgba, u16)], x: f32, y: f32, clip: (i32, i32, i32, i32)) -> f32 {
         let key_line_width;
         // Borrow dance: shape first, then draw with the font system.
         {

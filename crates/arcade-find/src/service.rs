@@ -408,8 +408,7 @@ impl Service {
         }
         let pins = self.pins.lock().map(|p| p.clone()).unwrap_or_default();
         let rows = hits.iter().map(|h| row_from_hit(h, &q, &pins)).collect();
-        let note =
-            note.or_else(|| (self.engine.phase() == Phase::Crawling).then(|| "Still indexing: more results will appear".to_string()));
+        let note = note.or_else(|| (self.engine.phase() == Phase::Crawling).then(|| "Still indexing: more results will appear".to_string()));
         let info = ResultsInfo { matched: r.matched, elapsed_ms: r.elapsed.as_secs_f32() * 1000.0, note, ..Default::default() };
         self.send(UiMsg::Results { seq: req.seq, rows, info });
     }
@@ -529,16 +528,8 @@ impl Service {
         if preview {
             items.push(ActionItem::new(ActionId::Preview, "Quick Look", Glyph::Preview).hint("⏎"));
         }
-        items.push(ActionItem::new(ActionId::Open, if one { "Open" } else { "Open all" }, Glyph::Open).hint(if preview {
-            "⇧⏎"
-        } else {
-            "⏎"
-        }));
-        items.push(ActionItem::new(ActionId::Reveal, "Show in folder", Glyph::Reveal).hint(if cfg!(target_os = "macos") {
-            "⌘⏎"
-        } else {
-            "Ctrl ⏎"
-        }));
+        items.push(ActionItem::new(ActionId::Open, if one { "Open" } else { "Open all" }, Glyph::Open).hint(if preview { "⇧⏎" } else { "⏎" }));
+        items.push(ActionItem::new(ActionId::Reveal, "Show in folder", Glyph::Reveal).hint(if cfg!(target_os = "macos") { "⌘⏎" } else { "Ctrl ⏎" }));
         let primary = if cfg!(target_os = "macos") { "⌘" } else { "Ctrl " };
         items.push(
             ActionItem::new(ActionId::CopyPath, if one { "Copy path".to_string() } else { format!("Copy {n} paths") }, Glyph::Copy)
@@ -664,25 +655,23 @@ impl Service {
                     s.toast(e, ToastKind::Error);
                 }
             }),
-            Effect::Rename { row, new_name } => {
-                self.worker("find-rename", move |s| match crate::os::rename_noreplace(&row.path, &new_name) {
-                    Ok(to) => {
-                        s.engine.touched(&row.path);
-                        s.engine.touched(&to);
-                        if let Ok(mut f) = s.frecency.lock() {
-                            f.rename(&row.path, &to);
-                            let _ = f.save(&s.paths.frecency_file());
-                        }
-                        if let Ok(mut p) = s.pins.lock() {
-                            p.rename(&row.path, &to);
-                            let _ = p.save(&s.paths.pins_file());
-                        }
-                        s.toast(format!("Renamed to {}", crate::os::display_name(&to)), ToastKind::Info);
-                        s.send(UiMsg::Refresh);
+            Effect::Rename { row, new_name } => self.worker("find-rename", move |s| match crate::os::rename_noreplace(&row.path, &new_name) {
+                Ok(to) => {
+                    s.engine.touched(&row.path);
+                    s.engine.touched(&to);
+                    if let Ok(mut f) = s.frecency.lock() {
+                        f.rename(&row.path, &to);
+                        let _ = f.save(&s.paths.frecency_file());
                     }
-                    Err(e) => s.toast(e, ToastKind::Error),
-                })
-            }
+                    if let Ok(mut p) = s.pins.lock() {
+                        p.rename(&row.path, &to);
+                        let _ = p.save(&s.paths.pins_file());
+                    }
+                    s.toast(format!("Renamed to {}", crate::os::display_name(&to)), ToastKind::Info);
+                    s.send(UiMsg::Refresh);
+                }
+                Err(e) => s.toast(e, ToastKind::Error),
+            }),
             Effect::Trash(rows) => self.worker("find-trash", move |s| {
                 let paths: Vec<PathBuf> = rows.iter().map(|r| r.path.clone()).collect();
                 match crate::os::trash(&paths) {
@@ -1076,12 +1065,7 @@ fn search_loop(svc: Weak<Service>, search: Arc<SearchSlot>) {
 
 /// Encodes overlay rows for Link.
 pub fn selection_of(rows: &[Row]) -> Selection {
-    link::selection(rows.iter().filter(|r| !r.missing).map(|r| Item {
-        path: &r.path,
-        is_dir: r.is_dir,
-        link_type: r.link_type(),
-        size: r.size,
-    }))
+    link::selection(rows.iter().filter(|r| !r.missing).map(|r| Item { path: &r.path, is_dir: r.is_dir, link_type: r.link_type(), size: r.size }))
 }
 
 fn highlights(name: &str, q: &Query) -> Vec<(usize, usize)> {
@@ -1129,11 +1113,7 @@ pub fn row_from_path(p: &Path, section: Option<&'static str>, pinned: bool) -> R
     let target = if is_symlink { std::fs::metadata(p).ok() } else { meta.clone() };
     let is_dir = target.as_ref().is_some_and(|m| m.is_dir());
     let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.display().to_string());
-    let mtime = meta
-        .as_ref()
-        .and_then(|m| m.modified().ok())
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map_or(0, |d| d.as_secs() as i64);
+    let mtime = meta.as_ref().and_then(|m| m.modified().ok()).and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs() as i64);
     Row {
         path: p.to_path_buf(),
         parent: p.parent().map(tilde).unwrap_or_default(),
@@ -1209,12 +1189,7 @@ impl link::Host for LinkHost {
         // No frecency boosts: ranking must not reveal what the user opened.
         let opts = SearchOptions { limit, show_hidden: hidden, now: find_core::now_secs(), ..Default::default() };
         let (hits, r) = s.engine.search_hits(query, &opts);
-        Ok(link::SearchOut {
-            hits,
-            matched: r.matched,
-            elapsed_ms: r.elapsed.as_secs_f64() * 1000.0,
-            indexing: s.engine.phase() == Phase::Crawling,
-        })
+        Ok(link::SearchOut { hits, matched: r.matched, elapsed_ms: r.elapsed.as_secs_f64() * 1000.0, indexing: s.engine.phase() == Phase::Crawling })
     }
 
     fn show(&self, query: Option<String>, reveal: Option<PathBuf>) -> Result<(), arcade_link::LinkError> {

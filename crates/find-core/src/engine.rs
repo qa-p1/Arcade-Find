@@ -564,12 +564,7 @@ impl Engine {
 
     /// Like [`Engine::search_hits`], re-using the previous query's candidates
     /// while the user types (see [`crate::search::Narrowing`]).
-    pub fn search_hits_narrowing(
-        &self,
-        q: &Query,
-        opts: &SearchOptions,
-        narrow: &mut crate::search::Narrowing,
-    ) -> (Vec<Hit>, SearchResult) {
+    pub fn search_hits_narrowing(&self, q: &Query, opts: &SearchOptions, narrow: &mut crate::search::Narrowing) -> (Vec<Hit>, SearchResult) {
         let ix = self.index.read().unwrap_or_else(|e| e.into_inner());
         let r = crate::search::search_narrowing(&ix, q, opts, Some(narrow));
         let hits = r.hits.iter().map(|&s| Hit::from_index(&ix, s)).collect();
@@ -689,9 +684,7 @@ mod tests {
         let index_file = dir.join("data/index.bin");
         let e = Engine::start(index_file.clone(), settings.clone(), Arc::new(move |x| ev.lock().unwrap().push(x)));
         assert!(e.wait_ready(Duration::from_secs(20)));
-        let find = |e: &Engine, q: &str| {
-            e.search_hits(&Query::parse(q), &SearchOptions { limit: 10, now: crate::now_secs(), ..Default::default() }).0
-        };
+        let find = |e: &Engine, q: &str| e.search_hits(&Query::parse(q), &SearchOptions { limit: 10, now: crate::now_secs(), ..Default::default() }).0;
         assert_eq!(find(&e, "alpha").len(), 1);
         // Ready comes just before the save that ends the first crawl.
         let deadline = Instant::now() + Duration::from_secs(5);

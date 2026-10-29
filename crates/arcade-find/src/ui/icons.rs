@@ -31,9 +31,7 @@ fn stroke16(body: &str) -> String {
 fn action_svg(g: Glyph) -> String {
     match g {
         Glyph::Preview => LOOK.to_string(),
-        Glyph::Open => stroke16(
-            r##"<path d="M9.5 2.25h4.25V6.5M13.75 2.25 7.5 8.5M12 9.5v3.25a1 1 0 0 1-1 1H3.25a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H6.5"/>"##,
-        ),
+        Glyph::Open => stroke16(r##"<path d="M9.5 2.25h4.25V6.5M13.75 2.25 7.5 8.5M12 9.5v3.25a1 1 0 0 1-1 1H3.25a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1H6.5"/>"##),
         Glyph::Reveal => stroke16(
             r##"<path d="M1.75 4.25a1 1 0 0 1 1-1H6l1.5 1.5h5.75a1 1 0 0 1 1 1v6.5a1 1 0 0 1-1 1H2.75a1 1 0 0 1-1-1z"/><path d="M6 9h4.5M8.75 7.25 10.5 9 8.75 10.75"/>"##,
         ),
@@ -97,9 +95,7 @@ fn kind_svg(k: Kind, color: Rgba, symlink: bool) -> String {
     let symbol = match k {
         Kind::Image => r##"<circle cx="10" cy="11" r="1.6" fill="white"/><path d="M7 18l3.5-3.5 2 2 3-3.5 1.5 2V18z" fill="white"/>"##,
         Kind::Video => r##"<path d="M10 11v6l5-3z" fill="white"/>"##,
-        Kind::Audio => {
-            r##"<path d="M11 17.5a1.5 1.5 0 1 1-1.5-1.5H11v-6l4-1v6" stroke="white" stroke-width="1.4" fill="none" stroke-linejoin="round"/>"##
-        }
+        Kind::Audio => r##"<path d="M11 17.5a1.5 1.5 0 1 1-1.5-1.5H11v-6l4-1v6" stroke="white" stroke-width="1.4" fill="none" stroke-linejoin="round"/>"##,
         Kind::Pdf => r##"<path d="M8 17h8M8 14h8M8 11h5" stroke="white" stroke-width="1.4" stroke-linecap="round"/>"##,
         Kind::Document | Kind::Text => r##"<path d="M8 11h8M8 14h8M8 17h5" stroke="white" stroke-width="1.4" stroke-linecap="round"/>"##,
         Kind::Spreadsheet => r##"<path d="M8 11h8v7H8zM8 14.5h8M12 11v7" stroke="white" stroke-width="1.2" fill="none"/>"##,
@@ -263,21 +259,10 @@ mod tests {
             assert!(p.pixels().iter().any(|px| px.alpha() > 0), "{k:?} is empty");
         }
         for g in
-            [Glyph::Preview, Glyph::Open, Glyph::Reveal, Glyph::Copy, Glyph::CopyFile, Glyph::Rename, Glyph::Pin, Glyph::Trash, Glyph::Info]
-                .into_iter()
-                .chain(
-                    [
-                        AppGlyph::Box,
-                        AppGlyph::Look,
-                        AppGlyph::Wheel,
-                        AppGlyph::Clipboard,
-                        AppGlyph::Lens,
-                        AppGlyph::Tools,
-                        AppGlyph::Shelf,
-                        AppGlyph::Other,
-                    ]
+            [Glyph::Preview, Glyph::Open, Glyph::Reveal, Glyph::Copy, Glyph::CopyFile, Glyph::Rename, Glyph::Pin, Glyph::Trash, Glyph::Info].into_iter().chain(
+                [AppGlyph::Box, AppGlyph::Look, AppGlyph::Wheel, AppGlyph::Clipboard, AppGlyph::Lens, AppGlyph::Tools, AppGlyph::Shelf, AppGlyph::Other]
                     .map(Glyph::App),
-                )
+            )
         {
             let p = icons.glyph(g, 16, Rgba::hex(0x000000)).expect("glyph");
             assert!(p.pixels().iter().any(|px| px.alpha() > 0), "{g:?} is empty");

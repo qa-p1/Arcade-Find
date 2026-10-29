@@ -260,9 +260,7 @@ pub fn result(state: &State) -> Result<arcade_link::app::ShortcutSetResult, arca
     Ok(match state {
         State::Native(_) => ShortcutSetResult { applied: true, via: ShortcutVia::Native, hint: None },
         State::Hyprland(_) => ShortcutSetResult { applied: true, via: ShortcutVia::HyprlandRuntime, hint: None },
-        State::Manual { reason, command } => {
-            ShortcutSetResult { applied: false, via: ShortcutVia::Manual, hint: Some(format!("{reason}: {command}")) }
-        }
+        State::Manual { reason, command } => ShortcutSetResult { applied: false, via: ShortcutVia::Manual, hint: Some(format!("{reason}: {command}")) },
         State::Off => return Err(arcade_link::LinkError::unavailable("global shortcuts are disabled")),
         State::Failed(e) => return Err(arcade_link::LinkError::unavailable(e.clone())),
     })
@@ -427,11 +425,7 @@ pub mod hyprland {
         }
 
         pub fn remove(&self) {
-            let _ = if lua() {
-                hyprctl(&["eval", &format!("hl.unbind({})", self.lua_keys())])
-            } else {
-                hyprctl(&["keyword", "unbind", &self.legacy_keys()])
-            };
+            let _ = if lua() { hyprctl(&["eval", &format!("hl.unbind({})", self.lua_keys())]) } else { hyprctl(&["keyword", "unbind", &self.legacy_keys()]) };
         }
     }
 
@@ -494,10 +488,7 @@ pub mod hyprland {
             assert_eq!(f.lua_keys(), "\"CTRL + ALT + F\"");
             assert_eq!(f.legacy_keys(), "CTRL ALT, F");
             assert_eq!(b("Super+Space").unwrap().key, "space");
-            assert_eq!(
-                config_line("Ctrl+Alt+F", "'/x/arcade-find' --toggle").as_deref(),
-                Some("bind = CTRL ALT, F, exec, '/x/arcade-find' --toggle")
-            );
+            assert_eq!(config_line("Ctrl+Alt+F", "'/x/arcade-find' --toggle").as_deref(), Some("bind = CTRL ALT, F, exec, '/x/arcade-find' --toggle"));
         }
 
         #[test]
@@ -540,16 +531,8 @@ mod tests {
     /// The default must not clash with the Arcade family's defaults (SPEC §8.5).
     #[test]
     fn default_clashes_with_no_family_shortcut() {
-        let family = [
-            "Ctrl+Alt+Space",
-            "Super+Shift+Space",
-            "Ctrl+Alt+Shift+Space",
-            "Ctrl+Alt+Shift+L",
-            "Ctrl+Shift+Space",
-            "Ctrl+Alt+V",
-            "Super+Shift+V",
-            "F8",
-        ];
+        let family =
+            ["Ctrl+Alt+Space", "Super+Shift+Space", "Ctrl+Alt+Shift+Space", "Ctrl+Alt+Shift+L", "Ctrl+Shift+Space", "Ctrl+Alt+V", "Super+Shift+V", "F8"];
         let ours = arcade_link::registry::normalize_accelerator(find_core::settings::DEFAULT_SHORTCUT);
         for f in family {
             assert_ne!(arcade_link::registry::normalize_accelerator(f), ours, "{f}");

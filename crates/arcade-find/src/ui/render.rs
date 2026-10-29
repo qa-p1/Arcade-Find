@@ -325,8 +325,7 @@ impl Renderer {
             }
         }
         let (name, cut) = self.text.fit_end(&r.name, name_st, if confirm { text_w - 60.0 * s } else { text_w });
-        let spans: Vec<(usize, usize, Rgba, u16)> =
-            r.highlights.iter().filter(|(a, _)| *a < cut).map(|&(a, b)| (a, b.min(cut), p.highlight, 700)).collect();
+        let spans: Vec<(usize, usize, Rgba, u16)> = r.highlights.iter().filter(|(a, _)| *a < cut).map(|&(a, b)| (a, b.min(cut), p.highlight, 700)).collect();
         self.text.draw(pm, &name, name_st, &spans, tx, y + 8.0 * s, full);
         let parent = self.text.fit_middle(&r.parent, sub_st, text_w);
         self.text.draw(pm, &parent, sub_st, &[], tx, y + 28.0 * s, full);
@@ -464,16 +463,9 @@ impl Renderer {
         let lab = Style { size: 12.5 * s, weight: 500, color: p.faint };
         let val = Style { size: 13.0 * s, weight: 400, color: p.text };
         let kind = if r.is_symlink { format!("{} (link)", r.kind.label()) } else { r.kind.label().to_string() };
-        let size = if r.is_dir {
-            "—".to_string()
-        } else {
-            r.size.map(|b| format!("{} ({} bytes)", fmt::size(b), fmt::count(b))).unwrap_or_default()
-        };
-        let modified = if r.mtime > 0 {
-            format!("{} · {}", fmt::datetime(r.mtime, self.utc_offset), fmt::date(r.mtime, now, self.utc_offset))
-        } else {
-            String::new()
-        };
+        let size = if r.is_dir { "—".to_string() } else { r.size.map(|b| format!("{} ({} bytes)", fmt::size(b), fmt::count(b))).unwrap_or_default() };
+        let modified =
+            if r.mtime > 0 { format!("{} · {}", fmt::datetime(r.mtime, self.utc_offset), fmt::date(r.mtime, now, self.utc_offset)) } else { String::new() };
         let lines = [("Kind", kind), ("Size", size), ("Modified", modified), ("Where", r.parent.clone())];
         let mut y = top + 44.0 * s;
         for (l, v) in lines {

@@ -171,9 +171,7 @@ impl SettingsApp {
             let _ = tx.send(Bg::Ripgrep(find_core::content::detect(&[])));
             let mut hints = Vec::new();
             if let Ok(environment) = arcade_link::install::Environment::discover() {
-                if let Ok(status) =
-                    arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
-                {
+                if let Ok(status) = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default()) {
                     if let Some(hint) = status.path_hint {
                         hints.push(hint);
                     }
@@ -412,7 +410,10 @@ impl SettingsApp {
         match &self.ripgrep {
             None => note(ui, "Looking for ripgrep…"),
             Some(Some(rg)) => note(ui, &format!("ripgrep {} found at {}", rg.version, rg.path.display())),
-            Some(None) => note(ui, "ripgrep isn't installed. Install it from your package manager (package \"ripgrep\") to search file contents; Find never downloads it."),
+            Some(None) => note(
+                ui,
+                "ripgrep isn't installed. Install it from your package manager (package \"ripgrep\") to search file contents; Find never downloads it.",
+            ),
         }
         if !self.integration_hints.is_empty() {
             egui::CollapsingHeader::new("Terminal command").show(ui, |ui| {
@@ -453,8 +454,7 @@ impl SettingsApp {
                 changed = true;
             }
         });
-        let suggestions: Vec<PathBuf> =
-            self.drives.iter().filter(|d| !self.settings.roots.iter().any(|r| expand_tilde(r) == **d)).cloned().collect();
+        let suggestions: Vec<PathBuf> = self.drives.iter().filter(|d| !self.settings.roots.iter().any(|r| expand_tilde(r) == **d)).cloned().collect();
         if !suggestions.is_empty() {
             note(ui, "Other drives (not indexed unless you add them):");
             for d in suggestions {
@@ -471,8 +471,7 @@ impl SettingsApp {
         ui.label(egui::RichText::new("Skip these names everywhere").strong());
         let r = ui.add(egui::TextEdit::multiline(&mut self.exclude_names).desired_rows(2).desired_width(f32::INFINITY));
         if r.lost_focus() {
-            self.settings.exclude_names =
-                self.exclude_names.split([',', '\n']).map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            self.settings.exclude_names = self.exclude_names.split([',', '\n']).map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
             changed = true;
         }
         note(ui, "Comma-separated; * and ? work (e.g. node_modules, *.tmp).");
@@ -564,8 +563,7 @@ impl SettingsApp {
         }
         ui.add_space(8.0);
         if cfg!(target_os = "linux") {
-            changed |=
-                ui.checkbox(&mut self.settings.hyprland_runtime_bind, "On Hyprland, add the shortcut as a runtime key binding").changed();
+            changed |= ui.checkbox(&mut self.settings.hyprland_runtime_bind, "On Hyprland, add the shortcut as a runtime key binding").changed();
             note(ui, "Runtime only: Find never edits your Hyprland config. Without it, add this line yourself:");
             if let Some(line) = hotkey::hyprland::config_line(&self.settings.shortcut, &hotkey::toggle_command()) {
                 ui.horizontal(|ui| {
@@ -678,11 +676,7 @@ impl SettingsApp {
         ui.add_space(8.0);
         let tools_installed = self.registry.as_ref().is_some_and(|r| r.get(ids::TOOLS).is_some());
         for (id, state) in self.states.clone() {
-            let name = self
-                .registry
-                .as_ref()
-                .and_then(|r| r.get(&id).map(|m| m.name.clone()))
-                .unwrap_or_else(|| link::apps::name(&id).to_string());
+            let name = self.registry.as_ref().and_then(|r| r.get(&id).map(|m| m.name.clone())).unwrap_or_else(|| link::apps::name(&id).to_string());
             ui.group(|ui| {
                 ui.set_width(ui.available_width());
                 ui.horizontal(|ui| {
@@ -749,14 +743,12 @@ impl SettingsApp {
         let (tx, loc, reg, id, c) = (self.tx.clone(), self.locations.clone(), self.registry.clone(), id.to_string(), ctx.clone());
         std::thread::spawn(move || {
             let via_tools = tools
-                && reg
-                    .as_ref()
-                    .and_then(|r| r.get(ids::TOOLS))
-                    .and_then(|m| m.action("tools.install").map(|a| (m.clone(), a.clone())))
-                    .is_some_and(|(m, a)| {
+                && reg.as_ref().and_then(|r| r.get(ids::TOOLS)).and_then(|m| m.action("tools.install").map(|a| (m.clone(), a.clone()))).is_some_and(
+                    |(m, a)| {
                         let req = link::request(&a, vec![arcade_link::Content::plain(id.clone())], serde_json::json!({ "app": id }));
                         link::invoke(&loc, &m, &req, None, None).is_ok()
-                    });
+                    },
+                );
             if !via_tools {
                 if let Err(e) = open::that_detached(link::apps::releases_url(&id)) {
                     let _ = tx.send(Bg::Message(format!("Couldn't open the browser: {e}")));

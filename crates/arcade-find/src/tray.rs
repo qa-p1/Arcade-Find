@@ -163,11 +163,8 @@ mod imp {
         menu.append_items(&[&open, &settings, &rescan, &restart, &PredefinedMenuItem::separator(), &quit]).map_err(|e| e.to_string())?;
         let px = 32;
         let icon = Icon::from_rgba(crate::ui::icons::app_icon_rgba(px), px, px).map_err(|e| e.to_string())?;
-        let tray = TrayIconBuilder::new()
-            .with_menu(Box::new(menu))
-            .with_tooltip("Arcade Find")
-            .with_icon(icon)
-            .with_menu_on_left_click(cfg!(target_os = "macos"));
+        let tray =
+            TrayIconBuilder::new().with_menu(Box::new(menu)).with_tooltip("Arcade Find").with_icon(icon).with_menu_on_left_click(cfg!(target_os = "macos"));
         let ids = [
             (open.id().clone(), Item::Open),
             (settings.id().clone(), Item::Settings),
@@ -235,12 +232,7 @@ mod imp {
 pub fn watch(svc: &Arc<Service>, callback: impl FnMut(TrayState) + Send + 'static) -> Result<TrayHostWatcher, String> {
     let callback = std::sync::Mutex::new(callback);
     TrayHostWatcher::start(
-        WatcherConfig {
-            locations: svc.locations.clone(),
-            app: crate::link::me(),
-            link_enabled: svc.settings().link.enabled,
-            has_tray: true,
-        },
+        WatcherConfig { locations: svc.locations.clone(), app: crate::link::me(), link_enabled: svc.settings().link.enabled, has_tray: true },
         move |state| {
             callback.lock().unwrap_or_else(|e| e.into_inner())(state);
         },

@@ -103,10 +103,7 @@ fn prepare(ix: &Index, q: &Query) -> Prepared {
                 if ix.is_dir(i) && !ix.is_deleted(i) {
                     let p = ix.path(i);
                     let pb = p.as_os_str().as_encoded_bytes().to_ascii_lowercase();
-                    if prefixes
-                        .iter()
-                        .any(|pre| pb.starts_with(pre) && (pb.len() == pre.len() || pb[pre.len()] == std::path::MAIN_SEPARATOR as u8))
-                    {
+                    if prefixes.iter().any(|pre| pb.starts_with(pre) && (pb.len() == pre.len() || pb[pre.len()] == std::path::MAIN_SEPARATOR as u8)) {
                         targets.insert(i);
                     }
                 }
@@ -402,13 +399,7 @@ impl Narrowing {
         if self.generation != ix.generation() || self.show_hidden != show_hidden {
             return false;
         }
-        if old.exts != q.exts
-            || old.kind != q.kind
-            || old.within != q.within
-            || old.size != q.size
-            || old.modified != q.modified
-            || old.hidden != q.hidden
-        {
+        if old.exts != q.exts || old.kind != q.kind || old.within != q.within || old.size != q.size || old.modified != q.modified || old.hidden != q.hidden {
             return false;
         }
         if q.content.is_some() || old.content.is_some() || old.terms.is_empty() || q.terms.len() < old.terms.len() {
@@ -416,10 +407,7 @@ impl Narrowing {
         }
         // Each old word must be a prefix of the new word in its place (same
         // kind); extra words only narrow further. Globs aren't monotonic.
-        old.terms
-            .iter()
-            .zip(&q.terms)
-            .all(|(a, b)| a.kind == b.kind && a.exact == b.exact && a.kind != TermKind::Glob && b.text.starts_with(&a.text))
+        old.terms.iter().zip(&q.terms).all(|(a, b)| a.kind == b.kind && a.exact == b.exact && a.kind != TermKind::Glob && b.text.starts_with(&a.text))
             && q.terms.iter().all(|t| t.kind != TermKind::Glob)
     }
 }
@@ -642,12 +630,7 @@ mod tests {
         let words = ["report", "rapport", "repo", "r-e-p-o-r-t", "prepare", "xrexpxoxrxtx", "README", "zebra", "rep_2024", "a"];
         for i in 0..60_000u32 {
             let w = words[i as usize % words.len()];
-            ix.push(
-                r,
-                format!("{w}-{}.txt", i % 911).as_bytes(),
-                Meta { size: i as u64, mtime: 1, flags: if i % 17 == 0 { flag::HIDDEN } else { 0 } },
-                0,
-            );
+            ix.push(r, format!("{w}-{}.txt", i % 911).as_bytes(), Meta { size: i as u64, mtime: 1, flags: if i % 17 == 0 { flag::HIDDEN } else { 0 } }, 0);
         }
         let mut nw = Narrowing::default();
         let mut typed = String::new();

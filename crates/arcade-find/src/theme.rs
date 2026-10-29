@@ -174,12 +174,9 @@ fn u32_from_value(v: &zbus::zvariant::Value<'_>) -> Option<u32> {
 pub fn watch_system_theme(f: impl Fn() + Send + 'static) {
     let _ = std::thread::Builder::new().name("find-theme".into()).spawn(move || {
         let Ok(conn) = zbus::blocking::Connection::session() else { return };
-        let Ok(proxy) = zbus::blocking::Proxy::new(
-            &conn,
-            "org.freedesktop.portal.Desktop",
-            "/org/freedesktop/portal/desktop",
-            "org.freedesktop.portal.Settings",
-        ) else {
+        let Ok(proxy) =
+            zbus::blocking::Proxy::new(&conn, "org.freedesktop.portal.Desktop", "/org/freedesktop/portal/desktop", "org.freedesktop.portal.Settings")
+        else {
             return;
         };
         let Ok(signals) = proxy.receive_signal("SettingChanged") else { return };
@@ -206,15 +203,7 @@ fn detect_dark() -> Option<bool> {
     let mut len: u32 = 4;
     // SAFETY: valid NUL-terminated strings and out buffers.
     let r = unsafe {
-        RegGetValueW(
-            HKEY_CURRENT_USER,
-            key.as_ptr(),
-            name.as_ptr(),
-            RRF_RT_REG_DWORD,
-            std::ptr::null_mut(),
-            &mut data as *mut u32 as *mut _,
-            &mut len,
-        )
+        RegGetValueW(HKEY_CURRENT_USER, key.as_ptr(), name.as_ptr(), RRF_RT_REG_DWORD, std::ptr::null_mut(), &mut data as *mut u32 as *mut _, &mut len)
     };
     (r == 0).then_some(data == 0)
 }

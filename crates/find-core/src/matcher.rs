@@ -308,10 +308,7 @@ mod tests {
         let boundary = s("annual-report.pdf", "report").unwrap();
         let sub = s("misreported.txt", "report").unwrap();
         let fuzzy = s("r_e_p_o_r_t.txt", "report").unwrap();
-        assert!(
-            exact > stem && stem > prefix && prefix > boundary && boundary > sub && sub > fuzzy,
-            "{exact} {stem} {prefix} {boundary} {sub} {fuzzy}"
-        );
+        assert!(exact > stem && stem > prefix && prefix > boundary && boundary > sub && sub > fuzzy, "{exact} {stem} {prefix} {boundary} {sub} {fuzzy}");
     }
 
     #[test]

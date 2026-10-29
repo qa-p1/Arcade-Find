@@ -13,9 +13,7 @@ pub const BACKGROUND_FLAG: &str = "--background";
 
 // Link v0.3.0's typed receipt omits extension fields on serialization. Retain
 // the original JSON when a login toggle updates an existing installation.
-fn read_receipt(
-    environment: &arcade_link::install::Environment,
-) -> Result<Option<(arcade_link::receipt::Receipt, serde_json::Value)>, String> {
+fn read_receipt(environment: &arcade_link::install::Environment) -> Result<Option<(arcade_link::receipt::Receipt, serde_json::Value)>, String> {
     let path = environment.receipts().path(crate::link::ME).map_err(|e| e.to_string())?;
     let text = match std::fs::read_to_string(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -219,8 +217,7 @@ mod win {
         let mut size = 0u32;
         // SAFETY: size query with a null buffer.
         unsafe {
-            RegGetValueW(HKEY_CURRENT_USER, k.as_ptr(), n.as_ptr(), RRF_RT_REG_SZ, std::ptr::null_mut(), std::ptr::null_mut(), &mut size)
-                == ERROR_SUCCESS
+            RegGetValueW(HKEY_CURRENT_USER, k.as_ptr(), n.as_ptr(), RRF_RT_REG_SZ, std::ptr::null_mut(), std::ptr::null_mut(), &mut size) == ERROR_SUCCESS
         }
     }
 }
@@ -229,10 +226,8 @@ mod win {
 fn enable(exe: &str) -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
     let (mut receipt, document) = read_receipt(&environment)?.ok_or("No install receipt")?;
-    let startup = std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .ok_or("APPDATA isn't available")?
-        .join("Microsoft/Windows/Start Menu/Programs/Startup/Arcade Find.lnk");
+    let startup =
+        std::env::var_os("APPDATA").map(PathBuf::from).ok_or("APPDATA isn't available")?.join("Microsoft/Windows/Start Menu/Programs/Startup/Arcade Find.lnk");
     crate::installer::write_windows_shortcut(&startup, std::path::Path::new(exe), BACKGROUND_FLAG).map_err(|e| e.to_string())?;
     receipt.integration.autostart = Some(startup);
     receipt.updated_at = arcade_link::manifest::now_rfc3339();

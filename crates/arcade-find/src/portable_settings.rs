@@ -193,12 +193,7 @@ pub fn read_import(inputs: &[Content]) -> Result<PortableSettings, LinkError> {
     if input.kind != "file/any" || !input.paths.is_empty() {
         return Err(LinkError::denied("import requires a file/any path"));
     }
-    let path = input
-        .path
-        .as_deref()
-        .map(Path::new)
-        .filter(|p| p.is_absolute())
-        .ok_or_else(|| LinkError::denied("import requires an absolute path"))?;
+    let path = input.path.as_deref().map(Path::new).filter(|p| p.is_absolute()).ok_or_else(|| LinkError::denied("import requires an absolute path"))?;
     let file = fs::File::open(path).map_err(io_error)?;
     if !file.metadata().map_err(io_error)?.is_file() {
         return Err(LinkError::denied("import requires a regular file"));
