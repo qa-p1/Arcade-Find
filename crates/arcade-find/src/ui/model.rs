@@ -237,7 +237,28 @@ pub enum Mode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToastKind {
     Info,
+    /// A copy finished ("Copied", "Copied 3 paths"): shown for 1.5 s.
+    Copied,
+    /// Stays until the next key or until the overlay closes.
     Error,
+}
+
+/// The index as the overlay shows it.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct IndexState {
+    /// The saved index is loading.
+    pub loading: bool,
+    /// The first scan is running: items so far.
+    pub indexing: Option<u64>,
+    /// The engine's last error, already worded for people.
+    pub error: Option<String>,
+}
+
+/// One line of the visible list: a section label or a row.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Entry {
+    Section(&'static str),
+    Row(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -286,14 +307,30 @@ pub trait Context {
     fn can_preview(&self, rows: &[Row]) -> bool;
 }
 
-/// Overlay sizes in logical pixels.
+/// Overlay sizes in logical pixels, all from the Arcade design kit
+/// (Template B, launcher variant).
 pub mod metrics {
-    pub const WIDTH: f32 = 680.0;
-    pub const BAR: f32 = 58.0;
-    pub const ROW: f32 = 52.0;
-    pub const LIST_PAD: f32 = 6.0;
-    pub const RADIUS: f32 = 14.0;
-    pub const SHADOW: f32 = 0.0;
+    use arcade_link::design::{radius, size, SPACE};
+
+    pub const WIDTH: f32 = size::LAUNCHER_WIDTH;
+    /// The search field.
+    pub const BAR: f32 = size::LAUNCHER_SEARCH;
+    /// A two-line result or action row.
+    pub const ROW: f32 = size::ROW_OVERLAY_2;
+    /// Space above and below the list.
+    pub const LIST_PAD: f32 = SPACE[2];
+    /// A section label ("Pinned", "Recent").
+    pub const SECTION: f32 = size::CONTROL_SM;
+    /// The footer hint bar.
+    pub const FOOTER: f32 = size::HINT_BAR;
+    /// The toast strip, which takes the footer's place while shown.
+    pub const TOAST: f32 = size::ROW_OVERLAY;
+    pub const RADIUS: f32 = radius::LG;
+    /// Transparent margin around the panel for `shadow-pop`, where the
+    /// window itself can be transparent (layer shell).
+    pub const SHADOW: f32 = SPACE[11];
+    /// Where the list starts, from the panel's top.
+    pub const LIST_TOP: f32 = BAR + LIST_PAD;
 }
 
 pub struct Overlay {
@@ -313,8 +350,12 @@ pub struct Overlay {
     /// The newest results are for `seq` (the query is settled).
     pub shown_seq: u64,
     pub toast: Option<Toast>,
-    /// Index status for the bar ("Indexing · 128,450").
-    pub status: Option<String>,
+    /// Loading, first scan and errors of the index.
+    pub index: IndexState,
+    /// Text an input method is composing (shown at the caret, not yet typed).
+    pub preedit: String,
+    /// Content search is on in Settings (offered when nothing matches).
+    pub content_search: bool,
     pub rows_cfg: Rows,
     /// Show recent items right away (setting).
     pub recent_on_open: bool,
@@ -340,7 +381,9 @@ impl Default for Overlay {
             seq: 0,
             shown_seq: 0,
             toast: None,
-            status: None,
+            index: IndexState::default(),
+            preedit: String::new(),
+            content_search: true,
             rows_cfg: Rows::default(),
             recent_on_open: false,
             empty_open: false,
@@ -359,6 +402,7 @@ impl Overlay {
         self.sel = 0;
         self.scroll = 0;
         self.toast = None;
+        self.preedit.clear();
         self.want_select = reveal;
         self.rows.clear();
         self.info = ResultsInfo::default();
@@ -383,6 +427,8 @@ impl Overlay {
         self.input.clear();
         self.empty_open = false;
         self.want_select = None;
+        self.preedit.clear();
+        self.toast = None;
     }
 
     fn search(&mut self) -> Effect {
@@ -468,14 +514,81 @@ impl Overlay {
         }
     }
 
-    /// Window height in logical pixels for the current state.
-    pub fn height(&self) -> f32 {
+    /// Section labels the list reserves room for: one per section among the
+    /// rows (the empty state's "Pinned" and "Recent").
+    pub fn sections(&self) -> usize {
+        if matches!(self.mode, Mode::Actions { .. } | Mode::Details { .. }) || self.rows.first().is_none_or(|r| r.section.is_none()) {
+            return 0;
+        }
+        1 + self.rows.windows(2).filter(|w| w[0].section != w[1].section).count()
+    }
+
+    /// The list area's height (without its padding).
+    pub fn list_height(&self) -> f32 {
         let rows = if self.shows_list() { self.visible_rows() } else { 0 };
         if rows == 0 {
-            metrics::BAR
-        } else {
-            metrics::BAR + metrics::LIST_PAD * 2.0 + rows as f32 * metrics::ROW
+            return 0.0;
         }
+        rows as f32 * metrics::ROW + self.sections() as f32 * metrics::SECTION
+    }
+
+    /// The strip under the list: a toast while one shows, else the hint bar
+    /// whenever the list does. At rest the overlay is just the field.
+    pub fn footer_height(&self) -> f32 {
+        if self.toast.is_some() {
+            metrics::TOAST
+        } else if self.list_height() > 0.0 {
+            metrics::FOOTER
+        } else {
+            0.0
+        }
+    }
+
+    /// Panel height in logical pixels for the current state.
+    pub fn height(&self) -> f32 {
+        let list = self.list_height();
+        let list = if list > 0.0 { list + metrics::LIST_PAD * 2.0 } else { 0.0 };
+        metrics::BAR + list + self.footer_height()
+    }
+
+    /// The visible list, top to bottom, as (y from the list's top, entry).
+    /// The first visible row's section label stays at the top while its
+    /// section scrolls; the next section's label sits above its first row.
+    pub fn layout(&self) -> Vec<(f32, Entry)> {
+        let (len, scroll, rows) = match &self.mode {
+            Mode::Actions { items, scroll, .. } => (items.len(), *scroll, false),
+            Mode::Details { .. } => return Vec::new(),
+            // Results, and the row-level modes drawn over them (rename, trash).
+            _ => (self.rows.len(), self.scroll, true),
+        };
+        let vis = self.visible_rows();
+        let mut out = Vec::new();
+        let mut y = 0.0;
+        for i in scroll..(scroll + vis).min(len) {
+            if rows {
+                if let Some(label) = self.rows[i].section {
+                    if i == scroll || self.rows[i - 1].section != Some(label) {
+                        out.push((y, Entry::Section(label)));
+                        y += metrics::SECTION;
+                    }
+                }
+            }
+            out.push((y, Entry::Row(i)));
+            y += metrics::ROW;
+        }
+        out
+    }
+
+    /// The row (absolute index) at `y` logical pixels from the panel's top.
+    pub fn row_at(&self, y: f64) -> Option<usize> {
+        if !self.shows_list() {
+            return None;
+        }
+        let y = (y - metrics::LIST_TOP as f64) as f32;
+        self.layout().into_iter().find_map(|(top, e)| match e {
+            Entry::Row(i) if y >= top && y < top + metrics::ROW => Some(i),
+            _ => None,
+        })
     }
 
     fn ensure_visible(&mut self) {
@@ -546,9 +659,17 @@ impl Overlay {
         self.ensure_visible();
     }
 
+    /// Shows a toast in the footer strip (STANDARD §5): "Copied" for 1.5 s,
+    /// others for 5 s; errors stay until the next key or until closing.
     pub fn toast(&mut self, text: impl Into<String>, kind: ToastKind) {
-        let secs = if kind == ToastKind::Error { 5 } else { 2 };
-        self.toast = Some(Toast { text: text.into(), kind, until: Instant::now() + Duration::from_secs(secs) });
+        use arcade_link::design::motion;
+        let ms = match kind {
+            ToastKind::Copied => motion::COPIED_MS,
+            ToastKind::Info => motion::TOAST_MS,
+            // Far enough away that only a key or hiding clears it.
+            ToastKind::Error => 24 * 3600 * 1000,
+        };
+        self.toast = Some(Toast { text: text.into(), kind, until: Instant::now() + Duration::from_millis(ms) });
     }
 
     /// Drops an expired toast; returns when the next one expires.
@@ -558,7 +679,53 @@ impl Overlay {
                 self.toast = None;
             }
         }
-        self.toast.as_ref().map(|t| t.until)
+        self.toast.as_ref().filter(|t| t.kind != ToastKind::Error).map(|t| t.until)
+    }
+
+    /// Text an input method is composing; drawn at the caret until committed.
+    pub fn ime_preedit(&mut self, text: &str) {
+        self.preedit = text.to_string();
+    }
+
+    /// Text an input method committed: typed into the active field.
+    pub fn ime_commit(&mut self, text: &str) -> Vec<Effect> {
+        self.preedit.clear();
+        let text: String = text.chars().filter(|c| !c.is_control()).collect();
+        if text.is_empty() {
+            return vec![];
+        }
+        match &mut self.mode {
+            Mode::Results => {
+                self.input.insert(&text);
+                self.requery()
+            }
+            Mode::Rename { input, .. } => {
+                input.insert(&text);
+                vec![]
+            }
+            Mode::Actions { filter, .. } => {
+                filter.insert(&text);
+                self.filter_actions();
+                vec![]
+            }
+            _ => vec![],
+        }
+    }
+
+    /// Nothing matched a name query that content search could run on: Enter
+    /// searches inside files instead (`/` + the query).
+    pub fn offers_content_search(&self) -> bool {
+        let text = self.input.text.trim();
+        matches!(self.mode, Mode::Results)
+            && self.content_search
+            && self.rows.is_empty()
+            && self.shown_seq == self.seq
+            && !text.is_empty()
+            && !self.info.content
+            && !self.info.empty_state
+            && self.info.note.is_none()
+            && self.index == IndexState::default()
+            && find_core::query::Query::parse_with(&format!("/{text}"), 0, &|_| 0).content.is_some()
     }
 
     pub fn paste(&mut self, text: &str) -> Vec<Effect> {
@@ -657,6 +824,9 @@ impl Overlay {
     }
 
     pub fn key(&mut self, ev: &KeyEvent, ctx: &dyn Context) -> Vec<Effect> {
+        if self.toast.as_ref().is_some_and(|t| t.kind == ToastKind::Error) {
+            self.toast = None;
+        }
         let primary = ev.primary();
         let shift = ev.mods.shift;
         // Mode-specific handling first.
@@ -793,6 +963,11 @@ impl Overlay {
                     return vec![Effect::Open(t)];
                 }
             }
+            Key::Enter if self.offers_content_search() => {
+                let text = format!("/{}", self.input.text.trim());
+                self.input.set(&text);
+                return self.requery();
+            }
             Key::Enter => return self.primary(ctx),
             Key::Space if self.nav && !self.rows.is_empty() && !primary => {
                 let t = self.targets();
@@ -835,8 +1010,8 @@ impl Overlay {
                 }
             }
             Key::Char('h') if primary => {
+                // The field's "Hidden" badge shows the state.
                 self.show_hidden = !self.show_hidden;
-                self.toast(if self.show_hidden { "Showing hidden files" } else { "Hiding hidden files" }, ToastKind::Info);
                 return self.refresh();
             }
             Key::Char(',') if primary => return vec![Effect::OpenSettings],
@@ -978,6 +1153,97 @@ mod tests {
     fn results(o: &mut Overlay, n: usize) {
         let rows = (0..n).map(|i| row(&format!("f{i}.txt"))).collect();
         assert!(o.set_results(o.seq, rows, ResultsInfo::default()));
+    }
+
+    #[test]
+    fn sections_label_pinned_and_recent_and_rows_map_to_clicks() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        o.empty_open = true;
+        let mut rows: Vec<Row> = (0..4).map(|i| row(&format!("f{i}.txt"))).collect();
+        for (i, r) in rows.iter_mut().enumerate() {
+            r.section = Some(if i < 1 { "Pinned" } else { "Recent" });
+        }
+        assert!(o.set_results(o.seq, rows, ResultsInfo { empty_state: true, ..Default::default() }));
+        assert_eq!(o.sections(), 2);
+        let layout = o.layout();
+        assert_eq!(layout[0], (0.0, Entry::Section("Pinned")));
+        assert_eq!(layout[1], (metrics::SECTION, Entry::Row(0)));
+        assert_eq!(layout[2], (metrics::SECTION + metrics::ROW, Entry::Section("Recent")));
+        assert_eq!(o.list_height(), 4.0 * metrics::ROW + 2.0 * metrics::SECTION);
+        // A click on a label selects nothing; a click on a row selects it.
+        let top = metrics::LIST_TOP as f64;
+        assert_eq!(o.row_at(top + 4.0), None);
+        assert_eq!(o.row_at(top + metrics::SECTION as f64 + 4.0), Some(0));
+        assert_eq!(o.row_at(top + (2.0 * metrics::SECTION + metrics::ROW) as f64 + 4.0), Some(1));
+        assert_eq!(o.height(), metrics::LIST_TOP + o.list_height() + metrics::LIST_PAD + metrics::FOOTER);
+    }
+
+    #[test]
+    fn rename_and_trash_keep_the_rows_on_screen() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "f", &Ctx(true));
+        results(&mut o, 3);
+        o.key(&KeyEvent::new(Key::F2), &Ctx(true));
+        assert!(matches!(o.mode, Mode::Rename { .. }));
+        assert_eq!(o.layout().len(), 3, "the rows stay visible while renaming");
+        o.key(&KeyEvent::new(Key::Escape), &Ctx(true));
+        o.key(&KeyEvent::new(Key::Delete).with(Mods { ctrl: true, ..Mods::default() }), &Ctx(true));
+        assert!(matches!(o.mode, Mode::ConfirmTrash { .. }));
+        assert_eq!(o.layout().len(), 3, "and while confirming the trash");
+    }
+
+    #[test]
+    fn enter_on_no_matches_searches_inside_files() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "todo", &Ctx(false));
+        assert!(o.set_results(o.seq, vec![], ResultsInfo::default()));
+        assert!(o.offers_content_search());
+        let e = o.key(&KeyEvent::new(Key::Enter), &Ctx(false));
+        assert_eq!(o.input.text, "/todo");
+        assert!(matches!(&e[..], [Effect::Search { text, .. }] if text == "/todo"));
+        // Not offered while the index is still being built, or when off.
+        assert!(o.set_results(o.seq, vec![], ResultsInfo { content: true, ..Default::default() }));
+        assert!(!o.offers_content_search(), "already a content search");
+        o.input.set("todo");
+        o.index.indexing = Some(10);
+        assert!(!o.offers_content_search());
+        o.index = IndexState::default();
+        o.content_search = false;
+        assert!(!o.offers_content_search());
+    }
+
+    #[test]
+    fn input_methods_commit_into_the_field() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        o.ime_preedit("にほん");
+        assert_eq!(o.preedit, "にほん");
+        assert!(o.input.text.is_empty(), "composing text isn't typed yet");
+        let e = o.ime_commit("日本");
+        assert!(o.preedit.is_empty());
+        assert_eq!(o.input.text, "日本");
+        assert!(matches!(&e[..], [Effect::Search { text, .. }] if text == "日本"));
+        // Into the action filter and the rename field too.
+        results(&mut o, 2);
+        o.set_actions(o.targets(), vec![ActionItem::new(ActionId::Open, "Öffnen", Glyph::Open)]);
+        o.ime_commit("Ö");
+        assert!(matches!(&o.mode, Mode::Actions { filter, items, .. } if filter.text == "Ö" && items.len() == 1));
+    }
+
+    #[test]
+    fn error_toasts_stay_until_a_key() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        o.toast("Couldn't open it.", ToastKind::Error);
+        assert_eq!(o.tick(Instant::now() + Duration::from_secs(60)), None, "no expiry is scheduled");
+        assert!(o.toast.is_some());
+        o.key(&KeyEvent::ch('a'), &Ctx(true));
+        assert!(o.toast.is_none());
+        o.toast("Copied", ToastKind::Copied);
+        assert!(o.tick(Instant::now() + Duration::from_millis(1600)).is_none() && o.toast.is_none());
     }
 
     #[test]

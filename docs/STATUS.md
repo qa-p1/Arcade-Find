@@ -1,5 +1,55 @@
 # Status
 
+## 2026-10-29: overhaul (FIND.md) in progress, branch `claude/arcade-overhaul-q3xegk`
+
+Not released. Work so far, checked locally with `cargo fmt --check`, `cargo clippy -D warnings`,
+`scripts/check-docs.py`, `scripts/check-vendored.py` and `scripts/isolate.py cargo test --workspace`
+(all pass on Linux). CI on Windows and macOS hasn't run on this branch yet.
+
+Done:
+- Rust sources formatted at 160 columns (one commit, formatting only).
+- Arcade Link pinned to tag `v0.4.6` with `design` and `design-egui`. v0.4.6 adds the egui `glyph_tile`,
+  `row_with_glyph`, `checkbox` and `dialog_head`/`dialog_actions` that Find needs (Link PR #21).
+- `scripts/sync-design` copies the app glyphs and Find's launcher icon set from the pinned tag; hashes in
+  VENDORED.md. The unused `assets/link-tokens.json` and `assets/logo.svg` are gone.
+- `theme.rs` builds the overlay palette from the kit (lime accent). Find's file-kind colours are a documented
+  content palette in `theme.rs`, with a test that every fill is ≥ 3:1 on the panel, hover and selection
+  fills in both themes.
+- Overlay (Template B, launcher):
+  - kit sizes: 56 px field, 52 px rows, 12 px radius;
+  - Inter loaded into cosmic-text; kit search icon; "Content" and "Hidden" badges;
+  - accent-soft selection with a 2 px bar; check badges on multi-selected rows;
+  - "Pinned"/"Recent" section labels; footer hint bar with key chips;
+  - loading/indexing/error/no-matches states (Enter on no matches searches inside files);
+  - kit toasts in the footer slot; `shadow-pop` on layer shell (transparent margin with no input);
+  - kit relative dates, sizes and counts (`find-core` keeps only exact timestamps).
+  - `--snapshot DIR` renders 30 states; reviewed in both themes. The Rename and Trash layout bug found
+    there has a regression test.
+- IME: winit now enables IME and handles `Ime::Preedit`/`Commit`; layer shell uses `zwp_text_input_v3`.
+  Preedit shows underlined at the caret. Model tests cover it. Not yet checked with fcitx5 on Hyprland.
+- The settings window was rewritten on the kit's egui components:
+  - pages in the standard order (General, Shortcuts, Locations, Index, Connected apps, About);
+  - the kit shortcut recorder, and the overlay key list read from `docs/user/shortcuts.json`;
+  - Connected apps rows with glyph tiles, badges, Open/Install and Recent activity;
+  - About in the standard order, plus Restart;
+  - live System theme; Esc and Ctrl+W close it, F1 opens the guide.
+  - It builds and its unit tests pass, but **it has not been screenshotted yet**.
+- Tray: monochrome glyph helper added; ksni id is now `dev.arcade.Find`. Window and app ids use
+  `dev.arcade.Find` (`os::APP_ID`).
+
+Still to do (see FIND.md):
+- Screenshot every settings page (light, dark, 720×520, 125 %) and fix what looks wrong.
+- Install prompt (`installer_ui.rs`) on `dialog_head`/`checkbox`/`dialog_actions`, with Tools' copy.
+- Tray: use `tray_icon_rgba` for the icon, left click opens the overlay, rename "Open Settings" to
+  "Settings", and add a separator before Restart.
+- Settings window focus on a second launch (service touches `settings.focus`, the window listens).
+- Words ("Couldn't …" everywhere, "Copied" toasts).
+- `dev.arcade.Find` folders with the verified migration, the desktop entry, and the README and
+  packaging icons from `assets/app-icon/`.
+- Project standard: rust-toolchain.toml, `docs/dev/` lowercase, `scripts/check`/`dev`/`package`,
+  `tag.yml` → `release.yml` with a beta run first, and `e2e-linux.sh` honouring TMPDIR.
+- Version 0.5.0, CHANGELOG, screenshots, PR, 3-OS CI, release, and the Tools update check.
+
 ## Release status (2026-10-18)
 
 - Latest release: [v0.4.3](https://github.com/qa-p1/Arcade-Find/releases/tag/v0.4.3), published 2026-10-19 (only programs from another image drop the AppImage's descriptors; see CHANGELOG.md). The CI and e2e notes below were recorded for the earlier v0.3.0.

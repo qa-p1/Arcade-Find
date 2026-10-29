@@ -4,6 +4,9 @@
 //! surface on hide hands focus back to the previous window. Software
 //! rendering into shared memory; fractional scaling through
 //! `wp_fractional_scale_v1` + `wp_viewporter` when the compositor has them.
+//! The surface is transparent, so the panel keeps its rounded corners and the
+//! kit's `shadow-pop` in a margin that takes no input. Input methods compose
+//! into the field through `zwp_text_input_v3`.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -21,9 +24,10 @@ use smithay_client_toolkit::reexports::calloop::timer::{TimeoutAction, Timer};
 use smithay_client_toolkit::reexports::calloop::{EventLoop, LoopHandle, RegistrationToken};
 use smithay_client_toolkit::reexports::calloop_wayland_source::WaylandSource;
 use smithay_client_toolkit::reexports::protocols::wp::fractional_scale::v1::client::{wp_fractional_scale_manager_v1, wp_fractional_scale_v1};
+use smithay_client_toolkit::reexports::protocols::wp::text_input::zv3::client::{zwp_text_input_manager_v3, zwp_text_input_v3};
 use smithay_client_toolkit::reexports::protocols::wp::viewporter::client::{wp_viewport, wp_viewporter};
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
+    compositor::{CompositorHandler, CompositorState, Region},
     delegate_compositor, delegate_data_device, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat,
     delegate_shm,
     output::{OutputHandler, OutputState},
@@ -46,7 +50,7 @@ use wayland_client::protocol::{wl_data_device, wl_data_source, wl_keyboard, wl_o
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 
 use super::dnd;
-use super::model::{metrics, Mode, Mods, Overlay};
+use super::model::{metrics, Mods, Overlay};
 use super::render::Renderer;
 use crate::service::{Outcome, Service, UiMsg};
 use crate::theme::Palette;
@@ -106,6 +110,10 @@ struct Wl {
     pool: SlotPool,
     fractional_mgr: Option<wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1>,
     viewporter: Option<wp_viewporter::WpViewporter>,
+    text_input_mgr: Option<zwp_text_input_manager_v3::ZwpTextInputManagerV3>,
+    text_input: Option<zwp_text_input_v3::ZwpTextInputV3>,
+    /// Input method state since the last `done`: (preedit, committed text).
+    ime_pending: (Option<String>, Option<String>),
     shown: Option<Shown>,
     /// Integer buffer scale (without fractional scaling).
     int_scale: i32,
@@ -145,6 +153,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
     let pool = SlotPool::new((metrics::WIDTH as usize) * 600 * 4, &shm).map_err(|e| e.to_string())?;
     let fractional_mgr = globals.bind::<wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1, _, _>(&qh, 1..=1, ()).ok();
     let viewporter = globals.bind::<wp_viewporter::WpViewporter, _, _>(&qh, 1..=1, ()).ok();
+    let text_input_mgr = globals.bind::<zwp_text_input_manager_v3::ZwpTextInputManagerV3, _, _>(&qh, 1..=1, ()).ok();
     let data_manager = DataDeviceManagerState::bind(&globals, &qh).ok();
 
     let (tx, rx) = channel::<UiMsg>();
@@ -164,10 +173,12 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
 
     let mut overlay = Overlay::default();
     svc.configure(&mut overlay);
+    let mut renderer = Renderer::new();
+    renderer.shadow = metrics::SHADOW;
     let mut st = Wl {
         svc: svc.clone(),
         overlay,
-        renderer: Renderer::new(),
+        renderer,
         registry_state: RegistryState::new(&globals),
         seat_state: SeatState::new(&globals, &qh),
         output_state: OutputState::new(&globals, &qh),
@@ -177,6 +188,9 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
         pool,
         fractional_mgr,
         viewporter,
+        text_input_mgr,
+        text_input: None,
+        ime_pending: (None, None),
         shown: None,
         int_scale: 1,
         frac_scale: None,
@@ -239,8 +253,26 @@ impl Wl {
         }
     }
 
+    /// The surface's logical size: the panel plus the shadow margin.
     fn logical_size(&self) -> (u32, u32) {
-        (metrics::WIDTH as u32, self.overlay.height().round() as u32)
+        let margin = 2.0 * metrics::SHADOW;
+        ((metrics::WIDTH + margin) as u32, (self.overlay.height() + margin).round() as u32)
+    }
+
+    /// Only the panel takes pointer input; the shadow margin passes through.
+    fn set_input_region(&self, surface: &wl_surface::WlSurface) {
+        let Ok(region) = Region::new(&self.compositor) else { return };
+        let m = metrics::SHADOW as i32;
+        region.add(m, m, metrics::WIDTH as i32, self.overlay.height().round() as i32);
+        surface.set_input_region(Some(region.wl_region()));
+    }
+
+    /// Where the field is, for the input method's candidate window.
+    fn ime_area(&self) {
+        let Some(ti) = &self.text_input else { return };
+        let m = metrics::SHADOW as i32;
+        ti.set_cursor_rectangle(m + 52, m + 16, metrics::WIDTH as i32 - 68, 24);
+        ti.commit();
     }
 
     fn show(&mut self) {
@@ -320,7 +352,8 @@ impl Wl {
         let scale = self.scale();
         let settings = self.svc.settings();
         let palette = Palette::for_theme(settings.theme);
-        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs()) else { return };
+        let previews = self.svc.can_preview(&self.overlay.targets());
+        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs(), previews) else { return };
         let (w, h) = (pm.width() as i32, pm.height() as i32);
         let Some(s) = self.shown.as_ref() else { return };
         let Ok((buffer, canvas)) = self.pool.create_buffer(w, h, w * 4, wl_shm::Format::Argb8888) else { return };
@@ -342,6 +375,7 @@ impl Wl {
             }
         }
         surface.damage_buffer(0, 0, w, h);
+        self.set_input_region(surface);
         if buffer.attach_to(surface).is_ok() {
             s.layer.commit();
         }
@@ -370,21 +404,9 @@ impl Wl {
         self.effects(effects);
     }
 
-    /// The list row under logical y, as an absolute index.
+    /// The list row under the surface's logical y, as an absolute index.
     fn row_at(&self, y: f64) -> Option<usize> {
-        let top = (metrics::BAR + metrics::LIST_PAD) as f64;
-        if y < top || !self.overlay.shows_list() {
-            return None;
-        }
-        let vi = ((y - top) / metrics::ROW as f64) as usize;
-        if vi >= self.overlay.visible_rows() {
-            return None;
-        }
-        let scroll = match &self.overlay.mode {
-            Mode::Actions { scroll, .. } => *scroll,
-            _ => self.overlay.scroll,
-        };
-        Some(scroll + vi)
+        self.overlay.row_at(y - metrics::SHADOW as f64)
     }
 
     /// Turns the pending press into a drag of its rows (the selection when
@@ -483,6 +505,9 @@ impl SeatHandler for Wl {
         if capability == Capability::Keyboard && self.keyboard.is_none() {
             let handle = self.handle.clone();
             self.keyboard = self.seat_state.get_keyboard_with_repeat(qh, &seat, None, handle, Box::new(|st: &mut Wl, _, ev| st.key(ev))).ok();
+            if self.text_input.is_none() {
+                self.text_input = self.text_input_mgr.as_ref().map(|m| m.get_text_input(&seat, qh, ()));
+            }
         }
         if capability == Capability::Pointer && self.pointer.is_none() {
             self.pointer = self.seat_state.get_pointer(qh, &seat).ok();
@@ -666,6 +691,53 @@ impl Dispatch<wp_viewporter::WpViewporter, ()> for Wl {
 
 impl Dispatch<wp_viewport::WpViewport, ()> for Wl {
     fn event(_: &mut Self, _: &wp_viewport::WpViewport, _: wp_viewport::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
+}
+
+impl Dispatch<zwp_text_input_manager_v3::ZwpTextInputManagerV3, ()> for Wl {
+    fn event(
+        _: &mut Self,
+        _: &zwp_text_input_manager_v3::ZwpTextInputManagerV3,
+        _: zwp_text_input_manager_v3::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
+}
+
+/// text-input-v3: enabled while the overlay's surface has text focus;
+/// preedit and commits apply together on `done`.
+impl Dispatch<zwp_text_input_v3::ZwpTextInputV3, ()> for Wl {
+    fn event(st: &mut Self, ti: &zwp_text_input_v3::ZwpTextInputV3, ev: zwp_text_input_v3::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {
+        use zwp_text_input_v3::{ContentHint, ContentPurpose, Event};
+        match ev {
+            Event::Enter { surface } => {
+                if st.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == &surface) {
+                    ti.enable();
+                    ti.set_content_type(ContentHint::None, ContentPurpose::Normal);
+                    st.ime_area();
+                }
+            }
+            Event::Leave { .. } => {
+                ti.disable();
+                ti.commit();
+                st.ime_pending = (None, None);
+                st.overlay.ime_preedit("");
+            }
+            Event::PreeditString { text, .. } => st.ime_pending.0 = Some(text.unwrap_or_default()),
+            Event::CommitString { text } => st.ime_pending.1 = text,
+            Event::Done { .. } => {
+                let (preedit, commit) = std::mem::take(&mut st.ime_pending);
+                let mut effects = Vec::new();
+                if let Some(text) = commit {
+                    effects = st.overlay.ime_commit(&text);
+                }
+                st.overlay.ime_preedit(&preedit.unwrap_or_default());
+                st.effects(effects);
+            }
+            _ => {}
+        }
+    }
 }
 
 impl DataSourceHandler for Wl {

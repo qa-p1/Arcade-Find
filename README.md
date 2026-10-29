@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="112" alt="Arcade Find icon">
+  <img src="assets/app-icon/icon.svg" width="112" alt="Arcade Find icon">
 </p>
 
 <h1 align="center">Arcade Find</h1>

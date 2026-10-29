@@ -525,7 +525,7 @@ pub fn run_search(host: &dyn Host, req: &InvokeRequest) -> Result<InvokeResult, 
     let message = match out.matched {
         0 => "No matches".to_string(),
         1 => "1 match".to_string(),
-        n => format!("{} matches", find_core::fmt::count(n as u64)),
+        n => format!("{} matches", arcade_link::design::format::format_count(n as i64)),
     };
     Ok(InvokeResult {
         outputs: sel.inputs,

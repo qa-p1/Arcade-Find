@@ -130,9 +130,10 @@ dependencies = [
 
 [[package]]
 name = "arcade-link"
-version = "0.3.0"
-source = "git+https://github.com/qa-p1/Arcade-Link?rev=4c75f3a7c806ae78f96127c556708e65eaeeb476#4c75f3a7c806ae78f96127c556708e65eaeeb476"
+version = "0.4.6"
+source = "git+https://github.com/qa-p1/Arcade-Link?tag=v0.4.6#4830245338801b0b3e01ad6702db1c93d5c74f36"
 dependencies = [
+ "egui",
  "getrandom 0.4.3",
  "interprocess",
  "libc",
@@ -3673,7 +3674,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.3.4",
+ "getrandom 0.4.3",
  "once_cell",
  "rustix 1.1.5",
  "windows-sys 0.59.0",

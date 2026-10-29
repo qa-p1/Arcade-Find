@@ -277,7 +277,7 @@ real_shelf_drag_checks() {
   sleep 0.3
   local fx top; read -r fx top <<<"$($find_top)"
   # Press inside the two-row selection (the first row), drag onto Shelf.
-  $dragger "$fx" $((top + 58 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
+  $dragger "$fx" $((top + 56 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
   sleep 1.5
   shelf_rows >"$T/rows" 2>/dev/null || true
   if [[ -n "$single" ]]; then

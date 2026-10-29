@@ -2,6 +2,10 @@
 //! overwriting), move to the trash (never a hard delete), and the clipboard.
 
 use std::path::{Path, PathBuf};
+
+/// The OS identifier (STANDARD §10): bundle id, AppUserModelID, desktop
+/// file, Wayland app_id and X11 WM_CLASS.
+pub const APP_ID: &str = "dev.arcade.Find";
 use std::sync::mpsc;
 use std::sync::OnceLock;
 

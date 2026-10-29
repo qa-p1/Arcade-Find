@@ -48,7 +48,7 @@ mod imp {
 
     impl ksni::Tray for FindTray {
         fn id(&self) -> String {
-            "arcade-find".into()
+            crate::os::APP_ID.into()
         }
         fn title(&self) -> String {
             "Arcade Find".into()

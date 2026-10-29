@@ -166,7 +166,8 @@ fn export_icon(path: &std::path::Path, size: u32) -> ExitCode {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_ascii_lowercase();
     let bytes = match ext.as_str() {
         "svg" => icons::app_icon_svg().into_bytes(),
-        "ico" => icons::app_icon_ico(&[16, 24, 32, 48, 64, 128, 256]),
+        "ico" => icons::app_icon_ico().to_vec(),
+        "icns" => include_bytes!("../../../assets/app-icon/arcade-find.icns").to_vec(),
         _ => icons::app_icon_png(size),
     };
     match std::fs::write(path, bytes) {

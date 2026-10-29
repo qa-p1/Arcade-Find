@@ -1,12 +1,14 @@
-//! Colors (from Arcade Link's integration tokens plus Find's accent) and
-//! the system light/dark preference.
+//! Colours from the Arcade design kit (`arcade_link::design`, Find's lime
+//! accent), Find's file-kind content palette, and the system light/dark
+//! preference. No other module defines a colour.
 
 use std::sync::atomic::{AtomicU8, Ordering};
 
+use arcade_link::design::{self, Theme as KitTheme};
+use find_core::kind::Kind;
 use find_core::settings::Theme;
 
-/// Arcade Find's accent (proposed for Link's tokens as `arcade.find`).
-pub const ACCENT: u32 = 0x22C55E;
+use crate::link::ME;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rgba {
@@ -32,75 +34,138 @@ impl Rgba {
     }
 }
 
+/// The overlay's colours: kit tokens under the names the renderer uses.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Palette {
     pub dark: bool,
     pub panel: Rgba,
+    /// The panel's 1 px border (`line`).
     pub border: Rgba,
+    /// Separators between the field, the list and the footer (`line`).
     pub separator: Rgba,
     pub text: Rgba,
+    /// Secondary text: paths, meta, placeholders, the footer hint bar.
     pub muted: Rgba,
+    /// Non-text marks only (scrollbar thumb, disabled glyphs): below 4.5:1.
     pub faint: Rgba,
+    /// Fills and the caret: the accent itself.
     pub accent: Rgba,
-    /// Matched characters in names.
+    /// Matched characters in names (weight 600): the accent's readable ink.
     pub highlight: Rgba,
+    /// The selected row (`accent-soft`).
     pub selection: Rgba,
+    /// Other rows of a multi-selection: half of `selection` over the panel.
     pub selection_multi: Rgba,
+    /// Selected text in the fields: the accent at 35 %.
     pub text_selection: Rgba,
+    /// Key chips, badges and the rename field (`sunken`).
     pub chip: Rgba,
+    /// Key chip and badge edges (`line-strong`).
+    pub chip_edge: Rgba,
+    pub hover: Rgba,
+    /// Text on an accent fill (the drag count badge).
+    pub accent_text: Rgba,
+    /// Readable danger text, and its soft fill.
     pub danger: Rgba,
+    pub danger_soft: Rgba,
+    /// Readable success text ("Copied").
+    pub ok: Rgba,
+    /// Readable warning text, and its soft fill.
+    pub warn: Rgba,
+    pub warn_soft: Rgba,
+    /// Symbols drawn on a file-kind fill.
+    pub kind_symbol: Rgba,
 }
 
 impl Palette {
-    pub fn dark() -> Palette {
+    pub fn kit(theme: KitTheme) -> Palette {
+        let p = design::palette(theme, ME);
+        let ink = design::ink(theme, ME);
+        let c = Rgba::hex;
+        let selection = c(p.accent_soft);
         Palette {
-            dark: true,
-            panel: Rgba::hex(0x14171C),
-            border: Rgba::hex(0x2A2F38),
-            separator: Rgba::hex(0x2A2F38).alpha(200),
-            text: Rgba::hex(0xE7EAF0),
-            muted: Rgba::hex(0x9AA3B2),
-            faint: Rgba::hex(0x6B7382),
-            accent: Rgba::hex(ACCENT),
-            highlight: Rgba::hex(0x4ADE80),
-            selection: Rgba::hex(ACCENT).alpha(46),
-            selection_multi: Rgba::hex(ACCENT).alpha(26),
-            text_selection: Rgba::hex(ACCENT).alpha(90),
-            chip: Rgba::hex(0x1C2027),
-            danger: Rgba::hex(0xF87171),
+            dark: theme.is_dark(),
+            panel: c(p.panel),
+            border: c(p.line),
+            separator: c(p.line),
+            text: c(p.text),
+            muted: c(p.muted),
+            faint: c(p.faint),
+            accent: c(p.accent),
+            highlight: c(ink.accent),
+            selection,
+            selection_multi: c(p.panel).mix(selection, 0.5),
+            text_selection: c(p.accent).alpha(89),
+            chip: c(p.sunken),
+            chip_edge: c(p.line_strong),
+            hover: c(p.hover),
+            accent_text: c(p.accent_text),
+            danger: c(ink.danger),
+            danger_soft: c(p.danger_soft),
+            ok: c(ink.ok),
+            warn: c(ink.warn),
+            warn_soft: c(p.warn_soft),
+            kind_symbol: if theme.is_dark() { c(p.panel) } else { c(p.on_fill) },
         }
+    }
+
+    pub fn dark() -> Palette {
+        Palette::kit(KitTheme::Dark)
     }
 
     pub fn light() -> Palette {
-        Palette {
-            dark: false,
-            panel: Rgba::hex(0xFFFFFF),
-            border: Rgba::hex(0xDDE1E7),
-            separator: Rgba::hex(0xDDE1E7),
-            text: Rgba::hex(0x161A20),
-            muted: Rgba::hex(0x5B6472),
-            faint: Rgba::hex(0x8A93A3),
-            accent: Rgba::hex(0x16A34A),
-            highlight: Rgba::hex(0x15803D),
-            selection: Rgba::hex(ACCENT).alpha(40),
-            selection_multi: Rgba::hex(ACCENT).alpha(22),
-            text_selection: Rgba::hex(ACCENT).alpha(70),
-            chip: Rgba::hex(0xF5F6F8),
-            danger: Rgba::hex(0xDC2626),
-        }
+        Palette::kit(KitTheme::Light)
     }
 
     pub fn for_theme(theme: Theme) -> Palette {
-        let dark = match theme {
-            Theme::Dark => true,
-            Theme::Light => false,
-            Theme::System => system_dark(),
-        };
-        if dark {
-            Palette::dark()
-        } else {
-            Palette::light()
-        }
+        Palette::kit(kit_theme(theme))
+    }
+
+    /// A file kind's icon fill (the content palette below).
+    pub fn kind(&self, k: Kind) -> Rgba {
+        let (light, dark) = KIND_COLOURS.iter().find(|(kind, _, _)| *kind == k).map_or((0x80899A, 0x8A94A6), |&(_, l, d)| (l, d));
+        Rgba::hex(if self.dark { dark } else { light })
+    }
+}
+
+/// Find's content palette (STANDARD §2): one fill per file kind, light and
+/// dark. Every fill is at least 3:1 against the panel, the hover fill and both
+/// selection fills in its theme, and the symbol drawn on it (white in light,
+/// the panel colour in dark) is at least 3:1 against the fill. The test below
+/// checks both.
+const KIND_COLOURS: &[(Kind, u32, u32)] = &[
+    (Kind::Folder, 0x5189DA, 0x5B9BF8),
+    (Kind::Image, 0x2D9A74, 0x34C38F),
+    (Kind::Video, 0xE25B72, 0xE85D75),
+    (Kind::Audio, 0xA36AFB, 0xA66CFF),
+    (Kind::Pdf, 0xED5250, 0xEF5350),
+    (Kind::Document, 0x3B82F6, 0x3B82F6),
+    (Kind::Spreadsheet, 0x219B57, 0x22A55B),
+    (Kind::Presentation, 0xBB7B10, 0xF59E0B),
+    (Kind::Archive, 0xA48456, 0xB08D5B),
+    (Kind::Code, 0x14988B, 0x14B8A6),
+    (Kind::Text, 0x80899A, 0x8A94A6),
+    (Kind::Font, 0xEC4899, 0xEC4899),
+    (Kind::Model, 0xDB6717, 0xF97316),
+    (Kind::Other, 0x80899A, 0x8A94A6),
+];
+
+/// The Appearance setting, resolved against the system preference.
+pub fn kit_theme(theme: Theme) -> KitTheme {
+    match theme {
+        Theme::Dark => KitTheme::Dark,
+        Theme::Light => KitTheme::Light,
+        Theme::System if system_dark() => KitTheme::Dark,
+        Theme::System => KitTheme::Light,
+    }
+}
+
+/// The Appearance setting as the kit's egui `apply` takes it.
+pub fn setting_name(theme: Theme) -> &'static str {
+    match theme {
+        Theme::System => "system",
+        Theme::Light => "light",
+        Theme::Dark => "dark",
     }
 }
 
@@ -223,28 +288,56 @@ fn detect_dark() -> Option<bool> {
 mod tests {
     use super::*;
 
+    fn lum(c: Rgba) -> f32 {
+        let f = |v: u8| {
+            let s = v as f32 / 255.0;
+            if s <= 0.03928 {
+                s / 12.92
+            } else {
+                ((s + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b)
+    }
+
+    fn ratio(a: Rgba, b: Rgba) -> f32 {
+        let (x, y) = (lum(a), lum(b));
+        (x.max(y) + 0.05) / (x.min(y) + 0.05)
+    }
+
     #[test]
-    fn contrast_is_reasonable() {
-        fn lum(c: Rgba) -> f32 {
-            let f = |v: u8| {
-                let s = v as f32 / 255.0;
-                if s <= 0.03928 {
-                    s / 12.92
-                } else {
-                    ((s + 0.055) / 1.055).powf(2.4)
-                }
-            };
-            0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b)
-        }
-        fn ratio(a: Rgba, b: Rgba) -> f32 {
-            let (x, y) = (lum(a), lum(b));
-            (x.max(y) + 0.05) / (x.min(y) + 0.05)
-        }
+    fn find_uses_the_kit_lime_accent() {
+        assert_eq!(Palette::light().accent, Rgba::hex(0x517E0E));
+        assert_eq!(Palette::dark().accent, Rgba::hex(0x84CC16));
+        assert_eq!(Palette::dark().selection, Rgba::hex(design::palette(KitTheme::Dark, "arcade.find").accent_soft));
+    }
+
+    #[test]
+    fn text_is_readable_on_every_overlay_surface() {
         for p in [Palette::dark(), Palette::light()] {
-            let bg = p.panel.alpha(255);
-            assert!(ratio(p.text, bg) >= 7.0);
-            assert!(ratio(p.muted, bg) >= 4.5, "muted {:?}", p.dark);
-            assert!(ratio(p.highlight, bg) >= 4.5, "highlight {:?}", p.dark);
+            for (name, bg) in [("panel", p.panel), ("selection", p.selection), ("multi", p.selection_multi), ("hover", p.hover), ("chip", p.chip)] {
+                assert!(ratio(p.text, bg) >= 7.0, "text on {name}, dark {}", p.dark);
+                assert!(ratio(p.muted, bg) >= 4.5, "muted on {name}, dark {}", p.dark);
+                assert!(ratio(p.highlight, bg) >= 4.5, "highlight on {name}, dark {}", p.dark);
+            }
+            assert!(ratio(p.danger, p.panel) >= 4.5 && ratio(p.danger, p.danger_soft) >= 4.5);
+            assert!(ratio(p.warn, p.panel) >= 4.5 && ratio(p.warn, p.warn_soft) >= 4.5);
+            assert!(ratio(p.ok, p.panel) >= 4.5);
+            assert!(ratio(p.accent_text, p.accent) >= 4.5);
+            assert!(ratio(p.accent, p.panel) >= 3.0, "the caret and selection bar");
+        }
+    }
+
+    #[test]
+    fn kind_icons_meet_ui_contrast() {
+        for p in [Palette::dark(), Palette::light()] {
+            for &(kind, _, _) in KIND_COLOURS {
+                let fill = p.kind(kind);
+                for (name, bg) in [("panel", p.panel), ("selection", p.selection), ("multi", p.selection_multi), ("hover", p.hover)] {
+                    assert!(ratio(fill, bg) >= 3.0, "{kind:?} on {name}, dark {}: {:.2}", p.dark, ratio(fill, bg));
+                }
+                assert!(ratio(p.kind_symbol, fill) >= 3.0, "{kind:?} symbol, dark {}: {:.2}", p.dark, ratio(p.kind_symbol, fill));
+            }
         }
     }
 }

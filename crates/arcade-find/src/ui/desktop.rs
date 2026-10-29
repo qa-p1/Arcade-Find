@@ -15,7 +15,7 @@ use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop, EventLoopProxy}
 use winit::window::{Window, WindowAttributes, WindowId, WindowLevel};
 
 use super::dnd;
-use super::model::{metrics, Effect, Mode, Mods, Overlay};
+use super::model::{metrics, Effect, Mods, Overlay};
 use super::render::Renderer;
 use crate::service::{Outcome, Service, UiMsg};
 use crate::theme::Palette;
@@ -24,6 +24,9 @@ const DOUBLE_CLICK: Duration = Duration::from_millis(400);
 /// How long focus may be gone before the overlay hides: compositors and X
 /// servers drop and restore it briefly (a keyboard device change, a grab).
 const FOCUS_GRACE: Duration = Duration::from_millis(150);
+/// Focus changes this soon after showing come from mapping the window, not
+/// from the user (STANDARD §8.1 overlays).
+const SHOW_SETTLE: Duration = Duration::from_millis(400);
 
 type Surface = softbuffer::Surface<Rc<Window>, Rc<Window>>;
 
@@ -46,6 +49,8 @@ struct App {
     focused: bool,
     /// Focus left at this moment's deadline; hide then unless it came back.
     leave_at: Option<Instant>,
+    /// When the window was last shown: mapping it can cost focus briefly.
+    shown_at: Option<Instant>,
     /// The screen center the window stays centered on while shown.
     center: Option<PhysicalPosition<i32>>,
     on_start: Option<Box<dyn FnOnce()>>,
@@ -86,6 +91,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
         wl_drag: None,
         focused: false,
         leave_at: None,
+        shown_at: None,
         center: None,
         on_start,
         initial,
@@ -105,7 +111,7 @@ fn attributes() -> WindowAttributes {
     #[cfg(all(unix, not(target_os = "macos")))]
     {
         use winit::platform::x11::{WindowAttributesExtX11, WindowType};
-        a = a.with_name("arcade-find", "Arcade Find").with_x11_window_type(vec![WindowType::Utility]);
+        a = a.with_name(crate::os::APP_ID, crate::os::APP_ID).with_x11_window_type(vec![WindowType::Utility]);
     }
     #[cfg(windows)]
     {
@@ -149,7 +155,11 @@ impl App {
         self.place(&w);
         self.focused = false;
         self.leave_at = None;
+        self.shown_at = Some(Instant::now());
         w.set_visible(true);
+        // Input methods (fcitx5, IBus) compose into the search field.
+        w.set_ime_allowed(true);
+        w.set_ime_cursor_area(winit::dpi::LogicalPosition::new(52.0, 16.0), LogicalSize::new(metrics::WIDTH as f64 - 68.0, 24.0));
         w.focus_window();
     }
 
@@ -197,7 +207,8 @@ impl App {
         let Some(surface) = self.surface.as_mut() else { return };
         let scale = w.scale_factor() as f32;
         let palette = Palette::for_theme(self.svc.settings().theme);
-        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs()) else { return };
+        let previews = self.svc.can_preview(&self.overlay.targets());
+        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs(), previews) else { return };
         let size = w.inner_size();
         let (Some(bw), Some(bh)) = (NonZeroU32::new(size.width), NonZeroU32::new(size.height)) else { return };
         if surface.resize(bw, bh).is_err() {
@@ -268,19 +279,7 @@ impl App {
     }
 
     fn row_at(&self, y: f64) -> Option<usize> {
-        let top = (metrics::BAR + metrics::LIST_PAD) as f64;
-        if y < top || !self.overlay.shows_list() {
-            return None;
-        }
-        let vi = ((y - top) / metrics::ROW as f64) as usize;
-        if vi >= self.overlay.visible_rows() {
-            return None;
-        }
-        let scroll = match &self.overlay.mode {
-            Mode::Actions { scroll, .. } => *scroll,
-            _ => self.overlay.scroll,
-        };
-        Some(scroll + vi)
+        self.overlay.row_at(y)
     }
 }
 
@@ -363,7 +362,8 @@ impl ApplicationHandler<UiMsg> for App {
                 self.leave_at = None;
             }
             WindowEvent::Focused(false) => {
-                if self.focused && self.overlay.visible && !self.dragging() {
+                let settling = self.shown_at.is_some_and(|t| t.elapsed() < SHOW_SETTLE);
+                if self.focused && self.overlay.visible && !self.dragging() && !settling {
                     self.leave_at = Some(Instant::now() + FOCUS_GRACE);
                 }
             }
@@ -378,6 +378,20 @@ impl ApplicationHandler<UiMsg> for App {
                 let ev = super::keys::from_winit(&event.logical_key, event.text.as_deref(), self.mods);
                 let svc = self.svc.clone();
                 let effects = self.overlay.key(&ev, &*svc);
+                self.effects(effects);
+            }
+            WindowEvent::Ime(ime) if self.overlay.visible => {
+                let effects = match ime {
+                    winit::event::Ime::Preedit(text, _) => {
+                        self.overlay.ime_preedit(&text);
+                        vec![]
+                    }
+                    winit::event::Ime::Commit(text) => self.overlay.ime_commit(&text),
+                    winit::event::Ime::Enabled | winit::event::Ime::Disabled => {
+                        self.overlay.ime_preedit("");
+                        vec![]
+                    }
+                };
                 self.effects(effects);
             }
             WindowEvent::CursorMoved { position, .. } => {
