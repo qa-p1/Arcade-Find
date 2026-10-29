@@ -33,7 +33,7 @@ jobs:
         with:
           cache-on-failure: true
       - name: Native dependencies
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev xvfb xdotool imagemagick dbus
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev xvfb xdotool x11-utils imagemagick dbus
       - name: Build Find and the pinned isolation runner
         run: |
           cargo build --locked -p arcade-find --bin arcade-find

@@ -39,8 +39,10 @@ def main():
     def xdo(*args):
         return subprocess.check_output(['xdotool', *map(str, args)], text=True).strip()
 
-    def window():
-        result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--name', '^Settings — Arcade Find$'], text=True, capture_output=True)
+    def window(pid):
+        # xdotool's legacy WM_NAME search depends on the runner's locale.
+        # Bind discovery to this process and check the actual UTF-8 property.
+        result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--pid', str(pid)], text=True, capture_output=True)
         return result.stdout.splitlines()[-1] if result.returncode == 0 else None
 
     with (output / 'settings.log').open('w') as log:
@@ -50,7 +52,7 @@ def main():
                 process = subprocess.Popen([str(binary), '--settings-window'], env=dict(os.environ, ARCADE_FIND_UI_SCALE=scale, ARCADE_FIND_DEBUG='1'), stdout=log, stderr=log)
                 try:
                     try:
-                        identifier = until(window, 'Settings did not map')
+                        identifier = until(lambda: window(process.pid), 'Settings did not map')
                     except AssertionError:
                         log.write(f'\nSettings exit status: {process.poll()}\n')
                         log.flush()
@@ -58,6 +60,8 @@ def main():
                             subprocess.run(command, stdout=log, stderr=log)
                         subprocess.run(['import', '-window', 'root', str(output / 'startup-failure.png')], check=True)
                         raise
+                    title = subprocess.check_output(['xprop', '-id', identifier, '_NET_WM_NAME'], text=True, encoding='utf-8')
+                    assert '"Settings — Arcade Find"' in title, title
                     xdo('windowfocus', '--sync', identifier)
                     for width, height in ((760, 560), (720, 520)):
                         xdo('windowsize', '--sync', identifier, width, height)
