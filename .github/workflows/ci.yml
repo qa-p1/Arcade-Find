@@ -30,6 +30,8 @@ jobs:
         run: rustup toolchain uninstall 1.88.0 || true
       - uses: dtolnay/rust-toolchain@1.88.0
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Native dependencies
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev xvfb xdotool imagemagick dbus
       - name: Build Find and the pinned isolation runner

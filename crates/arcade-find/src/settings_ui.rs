@@ -105,8 +105,11 @@ pub fn focus_request(paths: &AppPaths) -> PathBuf {
 }
 
 pub fn run(paths: AppPaths) -> ExitCode {
+    crate::debug!("settings: loading settings");
     let (settings, _) = Settings::load(&paths.settings_file());
+    crate::debug!("settings: reading system theme");
     theme::refresh_system_theme();
+    crate::debug!("settings: starting eframe");
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Settings — Arcade Find")
@@ -120,6 +123,7 @@ pub fn run(paths: AppPaths) -> ExitCode {
         "Arcade Find",
         options,
         Box::new(move |cc| {
+            crate::debug!("settings: creating UI");
             arcade_link::design::egui::install_inter(&cc.egui_ctx);
             apply_theme(&cc.egui_ctx, settings.theme);
             // Explicit text scaling for the native UI matrix (also useful on
@@ -131,7 +135,9 @@ pub fn run(paths: AppPaths) -> ExitCode {
                     }
                 }
             }
-            Ok(Box::new(SettingsApp::new(paths, settings, cc.egui_ctx.clone())))
+            let app = SettingsApp::new(paths, settings, cc.egui_ctx.clone());
+            crate::debug!("settings: UI created");
+            Ok(Box::new(app))
         }),
     );
     match r {
