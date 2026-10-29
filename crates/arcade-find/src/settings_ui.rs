@@ -122,6 +122,15 @@ pub fn run(paths: AppPaths) -> ExitCode {
         Box::new(move |cc| {
             arcade_link::design::egui::install_inter(&cc.egui_ctx);
             apply_theme(&cc.egui_ctx, settings.theme);
+            // Explicit text scaling for the native UI matrix (also useful on
+            // desktops that do not publish a system text-scale preference).
+            if let Ok(scale) = std::env::var("ARCADE_FIND_UI_SCALE") {
+                if let Ok(scale) = scale.parse::<f32>() {
+                    if (1.0..=1.25).contains(&scale) {
+                        cc.egui_ctx.set_zoom_factor(scale);
+                    }
+                }
+            }
             Ok(Box::new(SettingsApp::new(paths, settings, cc.egui_ctx.clone())))
         }),
     );
