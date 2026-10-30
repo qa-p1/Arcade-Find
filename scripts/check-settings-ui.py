@@ -74,21 +74,32 @@ def main():
                             geometry = dict(line.split('=', 1) for line in xdo('getwindowgeometry', '--shell', identifier).splitlines())
                             assert (int(geometry['WIDTH']), int(geometry['HEIGHT'])) == (width, height), geometry
                             name = f'{page}-{theme}-{width}x{height}-{scale}'
-                            full = output / 'root.png'
-                            subprocess.run(['import', '-window', 'root', str(full)], check=True)
-                            crop = f"{width}x{height}+{geometry['X']}+{geometry['Y']}"
-                            subprocess.run(['convert', str(full), '-crop', crop, '+repage', str(output / (name + '.png'))], check=True)
-                            full.unlink()
-                            captures.append(name)
+                            xdo('mousemove', '--window', identifier, width - 80, height - 90)
+                            xdo('click', '--repeat', 45, '--delay', 2, 4)
+                            time.sleep(.2)
+                            headers = []
+                            for position in ('top', 'bottom'):
+                                if position == 'bottom':
+                                    xdo('click', '--repeat', 65, '--delay', 2, 5)
+                                    time.sleep(.3)
+                                full = output / 'root.png'
+                                subprocess.run(['import', '-window', 'root', str(full)], check=True)
+                                crop = f"{width}x{height}+{geometry['X']}+{geometry['Y']}"
+                                destination = output / (name + '-' + position + '.png')
+                                subprocess.run(['convert', str(full), '-crop', crop, '+repage', str(destination)], check=True)
+                                full.unlink()
+                                headers.append(subprocess.check_output(['convert', str(destination), '-crop', f'{width}x{round(95 * zoom)}+0+0', '+repage', 'rgba:-']))
+                                captures.append(name + '-' + position)
+                            assert headers[0] == headers[1], (name, 'page heading moved while its body scrolled')
                     xdo('key', 'ctrl+w')
                     assert process.wait(timeout=10) == 0
                 finally:
                     if process.poll() is None:
                         process.terminate()
                         process.wait(timeout=10)
-    assert len(captures) == 48
+    assert len(captures) == 96
     (output / 'captures.json').write_text(json.dumps(captures, indent=2) + '\n')
-    print('Captured 48 real settings pages. These images require visual review; capture success is not layout approval.')
+    print('Captured 96 real settings views (page tops and bottoms). These images require visual review; capture success is not layout approval.')
 
 
 if __name__ == '__main__':
