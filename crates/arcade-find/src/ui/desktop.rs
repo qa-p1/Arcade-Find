@@ -4,7 +4,6 @@
 //! the previous app (on macOS by hiding the app).
 
 use std::num::NonZeroU32;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -21,20 +20,13 @@ use crate::service::{Outcome, Service, UiMsg};
 use crate::theme::Palette;
 
 const DOUBLE_CLICK: Duration = Duration::from_millis(400);
-/// How long focus may be gone before the overlay hides: compositors and X
-/// servers drop and restore it briefly (a keyboard device change, a grab).
-const FOCUS_GRACE: Duration = Duration::from_millis(150);
-/// Focus changes this soon after showing come from mapping the window, not
-/// from the user (STANDARD §8.1 overlays).
-const SHOW_SETTLE: Duration = Duration::from_millis(400);
-
-type Surface = softbuffer::Surface<Rc<Window>, Rc<Window>>;
+type Surface = softbuffer::Surface<Arc<Window>, Arc<Window>>;
 
 struct App {
     svc: Arc<Service>,
     overlay: Overlay,
     renderer: Renderer,
-    window: Option<Rc<Window>>,
+    window: Option<Arc<Window>>,
     surface: Option<Surface>,
     mods: Mods,
     /// Logical pointer position in the window.
@@ -76,7 +68,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
     let mut overlay = Overlay::default();
     svc.configure(&mut overlay);
     let mut renderer = Renderer::new();
-    renderer.radius = if cfg!(windows) { 8.0 } else { 0.0 };
+    renderer.radius = 0.0; // The opaque fallback keeps square corners.
     let mut app = App {
         svc,
         overlay,
@@ -102,7 +94,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
 fn attributes() -> WindowAttributes {
     #[allow(unused_mut)]
     let mut a = Window::default_attributes()
-        .with_title("Arcade Find")
+        .with_title("Search — Arcade Find")
         .with_decorations(false)
         .with_resizable(false)
         .with_visible(false)
@@ -116,14 +108,34 @@ fn attributes() -> WindowAttributes {
     #[cfg(windows)]
     {
         use winit::platform::windows::{CornerPreference, WindowAttributesExtWindows};
-        a = a.with_skip_taskbar(true).with_corner_preference(CornerPreference::Round);
+        a = a.with_skip_taskbar(true).with_corner_preference(CornerPreference::DoNotRound);
     }
     a
 }
 
 impl App {
-    fn window(&self) -> Option<&Rc<Window>> {
+    fn window(&self) -> Option<&Arc<Window>> {
         self.window.as_ref()
+    }
+
+    fn ensure_window(&mut self, el: &ActiveEventLoop) -> Result<(), String> {
+        if self.window.is_some() {
+            return Ok(());
+        }
+        let window = Arc::new(el.create_window(attributes()).map_err(|e| e.to_string())?);
+        let context = softbuffer::Context::new(window.clone()).map_err(|e| e.to_string())?;
+        let surface = softbuffer::Surface::new(&context, window.clone()).map_err(|e| e.to_string())?;
+        #[cfg(target_os = "linux")]
+        if is_wayland(&window) {
+            if let Some(dragger) = &mut self.wl_drag {
+                dragger.use_window(window.clone())?;
+            } else {
+                self.wl_drag = wayland_dragger(window.clone());
+            }
+        }
+        self.surface = Some(surface);
+        self.window = Some(window);
+        Ok(())
     }
 
     fn apply(&mut self, out: Outcome) {
@@ -155,6 +167,15 @@ impl App {
         self.place(&w);
         self.focused = false;
         self.leave_at = None;
+        // Present directly while hidden: a hidden redraw callback is not
+        // guaranteed to run, and mapping before this paint causes a flash.
+        if !self.draw() {
+            self.overlay.visible = false;
+            self.svc.set_visible(false);
+            self.svc.note_ui(&self.overlay);
+            eprintln!("arcade-find: Couldn't show search. The first frame wasn't ready.");
+            return;
+        }
         self.shown_at = Some(Instant::now());
         w.set_visible(true);
         // Input methods (fcitx5, IBus) compose into the search field.
@@ -169,8 +190,21 @@ impl App {
         }
         self.svc.set_visible(false);
         self.svc.note_ui(&self.overlay);
-        if let Some(w) = self.window() {
-            w.set_visible(false);
+        // winit cannot hide a Wayland toplevel. Release its role, then create
+        // a fresh one on Show. The drag helper keeps an active origin alive.
+        #[cfg(target_os = "linux")]
+        let release = self.window().is_some_and(|window| is_wayland(window));
+        #[cfg(not(target_os = "linux"))]
+        let release = false;
+        if release {
+            self.surface = None;
+            self.window = None;
+            #[cfg(target_os = "linux")]
+            if let Some(dragger) = &mut self.wl_drag {
+                dragger.forget_window();
+            }
+        } else if let Some(window) = self.window() {
+            window.set_visible(false);
         }
         self.focused = false;
         self.leave_at = None;
@@ -202,19 +236,22 @@ impl App {
         w.request_redraw();
     }
 
-    fn draw(&mut self) {
-        let Some(w) = self.window().cloned() else { return };
-        let Some(surface) = self.surface.as_mut() else { return };
+    fn draw(&mut self) -> bool {
+        if !self.overlay.visible {
+            return false;
+        }
+        let Some(w) = self.window().cloned() else { return false };
+        let Some(surface) = self.surface.as_mut() else { return false };
         let scale = w.scale_factor() as f32;
         let palette = Palette::for_theme(self.svc.settings().theme);
         let previews = self.svc.can_preview(&self.overlay.targets());
-        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs(), previews) else { return };
+        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs(), previews) else { return false };
         let size = w.inner_size();
-        let (Some(bw), Some(bh)) = (NonZeroU32::new(size.width), NonZeroU32::new(size.height)) else { return };
+        let (Some(bw), Some(bh)) = (NonZeroU32::new(size.width), NonZeroU32::new(size.height)) else { return false };
         if surface.resize(bw, bh).is_err() {
-            return;
+            return false;
         }
-        let Ok(mut buf) = surface.buffer_mut() else { return };
+        let Ok(mut buf) = surface.buffer_mut() else { return false };
         // The window is opaque: composite the panel over its own color.
         let bg = palette.panel;
         let (pw, ph) = (pm.width() as usize, pm.height() as usize);
@@ -236,8 +273,9 @@ impl App {
                 buf[y * bw + x] = px;
             }
         }
-        let _ = buf.present();
+        let ready = buf.present().is_ok();
         self.svc.note_ui(&self.overlay);
+        ready
     }
 
     fn effects(&mut self, effects: Vec<Effect>) {
@@ -313,24 +351,11 @@ impl ApplicationHandler<UiMsg> for App {
     }
 
     fn resumed(&mut self, el: &ActiveEventLoop) {
-        if self.window.is_some() {
-            return;
-        }
-        let Ok(w) = el.create_window(attributes()) else {
+        if let Err(error) = self.ensure_window(el) {
+            eprintln!("arcade-find: Couldn't create the search window. {error}");
             el.exit();
             return;
-        };
-        let w = Rc::new(w);
-        let Ok(ctx) = softbuffer::Context::new(w.clone()) else {
-            el.exit();
-            return;
-        };
-        self.surface = softbuffer::Surface::new(&ctx, w.clone()).ok();
-        #[cfg(target_os = "linux")]
-        {
-            self.wl_drag = wayland_dragger(&w);
         }
-        self.window = Some(w);
         if let Some(f) = self.on_start.take() {
             f();
         }
@@ -347,27 +372,46 @@ impl ApplicationHandler<UiMsg> for App {
             el.exit();
             return;
         }
+        if out.show {
+            if let Err(error) = self.ensure_window(el) {
+                eprintln!("arcade-find: Couldn't create the search window. {error}");
+                self.hide();
+                return;
+            }
+        }
         self.apply(out);
     }
 
-    fn window_event(&mut self, _el: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        if !matches!(event, WindowEvent::RedrawRequested | WindowEvent::CursorMoved { .. }) {
-            crate::debug!("winit {event:?}");
+    fn window_event(&mut self, _el: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        if self.window().is_none_or(|window| window.id() != id) {
+            return;
+        }
+        if matches!(event, WindowEvent::Focused(_) | WindowEvent::CloseRequested | WindowEvent::Resized(_)) {
+            crate::debug!("winit window lifecycle {event:?}");
         }
         match event {
-            WindowEvent::RedrawRequested => self.draw(),
+            WindowEvent::RedrawRequested => {
+                self.draw();
+            }
             WindowEvent::CloseRequested => self.hide(),
             WindowEvent::Focused(true) => {
                 self.focused = true;
                 self.leave_at = None;
             }
             WindowEvent::Focused(false) => {
-                let settling = self.shown_at.is_some_and(|t| t.elapsed() < SHOW_SETTLE);
-                if self.focused && self.overlay.visible && !self.dragging() && !settling {
-                    self.leave_at = Some(Instant::now() + FOCUS_GRACE);
+                let now = Instant::now();
+                if self.focused && self.overlay.visible && !self.dragging() {
+                    self.leave_at = super::focus_loss_delay(self.shown_at, now).map(|delay| now + delay);
                 }
             }
             WindowEvent::ScaleFactorChanged { .. } => self.resize_and_redraw(),
+            WindowEvent::ThemeChanged(theme) => {
+                #[cfg(any(windows, target_os = "macos"))]
+                crate::theme::native_system_theme(theme == winit::window::Theme::Dark);
+                #[cfg(not(any(windows, target_os = "macos")))]
+                let _ = theme;
+                self.resize_and_redraw();
+            }
             WindowEvent::ModifiersChanged(m) => {
                 let s = m.state();
                 self.mods = Mods { ctrl: s.control_key(), shift: s.shift_key(), alt: s.alt_key(), logo: s.super_key() };
@@ -453,20 +497,20 @@ impl ApplicationHandler<UiMsg> for App {
 
 /// The Wayland drag source for `w`, when winit runs on Wayland.
 #[cfg(target_os = "linux")]
-fn wayland_dragger(w: &Window) -> Option<super::wl_drag::Dragger> {
-    use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
-    let (RawDisplayHandle::Wayland(d), RawWindowHandle::Wayland(s)) = (w.display_handle().ok()?.as_raw(), w.window_handle().ok()?.as_raw()) else {
-        return None;
-    };
-    // SAFETY: winit's wl_display and the window's wl_surface; the window is
-    // created once and lives until the process exits.
-    match unsafe { super::wl_drag::Dragger::new(d.display.as_ptr(), s.surface.as_ptr()) } {
+fn wayland_dragger(window: Arc<Window>) -> Option<super::wl_drag::Dragger> {
+    match super::wl_drag::Dragger::new(window) {
         Ok(dragger) => Some(dragger),
         Err(e) => {
             crate::debug!("wayland drag source unavailable: {e}");
             None
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+fn is_wayland(window: &Window) -> bool {
+    use winit::raw_window_handle::{HasDisplayHandle, RawDisplayHandle};
+    window.display_handle().is_ok_and(|handle| matches!(handle.as_raw(), RawDisplayHandle::Wayland(_)))
 }
 
 /// The drag image for a Wayland icon surface: its top-left is the pointer

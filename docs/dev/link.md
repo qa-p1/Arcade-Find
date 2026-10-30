@@ -66,7 +66,7 @@ interactive, no file outputs, e.g. `look.inspect`) aren't listed.
 |---|---|---|
 | Look | **Enter**, Space, "Quick Look" | `look.preview` with the selection; falls back to the default app when Look can't take it |
 | Box | Tab: featured tools for the selection's type, pipelines, "More in Arcade Box…" | `box:<tool>` (`#preset`), `box.pipeline.run` with `options.pipeline`, `box.open`; `box.pipelines` is read only while Box is running |
-| Shelf | Tab: "Add to Shelf" for any selection, with a payload preview; Find stays open | `shelf.add` (see [SHELF.md](SHELF.md)) |
+| Shelf | Tab: "Add to Shelf" for any selection, with a payload preview; Find stays open | `shelf.add` (see [SHELF.md](shelf.md)) |
 | Wheel | Tab: "Add to Wheel" (single file) | `wheel.add_action` |
 | Clipboard | Tab: "Send to my devices ↗" with a payload preview | `clipboard.add` |
 | Lens | Tab, for one image: its analyze / pin actions | `lens.analyze`, `lens.pin` |
@@ -155,4 +155,4 @@ The manifest uses Link’s `ManifestDocument` wrapper for cached **menu**, **doc
 - `installer.rs` owns AppInfo, pure dialog-state selection, prompt/dismissal policy, platform install/repair/uninstall wrappers and re-execution paths. `installer_ui.rs` uses shared strings, a private helper-process pipe, and worker actions so Run once can create the resident event loop afterward.
 - `tray::{watch,start,set_state}` are the small toolkit adapters. Apps should pass their own IDs, menu extras, portable settings and data folders while retaining Link’s watcher/receipt/install machinery.
 
-See [vendoring pins](../VENDORED.md), [user installation guide](user/getting-started.md) and the dated [verification status](STATUS.md). Native platform code is build/CI only until explicitly exercised.
+See [vendoring pins](../../VENDORED.md), [user installation guide](../user/getting-started.md) and the dated [verification status](../STATUS.md). Native platform code is build/CI only until explicitly exercised.

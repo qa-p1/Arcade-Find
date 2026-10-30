@@ -609,7 +609,7 @@ impl Renderer {
             let gx = 24.0 * s;
             match a.glyph {
                 super::model::Glyph::App(_) => {
-                    if let Some(img) = self.icons.glyph(a.glyph, gs.round() as u32, if a.disabled { p.faint } else { p.muted }) {
+                    if let Some(img) = self.icons.glyph(a.glyph, gs.round() as u32, p.muted) {
                         let img = img.clone();
                         blit(pm, &img, gx, y + (rh - gs) / 2.0);
                     }
@@ -621,7 +621,7 @@ impl Renderer {
                     y + rh / 2.0,
                     gs,
                     if a.disabled {
-                        p.faint
+                        p.muted
                     } else if a.danger {
                         p.danger
                     } else {

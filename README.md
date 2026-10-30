@@ -66,7 +66,7 @@ Other apps can call `find.search` to get matching paths without opening the over
 
 When Arcade Tools is running, its tray icon hosts Find's menu (Open Find, Open Settings, Rescan index, Restart, Quit). When Tools quits, Find's own tray icon returns. Turning off **Connect with other Arcade apps** always restores Find's icon.
 
-See [how Find works with other Arcade apps](docs/user/with-other-apps.md) and the [Arcade Link reference](docs/ARCADE_LINK.md).
+See [how Find works with other Arcade apps](docs/user/with-other-apps.md) and the [Arcade Link reference](docs/dev/link.md).
 
 ## Usage
 
@@ -87,7 +87,7 @@ Press **Ctrl+Alt+F** (⌃⌥F on macOS) to show or hide Find. Type, move with th
 
 On macOS, Cmd replaces Ctrl. The full list is in the [shortcut reference](docs/user/shortcuts.md), generated from the app's validated shortcut data.
 
-Change the shortcut in **Settings → Shortcut**. On Wayland desktops where Find cannot register a global shortcut, bind `arcade-find --toggle` in the desktop's keyboard settings. See [Hyprland integration](docs/HYPRLAND.md).
+Change the shortcut in **Settings → Shortcut**. On Wayland desktops where Find cannot register a global shortcut, bind `arcade-find --toggle` in the desktop's keyboard settings. See [Hyprland integration](docs/dev/hyprland.md).
 
 ### Command line
 
@@ -143,7 +143,7 @@ Settings, pins, history and the index are kept unless you choose to remove them 
 ## Platform notes
 
 - **Wayland:** the overlay uses the layer shell where available; on desktops without it (GNOME's path) Find uses a normal floating window. If Find cannot register a global shortcut, bind `arcade-find --toggle`.
-- **Hyprland:** Find can add a runtime binding and never edits your Hyprland configuration. See [docs/HYPRLAND.md](docs/HYPRLAND.md).
+- **Hyprland:** Find can add a runtime binding and never edits your Hyprland configuration. See [docs/dev/hyprland.md](docs/dev/hyprland.md).
 - **Linux live updates** use inotify. If the system watch limit is too low, Find watches what it can and rescans the rest hourly; the Index page shows the command for raising the limit.
 - **Windows** uses ReadDirectoryChangesW plus rescans.
 - Find's input does not yet support IME text input or right-to-left text.
@@ -171,10 +171,10 @@ The end-to-end script needs Sway, grim, wtype, Xvfb and xdotool.
 ## Documentation
 
 - [User guide](docs/user/): [getting started](docs/user/getting-started.md), [features](docs/user/features.md), [shortcuts](docs/user/shortcuts.md), [FAQ](docs/user/faq.md), [troubleshooting](docs/user/troubleshooting.md)
-- [Architecture](docs/ARCHITECTURE.md): index, query, matching and overlay
-- [Arcade Link](docs/ARCADE_LINK.md): actions Find exposes and uses
-- [Hyprland](docs/HYPRLAND.md): runtime binding and compositor setup
-- [Shelf integration](docs/SHELF.md): selection handoff details
+- [Architecture](docs/dev/architecture.md): index, query, matching and overlay
+- [Arcade Link](docs/dev/link.md): actions Find exposes and uses
+- [Hyprland](docs/dev/hyprland.md): runtime binding and compositor setup
+- [Shelf integration](docs/dev/shelf.md): selection handoff details
 - [Status](docs/STATUS.md): verification and known limits
 - [Changelog](CHANGELOG.md)
 - [Third-party notices](THIRD_PARTY_NOTICES.md) and [vendored files](VENDORED.md)

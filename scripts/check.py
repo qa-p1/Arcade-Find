@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""The same source, lint, test and native checks CI runs, without silent skips."""
+import argparse
+import os
+from pathlib import Path
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[1]
+os.chdir(ROOT)
+
+
+def run(*args, env=None):
+    subprocess.run(args, check=True, env=env)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--core-only', action='store_true')
+    parser.add_argument('--native-only', action='store_true')
+    parser.add_argument('--binary', type=Path)
+    args = parser.parse_args()
+    if not args.native_only:
+        run(sys.executable, 'scripts/check-docs.py')
+        run(sys.executable, 'scripts/check-vendored.py')
+        run(sys.executable, 'scripts/check-design.py', '--source-only')
+        run('cargo', 'fmt', '--all', '--', '--check')
+        run('cargo', 'clippy', '--workspace', '--all-targets', '--locked', '--', '-D', 'warnings')
+        run(sys.executable, 'scripts/isolate.py', 'cargo', 'test', '--workspace', '--locked')
+        run(sys.executable, 'scripts/check-design.py')
+    if args.core_only or sys.platform != 'linux':
+        return
+    binary = (args.binary or Path(os.environ.get('CARGO_TARGET_DIR', 'target')) / 'release/arcade-find').resolve()
+    link = Path(os.environ['ARCADE_LINK_DIR']).resolve()
+    if not binary.is_file():
+        run('cargo', 'build', '--release', '--locked', '-p', 'arcade-find', '--example', 'e2e-pointer', '--bin', 'arcade-find')
+    pointer = Path(os.environ.get('ARCADE_E2E_POINTER', str(binary.parent / 'examples/e2e-pointer')))
+    if not pointer.is_file():
+        raise SystemExit('Build --example e2e-pointer alongside the native binary before running this check.')
+    cli = Path(os.environ['ARCADE_LINK_CLI']).resolve()
+    env = dict(os.environ, ARCADE_LINK_CLI=str(cli))
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-native.py', str(binary), env=env)
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/tray-registration.py', str(binary), str(cli), 'find', env=env)
+    if not os.environ.get('ARCADE_SHELF_BIN'):
+        raise SystemExit('ARCADE_SHELF_BIN must name the real Shelf binary; peer/drag checks have not passed.')
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', 'scripts/e2e-linux.sh', str(binary), 'target/e2e', env=env)
+
+
+if __name__ == '__main__': main()

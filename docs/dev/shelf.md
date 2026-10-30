@@ -33,7 +33,7 @@ then one `folder/reference` per folder; missing and non-UTF-8 paths are left
 out and reported. Shelf answers synchronously with a complete sentence in
 `message` and `data.{shelf, added, skipped}`; partial success is success.
 Find offers the entry by its generic rules (installed, Link on, not switched
-off in Connected apps, every value accepted; see [ARCADE_LINK.md](ARCADE_LINK.md)).
+off in Connected apps, every value accepted; see [ARCADE_LINK.md](link.md)).
 It hides its overlay only for actions that open UI, so collecting doesn't
 close the search.
 
@@ -69,6 +69,6 @@ on Windows and macOS (built and type-checked by CI, never run interactively).
   shell) the drag comes from Find's winit window through the same Wayland
   data device (tested on Sway, not on Mutter).
 - Both apps are in Link's shared catalogs since `v0.2.0`; Tools installs them
-  and Wheel slots can hold their actions ([ARCADE_LINK.md](ARCADE_LINK.md#family-onboarding)).
+  and Wheel slots can hold their actions ([ARCADE_LINK.md](link.md#family-onboarding)).
 - On Hyprland, Find's overlay takes exclusive keyboard focus while open;
   Shelf's collapsed capsule never takes focus, so they don't fight.

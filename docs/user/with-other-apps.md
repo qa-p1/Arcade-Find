@@ -20,4 +20,4 @@ Turn on **Connect with other Arcade apps** in Find’s Connected apps settings. 
 
 Other apps can call **find.search** to get matching file paths without opening the overlay, or **find.show** to open Find on a query or item. A peer action appears only when the app is installed, enabled, and available for that selection.
 
-Find’s Shelf flow has been tested with the real Shelf app in an isolated runner. The other peer integrations are not all verified against their current desktop builds; see [STATUS](../STATUS.md).
+Find’s Shelf flow has been tested with the real Shelf app in an isolated runner. The other peer integrations are not all verified against their current desktop builds; see [STATUS](https://github.com/qa-p1/Arcade-Find/blob/main/docs/STATUS.md).

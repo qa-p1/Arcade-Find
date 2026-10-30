@@ -8,6 +8,11 @@
 #
 # Needs: sway, grim, wtype (Wayland); Xvfb, xdotool, import (X11).
 set -euo pipefail
+[[ "${ARCADE_E2E_INNER:-}" == 1 ]] || { echo "Run GUI checks through Arcade Link tools/e2e.py run" >&2; exit 1; }
+for tool in sway swaymsg grim wtype Xvfb xdotool import dbus-run-session; do
+  command -v "$tool" >/dev/null || { echo "Missing required native tool: $tool" >&2; exit 1; }
+done
+[[ -x "${ARCADE_LINK_CLI:-}" && -x "${ARCADE_SHELF_BIN:-}" ]] || { echo "Real Shelf and the pinned Link CLI are required" >&2; exit 1; }
 
 BIN=$(realpath "${1:-target/release/arcade-find}")
 OUT=$(realpath -m "${2:-target/e2e}")
@@ -324,12 +329,13 @@ if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype 
   cat >"$T/sway.conf" <<'EOF'
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
-for_window [title="^Arcade Find$"] floating enable
+for_window [app_id="dev.arcade.Find"] floating enable
 EOF
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman dbus-run-session -- sway -c "$T/sway.conf" >"$OUT/sway.log" 2>&1 &
   PIDS+=($!)
   for _ in $(seq 1 50); do ls "$XDG_RUNTIME_DIR"/wayland-* >/dev/null 2>&1 && break; sleep 0.1; done
   export WAYLAND_DISPLAY=$(basename "$(ls "$XDG_RUNTIME_DIR"/wayland-? | head -1)")
+  export SWAYSOCK=$(ls "$XDG_RUNTIME_DIR"/sway-ipc.*.sock | head -1)
   unset DISPLAY
   # Headless sway has no keyboard: keep one virtual keyboard for the whole
   # run, so the seat doesn't lose (and the overlay doesn't see focus leave)
@@ -370,14 +376,14 @@ walk(json.load(sys.stdin)); sys.exit(1)'
     wl_winit_find_top() {
       swaymsg -t get_tree | python3 -I -c 'import json,sys
 def walk(n):
-    if n.get("name") == "Arcade Find" and n.get("visible"):
+    if n.get("app_id") == "dev.arcade.Find" and n.get("visible"):
         r = n["rect"]; print(r["x"] + r["width"] // 2, r["y"]); sys.exit(0)
     for c in n.get("nodes", []) + n.get("floating_nodes", []): walk(c)
 walk(json.load(sys.stdin)); sys.exit(1)'
     }
     DRAG_ARGS="wayland wl_shelf_rect wl_drag wl_find_top"
   else
-    echo "  skip  Wayland drag checks (no $POINTER; cargo build --example e2e-pointer)"
+    echo "Missing required pointer helper: $POINTER" >&2; exit 1
   fi
   link_checks wayland "timeout 5 grim" wl_key wl_text
   overlay_checks wayland "timeout 5 grim" wl_key
@@ -385,6 +391,14 @@ walk(json.load(sys.stdin)); sys.exit(1)'
   # Same compositor, winit backend forced: the drag source shares winit's
   # Wayland connection.
   export ARCADE_FIND_BACKEND=winit
+  if [[ -n "${ARCADE_FIND_OLD_WAYLAND_BIN:-}" ]]; then
+    if python3 tests/wayland-lifecycle.py "$ARCADE_FIND_OLD_WAYLAND_BIN" >"$OUT/wayland-old-regression.log" 2>&1; then
+      echo "Old backend unexpectedly passed the lifecycle regression" >&2; exit 1
+    fi
+    grep -Eq 'background mapped|Hide did not unmap' "$OUT/wayland-old-regression.log" || { cat "$OUT/wayland-old-regression.log"; exit 1; }
+    ok "Wayland lifecycle regression fails on the old backend"
+  fi
+  python3 tests/wayland-lifecycle.py "$BIN" | tee "$OUT/wayland-lifecycle.log"
   run_session wayland-winit
   if [[ -n "$DRAG_ARGS" && -n "${ARCADE_SHELF_BIN:-}" && -x "${ARCADE_LINK_CLI:-}" ]]; then
     # One result: modifiers from wtype's short-lived virtual keyboards don't
@@ -392,13 +406,13 @@ walk(json.load(sys.stdin)); sys.exit(1)'
     # selection here (the selection itself is covered by the other sessions).
     real_shelf_drag_checks wayland-winit "timeout 5 grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
   else
-    echo "  skip  wayland-winit: drag to Shelf (needs the pointer helper, ARCADE_SHELF_BIN and ARCADE_LINK_CLI)"
+    echo "Missing required real Shelf drag prerequisites" >&2; exit 1
   fi
   overlay_checks wayland-winit "timeout 5 grim" wl_key
   unset ARCADE_FIND_BACKEND
   unset WAYLAND_DISPLAY
 else
-  echo "  skip  Wayland (sway, grim or wtype missing)"
+  echo "Missing required Wayland prerequisites" >&2; exit 1
 fi
 
 # ---- X11 (Xvfb, winit backend) ----
@@ -411,7 +425,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   x_shot() { import -window root "$1"; }
   # No window manager: give the overlay input focus directly.
   x_key() {
-    if [[ "$1" == FOCUS ]]; then xdotool search --name '^Arcade Find$' windowfocus --sync 2>/dev/null || true; else xdotool key "$1"; fi
+    if [[ "$1" == FOCUS ]]; then xdotool search --class '^dev.arcade.Find$' windowfocus --sync 2>/dev/null || true; else xdotool key "$1"; fi
   }
   x_text() { xdotool type "$1"; }
   x_shelf_rect() {
@@ -426,7 +440,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
     sleep 0.3; xdotool mouseup 1
   }
   x_find_top() {
-    local w; w=$(xdotool search --name '^Arcade Find$' | head -1)
+    local w; w=$(xdotool search --class '^dev.arcade.Find$' | head -1)
     eval "$(xdotool getwindowgeometry --shell "$w")"
     echo "$((X + WIDTH / 2)) $Y"
   }
@@ -434,7 +448,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   link_checks x11 x_shot x_key x_text
   overlay_checks x11 x_shot x_key
 else
-  echo "  skip  X11 (Xvfb or xdotool missing)"
+  echo "Missing required X11 prerequisites" >&2; exit 1
 fi
 
 echo "== $pass passed, $fail failed (screenshots and logs in $OUT)"

@@ -63,7 +63,7 @@ enum Bg {
         channel: Option<String>,
     },
     Status(Option<Value>),
-    Registry(Registry, Vec<(String, AppState)>),
+    Registry(Registry, Vec<(String, AppState)>, Option<String>),
     Ripgrep(Option<find_core::content::Ripgrep>),
     Saved(Result<(), String>),
     Toast(String, Tone),
@@ -85,6 +85,7 @@ struct SettingsApp {
     status: Option<Option<Value>>,
     status_at: Option<Instant>,
     registry: Option<Registry>,
+    registry_error: Option<String>,
     states: Vec<(String, AppState)>,
     ripgrep: Option<Option<find_core::content::Ripgrep>>,
     tx: Sender<Bg>,
@@ -254,6 +255,7 @@ impl SettingsApp {
             status: None,
             status_at: None,
             registry: None,
+            registry_error: None,
             states: Vec::new(),
             ripgrep: None,
             tx,
@@ -329,7 +331,8 @@ impl SettingsApp {
             let reg = Registry::load(&loc);
             let me = link::me();
             let states = app_ids(&reg).into_iter().map(|id| (id.clone(), app_state(&loc, &reg, &id, &me))).collect();
-            let _ = tx.send(Bg::Registry(reg, states));
+            let error = registry_read_error(&loc.registry);
+            let _ = tx.send(Bg::Registry(reg, states, error));
             c.request_repaint();
         });
     }
@@ -444,7 +447,8 @@ impl SettingsApp {
                     self.status = Some(s);
                     self.status_at = Some(Instant::now());
                 }
-                Bg::Registry(r, st) => {
+                Bg::Registry(r, st, error) => {
+                    self.registry_error = error;
                     self.registry = Some(r);
                     self.states = st;
                 }
@@ -501,6 +505,31 @@ impl SettingsApp {
 
 /// The apps the Connected apps page lists: the family, plus any other
 /// installed Arcade app (a new app shows up without a Find update).
+fn registry_read_error(path: &Path) -> Option<String> {
+    let entries = match std::fs::read_dir(path) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return None,
+        Err(error) => return Some(error.to_string()),
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => return Some(error.to_string()),
+        };
+        if entry.path().extension().is_none_or(|ext| ext != "json") {
+            continue;
+        }
+        let bytes = match std::fs::read_to_string(entry.path()) {
+            Ok(bytes) => bytes,
+            Err(error) => return Some(error.to_string()),
+        };
+        if let Err(error) = arcade_link::manifest::ManifestDocument::from_json(&bytes) {
+            return Some(error.to_string());
+        }
+    }
+    None
+}
+
 fn app_ids(reg: &Registry) -> Vec<String> {
     let mut v: Vec<String> = link::apps::known().iter().map(|s| s.to_string()).collect();
     for m in reg.apps() {
@@ -691,8 +720,16 @@ impl SettingsApp {
             kit.notice(ui, "ripgrep isn't installed. Install the \u{201c}ripgrep\u{201d} package to search inside files; Find never downloads it.", Tone::Warn);
         }
 
-        if !self.integration_hints.is_empty() {
-            kit.section_head(ui, "Terminal command");
+        kit.section_head(ui, "Terminal command");
+        if self.integration_hints.is_empty() {
+            kit.list(ui, |ui| {
+                kit.row(ui, "arcade-find", "Use arcade-find --show, --search, --settings or --help in a terminal.", |ui| {
+                    if kit.button_state(ui, "Copy", ButtonKind::Default, true, false, true).clicked() {
+                        self.copy(ctx, "arcade-find --help".into());
+                    }
+                });
+            });
+        } else {
             let hints = self.integration_hints.clone();
             let mut copy = None;
             kit.list(ui, |ui| {
@@ -961,7 +998,19 @@ impl SettingsApp {
             _ => format!("{} files indexed", count(entries)),
         };
         if let Some(err) = e["lastError"].as_str() {
-            kit.notice(ui, err, Tone::Danger);
+            let mut retry = false;
+            let mut details = false;
+            kit.notice_action(ui, "Couldn't finish indexing. Check the folders in Locations, then retry.", Tone::Danger, |ui| {
+                retry = kit.button_state(ui, "Retry", ButtonKind::Default, true, self.rescanning, true).clicked();
+                details = kit.button_state(ui, "Copy details", ButtonKind::Ghost, true, false, true).clicked();
+            });
+            if retry {
+                self.rescanning = true;
+                self.command(ctx, Command::Rescan, None);
+            }
+            if details {
+                self.copy(ctx, err.into());
+            }
             ui.add_space(10.0);
         }
         let now = find_core::now_secs();
@@ -1043,6 +1092,20 @@ impl SettingsApp {
                 .changed();
         });
         kit.section_head(ui, "Apps");
+        if let Some(error) = self.registry_error.clone() {
+            let mut retry = false;
+            let mut details = false;
+            kit.notice_action(ui, "Couldn't read connected apps. Check the registry folder, then retry.", Tone::Danger, |ui| {
+                retry = kit.button_state(ui, "Retry", ButtonKind::Default, true, false, true).clicked();
+                details = kit.button_state(ui, "Copy details", ButtonKind::Ghost, true, false, true).clicked();
+            });
+            if retry {
+                self.refresh_registry(ctx);
+            }
+            if details {
+                self.copy(ctx, error);
+            }
+        }
         if self.registry.is_none() {
             kit.list(ui, |ui| {
                 for _ in 0..3 {

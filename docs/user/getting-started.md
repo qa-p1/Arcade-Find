@@ -44,4 +44,4 @@ Install ripgrep with your package manager, then start a query with **/**, for ex
 
 Find uses **Ctrl+Alt+F** by default. Change it in **Settings → Shortcut** if another app owns it. On Linux Wayland desktops where Find cannot register a shortcut, bind **arcade-find --toggle** in the desktop keyboard settings.
 
-On Hyprland, see the [Hyprland guide](../HYPRLAND.md) for runtime bindings and login behavior. Find never edits your Hyprland configuration.
+On Hyprland, see the [Hyprland guide](https://github.com/qa-p1/Arcade-Find/blob/main/docs/dev/hyprland.md) for runtime bindings and login behavior. Find never edits your Hyprland configuration.

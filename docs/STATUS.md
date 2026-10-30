@@ -1,30 +1,37 @@
 # Status
 
-## 2026-10-30: recovery and verification in progress
+## 2026-10-30: Find 0.5.0 verification in progress
 
-Continuing draft PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
+Continuing PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
 
-- The paused scratch checkout was cleared. Recovered the implementation from
-  the preserved checkout and recorded edits onto the existing PR branch.
-- Link PR #22 is merged and its `tag.yml` created `v0.4.7` at
-  `a30bcc80bffc2c202ee4230f8623fcc45be95223` (run 41002783290).
-  Find now pins that real tag and syncs its kit files with recorded hashes.
-- Earlier evidence: all 48 Settings captures in run 40917884604 were reviewed.
-  Row overlap and long folder names required the shared fix in Link PR #22.
-  This head still needs a new real screenshot matrix and visual review.
-- Recovered fixed page headings, folder titles, Settings singleton/ordered
-  saves, kit install prompt, tray wording/clicks, copy feedback, identifiers,
-  migration and project scaffolding. These are implementation, not verification.
-- A new watcher regression exposed read-event feedback on Linux. Filtering
-  write events fixes the loop; the old handler fails the regression, and all
-  seven focused Settings tests pass locally with the fix. Full CI is pending.
-- The local sandbox rejects private Unix sockets with EPERM. The full native
-  and IPC checks must pass in CI; no blocked check is counted as passed.
-- Known remaining native issue: winit cannot hide a Wayland window with
-  `set_visible(false)`. Its lifecycle repair and compositor regression remain
-  to be recovered and verified before release.
-- Release workflow integration, the beta rehearsal, final native/three-OS
-  checks, updated screenshots and release/Tools verification remain open.
+- Recovered the paused implementation onto the existing branch; source is
+  checkpointed remotely. No completed app is being overhauled again.
+- Link PRs #22 and #23 fixed the real Settings layout and disabled-text bugs.
+  `tag.yml` created v0.4.8 at `390f5ede7d5f448e544cf0768d8a0a4c1946345e`
+  (run 41007600045); both Rust dependencies and synced files use that tag.
+- Settings uses fixed page headings, wrapping paths, singleton focus, one
+  ordered save worker and retryable errors. The watch-loop regression fails
+  the old handler and passes the repair. CI run 41007834210 captured 96
+  top/bottom page views and checked that headings stay fixed while scrolling;
+  visual review of this new matrix is pending.
+- The migration check now uses a mutating non-resident entry point, rather
+  than waiting indefinitely for a background process. The local check passes
+  and verifies the saved shortcut, theme, pins and history.
+- Wayland fallback lifecycle repaired: hidden windows do not paint/map;
+  Hide releases the toplevel role, Show recreates it, and one drag worker
+  retains each active origin safely. A compositor regression checks actual
+  mapping and repeated cycles, including an old-code failure. CI is pending.
+- Local Rustfmt and Clippy are clean. The design script verifies 190 actual
+  renderer contrast pairs, including every file-kind fill in both themes.
+- Project scripts and the new manual release flow are implemented. The old
+  tag-push publisher remains until a draft beta proves the replacement.
+- The local sandbox rejects private Unix sockets with EPERM. Native and IPC
+  checks run in CI; blocked local checks are never recorded as passed.
+- Full native/three-OS installer checks, visual review, updated documentation
+  screenshots, beta rehearsal, stable release and Tools verification remain.
+- Owner desktop checks remain: Hyprland shortcuts, placement, focus timing,
+  tray clicks and physical IME; platform login items and Windows identity;
+  a real Tools self-update on the owner's machine.
 
 ## 2026-10-29: overhaul (FIND.md) in progress, branch `claude/arcade-overhaul-q3xegk`
 
@@ -125,7 +132,7 @@ and builds the AppImage, Inno installer and universal DMG.
 | End to end, Wayland layer shell | `scripts/e2e-linux.sh` in headless Sway 1.9 | pass: indexing, search, filters, hidden files, live add/remove, single instance, one-shot `find.search`, overlay shows centered, keys (Down, Tab, Esc), Enter → `look.preview` and Find hides, mixed selection → `shelf.add` and Find stays open, `--quit` |
 | End to end, Wayland without layer shell (GNOME's path) | same script in headless Sway with `ARCADE_FIND_BACKEND=winit`, the window floating | same checks pass, plus dragging a result onto the real Shelf |
 | End to end, X11 | same script in Xvfb (no window manager) | same checks pass |
-| Link peers | `arcade-link mock` (Arcade Link v0.2.0 CLI) as Look; the **real Arcade Shelf** (`ARCADE_SHELF_BIN`, v0.1.0) | 71/71 (59/59 with mock peers; debug build): a mixed selection lands in Shelf's store as references; a stopped Shelf is launched from its manifest and takes the add; Shelf's `find.show` opens Find with that file selected; results dragged onto Shelf's window land as references from the layer-shell overlay, the winit window on Wayland, and X11 ([SHELF.md](SHELF.md)) |
+| Link peers | `arcade-link mock` (Arcade Link v0.2.0 CLI) as Look; the **real Arcade Shelf** (`ARCADE_SHELF_BIN`, v0.1.0) | 71/71 (59/59 with mock peers; debug build): a mixed selection lands in Shelf's store as references; a stopped Shelf is launched from its manifest and takes the add; Shelf's `find.show` opens Find with that file selected; results dragged onto Shelf's window land as references from the layer-shell overlay, the winit window on Wayland, and X11 ([SHELF.md](dev/shelf.md)) |
 | Ecosystem runner | Arcade Link `tools/e2e.py --only find` (onboarding branch) | 3/3: `find.search` resident and one-shot, `find.show` as Shelf sends it, results into the real Shelf |
 | Shelf's own UI | Arcade Shelf `tst_Ui::actionsMenuDrivesFind` | Clicking Shelf's Actions menu sends `find.show` and `find.search` to a peer serving Find's real manifest; the match lands on the shelf |
 | Settings window | launched under Xvfb, General and Connected apps pages inspected | renders; ripgrep detected |
@@ -186,8 +193,8 @@ measured together.
 
 ## Documents
 
-[README](../README.md) · [Architecture](ARCHITECTURE.md) ·
-[Arcade Link](ARCADE_LINK.md) · [Hyprland](HYPRLAND.md) ·
-[Decisions](DECISIONS.md) · [Arcade Shelf](SHELF.md) ·
+[README](../README.md) · [Architecture](dev/architecture.md) ·
+[Arcade Link](dev/link.md) · [Hyprland](dev/hyprland.md) ·
+[Decisions](dev/decisions.md) · [Arcade Shelf](dev/shelf.md) ·
 [Changelog](../CHANGELOG.md) · [Vendored](../VENDORED.md) ·
 [Third-party notices](../THIRD_PARTY_NOTICES.md)

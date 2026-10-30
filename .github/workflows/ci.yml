@@ -9,6 +9,7 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -25,11 +26,11 @@ jobs:
     name: Settings screenshots (real eframe)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Remove the runner's incomplete pinned toolchain
         run: rustup toolchain uninstall 1.88.0 || true
-      - uses: dtolnay/rust-toolchain@1.88.0
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
           cache-on-failure: true
       - name: Native dependencies
@@ -40,7 +41,7 @@ jobs:
           git clone --depth 1 --branch v0.4.8 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
       - name: Capture settings matrix
         run: python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-settings-ui.py target/debug/arcade-find
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: settings-screenshots
@@ -54,58 +55,59 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-14]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
-      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
         with:
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev
-      - name: Format
-        if: runner.os == 'Linux'
-        run: cargo fmt --all -- --check
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Documentation, shortcuts and vendored checksums
+      - name: Source, lint, documentation, design and isolated tests
+        timeout-minutes: 15
         shell: bash
-        run: |
-          python3 scripts/check-docs.py
-          python3 scripts/check-vendored.py
-      - name: Tests (isolated profile)
-        timeout-minutes: 10
-        shell: bash
-        run: python3 scripts/isolate.py cargo test --workspace --locked
+        run: python3 scripts/check.py --core-only
 
   e2e-linux:
     name: end-to-end (headless sway + Xvfb)
     needs: check
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
-      - uses: dtolnay/rust-toolchain@1.88.0
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       - name: Session tools
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool imagemagick dbus python3-dbus python3-gi
-      - name: Build
-        run: cargo build --release --locked -p arcade-find
-      - name: Arcade Link CLI (mock peers), v0.3.0
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool x11-utils imagemagick dbus python3-dbus python3-gi ripgrep fonts-noto-cjk
+      - name: Build the old backend for the lifecycle regression
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.3.0 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
-          cargo build --release --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
-      - name: Vendored files match Arcade Link
-        run: scripts/check-vendored.sh
-      - name: End-to-end
-        run: ARCADE_LINK_CLI="$RUNNER_TEMP/link/target/release/arcade-link" scripts/e2e-linux.sh target/release/arcade-find target/e2e
-      - name: Tray icon registration (real StatusNotifierWatcher, isolated)
-        run: /usr/bin/python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- /usr/bin/python3 tests/tray-registration.py target/release/arcade-find "$RUNNER_TEMP/link/target/release/arcade-link" find
-      - uses: actions/upload-artifact@v4
+          git fetch --depth 1 origin 041ccef4794ac3c5c9f54b8e901239df6fd4e786
+          git worktree add --detach "$RUNNER_TEMP/before-wayland" 041ccef4794ac3c5c9f54b8e901239df6fd4e786
+          CARGO_TARGET_DIR="$GITHUB_WORKSPACE/target" cargo build --locked --manifest-path "$RUNNER_TEMP/before-wayland/Cargo.toml" -p arcade-find --bin arcade-find
+          cp target/debug/arcade-find "$RUNNER_TEMP/old-wayland-find"
+          echo "ARCADE_FIND_OLD_WAYLAND_BIN=$RUNNER_TEMP/old-wayland-find" >> "$GITHUB_ENV"
+      - name: Build Find and the pinned Link CLI
+        run: |
+          cargo build --locked -p arcade-find --bin arcade-find --example e2e-pointer
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.4.8 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          cargo build --locked --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
+          echo "ARCADE_LINK_DIR=$RUNNER_TEMP/link" >> "$GITHUB_ENV"
+          echo "ARCADE_LINK_CLI=$RUNNER_TEMP/link/target/debug/arcade-link" >> "$GITHUB_ENV"
+      - name: Download and verify the real released Shelf
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/fetch-peer.py qa-p1/Arcade-Shelf "$RUNNER_TEMP/real-shelf"
+          echo "ARCADE_SHELF_BIN=$RUNNER_TEMP/real-shelf/squashfs-root/AppRun" >> "$GITHUB_ENV"
+      - name: Native lifecycle, real tray, layer-shell, fallback and real Shelf drag checks
+        timeout-minutes: 20
+        run: python3 scripts/check.py --native-only --binary target/debug/arcade-find
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: e2e-screenshots
@@ -123,51 +125,37 @@ jobs:
           - { name: macos-universal, os: macos-14 }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
-      - uses: dtolnay/rust-toolchain@1.88.0
-      - uses: Swatinem/rust-cache@v2
+      - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libwayland-dev desktop-file-utils xvfb xdotool dbus
-      - name: Build
-        if: runner.os != 'macOS'
-        run: cargo build --release --locked -p arcade-find
-      - name: Build (universal binary)
-        if: runner.os == 'macOS'
-        run: |
-          rustup target add x86_64-apple-darwin aarch64-apple-darwin
-          cargo build --release --locked -p arcade-find --target aarch64-apple-darwin
-          cargo build --release --locked -p arcade-find --target x86_64-apple-darwin
-          mkdir -p target/release
-          lipo -create -output target/release/arcade-find target/aarch64-apple-darwin/release/arcade-find target/x86_64-apple-darwin/release/arcade-find
-      - name: AppImage
-        if: runner.os == 'Linux'
-        run: packaging/linux/build-appimage.sh target/release/arcade-find dist
-      - name: AppImage install and uninstall (isolated profile, CI only)
-        if: runner.os == 'Linux'
-        run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.3.0 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
-          python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/verify-appimage.py dist/Arcade-Find-x86_64.AppImage
-      - name: Installer (Inno Setup, per-user)
+      - name: Inno Setup compiler
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           choco install innosetup --no-progress -y
-          target\release\arcade-find.exe --export-icon target\release\arcade-find.ico
-          $v = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages | Where-Object name -eq 'arcade-find' | Select-Object -ExpandProperty version
-          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" "/DVersion=$v" "/DSource=..\..\target\release" packaging\windows\arcade-find.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup installation did not complete' }
+      - name: Build installers
+        shell: bash
+        run: python3 scripts/package.py
+      - name: AppImage install, repair and uninstall (isolated)
+        if: runner.os == 'Linux'
+        run: |
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.4.8 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/verify-appimage.py dist/Arcade-Find-x86_64.AppImage
       - name: Windows silent install/uninstall (CI account only)
         if: runner.os == 'Windows'
         shell: pwsh
         run: packaging/windows/verify.ps1
-      - name: App bundle and DMG
+      - name: DMG install (CI account only)
         if: runner.os == 'macOS'
         run: |
-          v=$(cargo metadata --no-deps --format-version 1 | python3 -c 'import json,sys; print([p["version"] for p in json.load(sys.stdin)["packages"] if p["name"]=="arcade-find"][0])')
-          packaging/macos/build-app.sh target/release/arcade-find "$v" universal dist
+          v=$(python3 scripts/check-version.py)
           packaging/macos/verify.sh "dist/Arcade-Find-$v-universal.dmg"
           rm -rf "dist/Arcade Find.app"
       - name: Smoke test
@@ -175,7 +163,7 @@ jobs:
         run: |
           target/release/arcade-find --version
           target/release/arcade-find --arcade-manifest | python3 -c 'import json,sys; m=json.load(sys.stdin); assert m["id"]=="arcade.find" and any(a["id"]=="find.search" for a in m["actions"])'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: package-${{ matrix.name }}
           path: dist/*
@@ -185,8 +173,8 @@ jobs:
     needs: package
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: package-*
           path: dist
@@ -198,7 +186,7 @@ jobs:
             --notes "https://github.com/qa-p1/Arcade-Find/blob/${GITHUB_SHA}/CHANGELOG.md" --windows-installer inno dist
           python3 -c 'import json; m=json.load(open("dist/arcade-release.json")); assert all(a["installArgs"] == ["--install", "--silent"] for a in m["assets"] if a["kind"] == "appimage")'
           cat dist/arcade-release.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: release-manifest
           path: |
@@ -207,19 +195,19 @@ jobs:
 
   publish:
     name: publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: [release-manifest, e2e-linux]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: package-*
           path: dist
           merge-multiple: true
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: release-manifest
           path: dist

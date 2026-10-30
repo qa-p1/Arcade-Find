@@ -78,6 +78,7 @@ struct Shown {
     viewport: Option<wp_viewport::WpViewport>,
     fractional: Option<wp_fractional_scale_v1::WpFractionalScaleV1>,
     configured: bool,
+    shown_at: Option<Instant>,
     /// The logical size last requested.
     size: (u32, u32),
 }
@@ -284,13 +285,13 @@ impl Wl {
         let surface = self.compositor.create_surface(&self.qh);
         let fractional = self.fractional_mgr.as_ref().map(|m| m.get_fractional_scale(&surface, &self.qh, ()));
         let viewport = self.viewporter.as_ref().map(|v| v.get_viewport(&surface, &self.qh, ()));
-        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some("arcade-find"), None);
+        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some(crate::os::APP_ID), None);
         layer.set_keyboard_interactivity(KeyboardInteractivity::Exclusive);
         layer.set_exclusive_zone(-1);
         let size = self.logical_size();
         layer.set_size(size.0, size.1);
         layer.commit();
-        self.shown = Some(Shown { layer, viewport, fractional, configured: false, size });
+        self.shown = Some(Shown { layer, viewport, fractional, configured: false, shown_at: None, size });
     }
 
     fn hide(&mut self) {
@@ -378,6 +379,9 @@ impl Wl {
         self.set_input_region(surface);
         if buffer.attach_to(surface).is_ok() {
             s.layer.commit();
+            if let Some(s) = self.shown.as_mut() {
+                s.shown_at.get_or_insert(Instant::now());
+            }
         }
         self.svc.note_ui(&self.overlay);
     }
@@ -394,7 +398,7 @@ impl Wl {
     }
 
     fn key(&mut self, event: WlKeyEvent) {
-        crate::debug!("wayland key {:?} shown={}", event.keysym, self.shown.is_some());
+        crate::debug!("wayland key event (shown={})", self.shown.is_some());
         if self.shown.is_none() {
             return;
         }
@@ -558,7 +562,8 @@ impl KeyboardHandler for Wl {
             if let Some(t) = self.leave_timer.take() {
                 self.handle.remove(t);
             }
-            let timer = Timer::from_duration(Duration::from_millis(150));
+            let Some(delay) = super::focus_loss_delay(self.shown.as_ref().and_then(|s| s.shown_at), Instant::now()) else { return };
+            let timer = Timer::from_duration(delay);
             self.leave_timer = self
                 .handle
                 .insert_source(timer, |_, _, st: &mut Wl| {
