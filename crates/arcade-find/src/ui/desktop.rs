@@ -26,6 +26,8 @@ struct App {
     svc: Arc<Service>,
     overlay: Overlay,
     renderer: Renderer,
+    accessible: super::accessibility::Shared,
+    accessibility: Option<accesskit_winit::Adapter>,
     window: Option<Arc<Window>>,
     surface: Option<Surface>,
     mods: Mods,
@@ -70,6 +72,8 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
     let mut renderer = Renderer::new();
     renderer.radius = 0.0; // The opaque fallback keeps square corners.
     let mut app = App {
+        accessible: super::accessibility::Shared::new(&overlay),
+        accessibility: None,
         svc,
         overlay,
         renderer,
@@ -123,6 +127,13 @@ impl App {
             return Ok(());
         }
         let window = Arc::new(el.create_window(attributes()).map_err(|e| e.to_string())?);
+        self.accessibility = Some(accesskit_winit::Adapter::with_direct_handlers(
+            el,
+            &window,
+            self.accessible.clone(),
+            super::accessibility::Actions(self.svc.clone()),
+            super::accessibility::Deactivated,
+        ));
         let context = softbuffer::Context::new(window.clone()).map_err(|e| e.to_string())?;
         let surface = softbuffer::Surface::new(&context, window.clone()).map_err(|e| e.to_string())?;
         #[cfg(target_os = "linux")]
@@ -194,6 +205,10 @@ impl App {
         }
         self.svc.set_visible(false);
         self.svc.note_ui(&self.overlay);
+        self.accessible.publish(&self.overlay, 1.0, 0.0);
+        if let Some(adapter) = &mut self.accessibility {
+            adapter.update_if_active(|| self.accessible.snapshot());
+        }
         // winit cannot hide a Wayland toplevel. Release its role, then create
         // a fresh one on Show. The drag helper keeps an active origin alive.
         #[cfg(target_os = "linux")]
@@ -201,6 +216,7 @@ impl App {
         #[cfg(not(target_os = "linux"))]
         let release = false;
         if release {
+            self.accessibility = None;
             self.surface = None;
             self.window = None;
             #[cfg(target_os = "linux")]
@@ -279,6 +295,12 @@ impl App {
         }
         let ready = buf.present().is_ok();
         self.svc.note_ui(&self.overlay);
+        if ready {
+            self.accessible.publish(&self.overlay, scale, 0.0);
+            if let Some(adapter) = &mut self.accessibility {
+                adapter.update_if_active(|| self.accessible.snapshot());
+            }
+        }
         ready
     }
 
@@ -345,6 +367,7 @@ impl ApplicationHandler<UiMsg> for App {
         {
             self.wl_drag = None;
         }
+        self.accessibility = None;
         self.surface = None;
         self.window = None;
     }
@@ -401,6 +424,9 @@ impl ApplicationHandler<UiMsg> for App {
     fn window_event(&mut self, _el: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
         if self.window().is_none_or(|window| window.id() != id) {
             return;
+        }
+        if let (Some(adapter), Some(window)) = (&mut self.accessibility, &self.window) {
+            adapter.process_event(window, &event);
         }
         if matches!(event, WindowEvent::Focused(_) | WindowEvent::CloseRequested | WindowEvent::Resized(_)) {
             crate::debug!("winit window lifecycle {event:?}");

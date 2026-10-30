@@ -1,5 +1,6 @@
 //! The overlay: model (state + keys), renderer, and window backends.
 
+pub mod accessibility;
 pub mod desktop;
 pub mod dnd;
 #[cfg(target_os = "macos")]

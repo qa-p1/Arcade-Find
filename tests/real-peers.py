@@ -89,6 +89,11 @@ def main():
                 until(lambda: command(cli, 'status', 'arcade.' + name, check=False).returncode == 0, 'real ' + name + ' did not register')
                 document = json.loads((Path(env['ARCADE_HOME']) / 'apps' / ('arcade.' + name + '.json')).read_text())
                 assert document['version'] == '0.4.0', (name, document['version'])
+            def box_conversion_ready():
+                document = json.loads((Path(env['ARCADE_HOME']) / 'apps/arcade.box.json').read_text())
+                return any(item['id'] == 'box:arcade.image.convert#webp' and item.get('available', True)
+                           for item in document['actions'])
+            until(box_conversion_ready, 'Box did not find the required libvips engine')
             show_result()
             xdo('key', 'Return')
             until(lambda: window('handoff-image.png'), 'Find Enter did not open the real selected image in Look')
@@ -117,6 +122,14 @@ def main():
             (output / 'result.json').write_text(json.dumps({'look': '0.4.0', 'box': '0.4.0',
                 'lookPreview': image.name, 'boxConversion': '24x16 WebP', 'boxIsland': True,
                 'sourceUnchanged': True}, indent=2) + '\n')
+        except BaseException:
+            (output / 'failure-state.json').write_text(json.dumps(status(), indent=2) + '\n')
+            for name in peers:
+                source = Path(env['ARCADE_HOME']) / 'apps' / ('arcade.' + name + '.json')
+                if source.exists():
+                    (output / (name + '-manifest.json')).write_bytes(source.read_bytes())
+            subprocess.run(['import', '-window', 'root', str(output / 'failure.png')], check=False)
+            raise
         finally:
             command(find, '--quit', check=False)
             for name in peers:

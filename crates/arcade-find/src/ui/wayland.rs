@@ -102,6 +102,8 @@ struct Wl {
     svc: Arc<Service>,
     overlay: Overlay,
     renderer: Renderer,
+    accessible: super::accessibility::Shared,
+    accessibility: accesskit_unix::Adapter,
     registry_state: RegistryState,
     seat_state: SeatState,
     output_state: OutputState,
@@ -177,7 +179,11 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
     svc.configure(&mut overlay);
     let mut renderer = Renderer::new();
     renderer.shadow = metrics::SHADOW;
+    let accessible = super::accessibility::Shared::new(&overlay);
+    let accessibility = accesskit_unix::Adapter::new(accessible.clone(), super::accessibility::Actions(svc.clone()), super::accessibility::Deactivated);
     let mut st = Wl {
+        accessible,
+        accessibility,
         svc: svc.clone(),
         overlay,
         renderer,
@@ -314,6 +320,9 @@ impl Wl {
         }
         self.svc.set_visible(false);
         self.svc.note_ui(&self.overlay);
+        self.accessible.publish(&self.overlay, 1.0, metrics::SHADOW);
+        self.accessibility.update_if_active(|| self.accessible.snapshot());
+        self.accessibility.update_window_focus_state(false);
         self.has_focus = false;
         self.frac_scale = None;
     }
@@ -381,6 +390,8 @@ impl Wl {
         self.set_input_region(surface);
         if buffer.attach_to(surface).is_ok() {
             s.layer.commit();
+            self.accessible.publish(&self.overlay, scale, metrics::SHADOW);
+            self.accessibility.update_if_active(|| self.accessible.snapshot());
             if let Some(s) = self.shown.as_mut() {
                 s.shown_at.get_or_insert(Instant::now());
             }
@@ -543,6 +554,7 @@ impl KeyboardHandler for Wl {
     fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_keyboard::WlKeyboard, surface: &wl_surface::WlSurface, _: u32, _: &[u32], _: &[Keysym]) {
         if self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = true;
+            self.accessibility.update_window_focus_state(true);
             if let Some(t) = self.leave_timer.take() {
                 self.handle.remove(t);
             }
@@ -557,6 +569,7 @@ impl KeyboardHandler for Wl {
         // keyboard device changes).
         if self.has_focus && self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = false;
+            self.accessibility.update_window_focus_state(false);
             if self.drag.is_some() {
                 // Some compositors move keyboard focus while a drag is over
                 // another window; the overlay stays until the drag ends.

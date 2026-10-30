@@ -1,49 +1,45 @@
 # Status
 
-## 2026-10-30: Find 0.5.0 final native verification in progress
+## 2026-10-30: Find 0.5.0 final verification in progress
 
-Continuing PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
+Continuing PR #11 on `claude/arcade-overhaul-q3xegk`. Not merged or released.
 
-- CI 41042829030 passed source/tests and all installer checks on three OSes.
-  Its native suite passed Settings lifecycle/geometry/live themes, all nine
-  tray checks, the eight-cycle Wayland fallback regression and real Shelf
-  handoff/background relaunch. The earlier shutdown crash is fixed by joining
-  the borrowed-display drag worker before the event loop destroys its display.
-- That native suite exposed covered Shelf drop targets and missing XCB
-  dependencies. Those test-environment repairs still need a green native run.
-  File-list paste had a real implementation gap; the model regression passes,
-  and the real clipboard check is pending after correcting a fixture query
-  that also matched its parent folder. No native clipboard pass is claimed.
+- Run [41045708438](https://github.com/qa-p1/Arcade-Find/actions/runs/41045708438)
+  passed every job: Linux, Windows and macOS source checks/tests; 96 real
+  Settings captures; native lifecycle/live themes/geometry; 16 install-dialog
+  and four welcome captures; real clipboard/file actions; nine tray checks;
+  eight Wayland fallback mapping/recreate/shutdown cycles; real Shelf handoff,
+  background relaunch and file drops on all three backends; 72 end-to-end
+  assertions; all three installers and the release manifest.
+- Later run [41049863733](https://github.com/qa-p1/Arcade-Find/actions/runs/41049863733)
+  passed three-OS source checks, the Settings matrix and Windows/macOS installer
+  checks. Native long-name tooltips passed in both themes at 125%; both captures
+  were inspected. The real Look 0.4.0 preview also worked. The added real Box
+  conversion check needs libvips in its runner; the new previous-release upgrade
+  check exposed a missing XKB X11 library. Both prerequisites are repaired in
+  CI; neither new check is claimed passed yet.
+- Find now pins and syncs Link v0.4.11 at
+  `047b686d9b02de6dcf7bdfa77c85bf7eefbf7264`. Shared fixes shipped through Link
+  PRs #22–#26: measured row layout, disabled-text and checkbox contrast, welcome
+  and disclosure controls, and the neutral welcome brand mark. Link's PR and
+  merge checks were read before its immutable tags were dispatched.
+- The overlay now supplies a native accessibility tree on both backends, full
+  names/paths, editable search, safe focus actions and polite result-count
+  announcements. Settings enables eframe's AccessKit support. Native AT-SPI
+  evidence is pending; compilation alone is not a screen-reader pass.
+- Full native/IPC checks cannot run in this local environment: private Unix
+  sockets return EPERM. CI runs those checks in Link's isolated D-Bus/Xvfb and
+  headless Sway runner. No local native pass is claimed.
 
-- Link PRs #22/#23 fixed measured row layout and disabled-text contrast.
-  All 96 Settings page top/bottom captures from run 41007834210 were
-  inspected in both themes, both sizes and both text scales. Repeated-row
-  warnings and overlap are gone. One primary/secondary action ordering issue
-  was found and fixed in the app.
-- Link PR #24 supplies welcome/disclosure components and pair descriptions.
-  Its full CI passed on the PR and merge. `tag.yml` created v0.4.9 at
-  `124d44178909601afc20e957a6a37f7fc6df660f`; Find pins and syncs that tag.
-- Current local checks: Rustfmt/Clippy zero warnings, eight focused Settings
-  tests, docs/shortcut generation, 24 vendored hashes, and 190 contrast pairs
-  from the actual renderer palette pass. Full native/IPC checks cannot run
-  locally because private Unix sockets are denied with EPERM; CI runs them.
-- CI run 41008814273: Linux, Windows and macOS source/test jobs passed.
-  Linux AppImage install/repair/re-exec/uninstall and Windows installer checks
-  passed. Mac packaging built the DMG but failed in a stale cleanup trap;
-  a new regression reproduces that failure and passes after the repair.
-- That run's native Settings captures include populated Index pages, singleton
-  focus, close/reopen and live themes. The suite stopped at an xmessage focus
-  probe: Xt does not publish `_NET_WM_PID`. The unique-title lookup is fixed;
-  this native job is not counted as passed. New geometry, install-dialog and
-  lifecycle checks still need CI and visual review.
-- Welcome, Notifications, common keyboard commands and local per-monitor
-  window records complete remaining shared conventions. No overlay capability
-  or useful app feature was removed.
-- Beta rehearsal, final native/three-OS installer checks, refreshed README/
-  guide screenshots, stable publication and Tools verification remain open.
-- Owner-only desktop checks: Hyprland shortcuts, placement, 100 ms warm-open
-  budget, focus timing, tray clicks and physical IME; platform login items,
-  macOS permissions and Windows identity; actual Tools self-update.
+Still required: the expanded suite green on the final head, screenshot review
+and refreshed guide images, complete spec acceptance evidence, ready PR and merge,
+a verified draft beta through the new release workflow, stable release and real
+Tools 0.4.1 update-decision/download verification.
+
+Physical-desktop checks remain explicit: Hyprland global shortcut, placement,
+warm-open latency, focus/tray interaction, fcitx5/dead-key input; Windows/macOS
+login items, macOS permission re-grant, Windows AppUserModelID; and an actual
+owner-machine update through Tools. CI cannot substitute for those desktops.
 
 ## 2026-10-29: overhaul (FIND.md) in progress, branch `claude/arcade-overhaul-q3xegk`
 

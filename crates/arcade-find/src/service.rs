@@ -49,6 +49,7 @@ pub enum UiMsg {
     Refresh,
     Paste(String),
     PasteFiles(Vec<PathBuf>),
+    Accessibility(accesskit::ActionRequest),
     /// Settings were reloaded: re-read display settings.
     Settings,
     /// The system theme changed.
@@ -902,6 +903,11 @@ impl Service {
                     o.paste_files(rows);
                     self.search.latest.store(o.seq, Ordering::SeqCst);
                     out.show = true;
+                }
+            }
+            UiMsg::Accessibility(request) => {
+                for effect in crate::ui::accessibility::apply(o, request, &**self) {
+                    out.merge(self.effect(o, effect));
                 }
             }
             UiMsg::Settings => {

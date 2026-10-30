@@ -96,6 +96,7 @@ def main():
                 overlay = until(lambda: window(pid, 'Search — Arcade Find'), 'overlay did not map')
                 xdo('windowfocus', '--sync', overlay)
                 time.sleep(.45)
+                xdo('mousemove', 0, 0)
                 capture(overlay, 'overlay-' + theme)
                 command('--hide')
                 if not memory:
