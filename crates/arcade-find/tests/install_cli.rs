@@ -128,14 +128,15 @@ fn legacy_folders_are_verified_before_removal_and_keep_shortcuts_and_history() {
     std::fs::write(config.join("settings.json"), serde_json::to_vec(&settings).unwrap()).unwrap();
     std::fs::write(data.join("pins.json"), b"[\"kept\"]").unwrap();
     std::fs::write(data.join("frecency.json"), b"history fixture").unwrap();
-    // Startup performs migration before attempting to create a display. This
-    // fixture deliberately has no display; its exit is not a native UI pass.
+    // Every mutating entry point migrates before IPC. Quit exercises that
+    // startup path without creating a background resident that never exits.
+    // No display is present, so this is not a native UI check.
     let output = fixture
         .command(&fixture.binary)
         .env_remove("ARCADE_FIND_HOME")
         .env("XDG_CACHE_HOME", fixture.root.join("cache"))
         .env("ARCADE_NO_INSTALL_PROMPT", "1")
-        .arg("--background")
+        .arg("--quit")
         .output()
         .unwrap();
     let migrated: serde_json::Value = serde_json::from_slice(&std::fs::read(fixture.root.join("config/arcade/find/settings.json")).unwrap()).unwrap();
