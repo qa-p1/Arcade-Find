@@ -32,7 +32,10 @@ checksums = dict((name.lstrip('*'), digest) for digest, name in (line.split(None
 for asset in manifest['assets']:
     path = args.output / asset['file']
     with path.open('rb') as stream:
-        digest = hashlib.file_digest(stream, 'sha256').hexdigest()
+        hasher = hashlib.sha256()
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            hasher.update(block)
+        digest = hasher.hexdigest()
     assert digest == asset['sha256'] == checksums[path.name], path.name
     assert path.stat().st_size == asset['size'], path.name
 print(f'Verified all {args.channel} installers and release metadata; nothing published.')

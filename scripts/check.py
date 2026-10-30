@@ -42,17 +42,22 @@ def main():
     env = dict(os.environ, ARCADE_LINK_CLI=str(cli))
     old = os.environ.get('ARCADE_FIND_OLD_WAYLAND_BIN')
     if old:
-        regression = subprocess.run([sys.executable, str(link / 'tools/e2e.py'), 'run', '--',
-                                     sys.executable, 'tests/clipboard-paste.py', old],
-                                    env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        evidence = ROOT / 'target/e2e/clipboard-old-regression.log'
-        evidence.parent.mkdir(parents=True, exist_ok=True)
-        evidence.write_text(regression.stdout)
-        if regression.returncode == 0 or 'file-list paste did not restore the copied files' not in regression.stdout:
-            raise SystemExit('The released clipboard regression was not reproduced; see ' + str(evidence))
-        print('Old clipboard regression reproduced: copied file references were not pasted.')
+        for script, expected, label in (
+            ('clipboard-paste.py', 'file-list paste did not restore the copied files', 'clipboard'),
+            ('hover-tooltip.py', 'full filename tooltip did not appear', 'tooltip'),
+        ):
+            regression = subprocess.run([sys.executable, str(link / 'tools/e2e.py'), 'run', '--',
+                                         sys.executable, 'tests/' + script, old],
+                                        env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            evidence = ROOT / ('target/e2e/' + label + '-old-regression.log')
+            evidence.parent.mkdir(parents=True, exist_ok=True)
+            evidence.write_text(regression.stdout)
+            if regression.returncode == 0 or expected not in regression.stdout:
+                raise SystemExit('The old ' + label + ' regression was not reproduced; see ' + str(evidence))
+            print('Old ' + label + ' regression reproduced: ' + expected + '.')
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/clipboard-paste.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/file-actions.py', str(binary), env=env)
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/hover-tooltip.py', str(binary), env=env)
     for peer in ('LOOK', 'BOX'):
         if not os.environ.get('ARCADE_' + peer + '_BIN'):
             raise SystemExit('The real released ' + peer.title() + ' is required for peer verification.')

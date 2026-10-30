@@ -366,6 +366,9 @@ pub struct Overlay {
     pub empty_open: bool,
     /// After results arrive, select this path (find.show "reveal").
     pub want_select: Option<PathBuf>,
+    /// A delayed full-name tooltip for the result under the pointer.
+    pub hovered_row: Option<(usize, Instant)>,
+    hover_ready: bool,
 }
 
 impl Default for Overlay {
@@ -391,6 +394,8 @@ impl Default for Overlay {
             recent_on_open: false,
             empty_open: false,
             want_select: None,
+            hovered_row: None,
+            hover_ready: false,
         }
     }
 }
@@ -398,6 +403,7 @@ impl Default for Overlay {
 impl Overlay {
     /// Opens with an optional prefilled query.
     pub fn show(&mut self, query: Option<&str>, reveal: Option<PathBuf>) -> Vec<Effect> {
+        self.hover(None);
         self.visible = true;
         self.mode = Mode::Results;
         self.nav = false;
@@ -424,6 +430,7 @@ impl Overlay {
     }
 
     pub fn hide(&mut self) {
+        self.hover(None);
         self.visible = false;
         self.mode = Mode::Results;
         self.rows.clear();
@@ -441,6 +448,7 @@ impl Overlay {
 
     /// The query changed: search again (or collapse to the bar).
     fn requery(&mut self) -> Vec<Effect> {
+        self.hover(None);
         self.nav = false;
         self.anchor = None;
         self.sel = 0;
@@ -466,6 +474,7 @@ impl Overlay {
         if seq != self.seq {
             return false;
         }
+        self.hover(None);
         // Keep the selection on the same item when results refresh in place.
         let keep = if self.shown_seq == seq || self.nav { self.rows.get(self.sel).map(|r| r.path.clone()) } else { None };
         self.shown_seq = seq;
@@ -682,7 +691,29 @@ impl Overlay {
                 self.toast = None;
             }
         }
-        self.toast.as_ref().filter(|t| t.kind != ToastKind::Error).map(|t| t.until)
+        if self.hovered_row.is_some_and(|(_, until)| now >= until) {
+            self.hover_ready = true;
+        }
+        self.feedback_deadline()
+    }
+
+    pub fn hover(&mut self, row: Option<usize>) -> bool {
+        let row = row.filter(|index| matches!(self.mode, Mode::Results) && *index < self.rows.len());
+        if row == self.hovered_row.map(|(index, _)| index) {
+            return false;
+        }
+        self.hovered_row = row.map(|index| (index, Instant::now() + Duration::from_millis(arcade_link::design::motion::TOOLTIP_DELAY_MS)));
+        self.hover_ready = false;
+        true
+    }
+
+    pub fn tooltip_row(&self) -> Option<&Row> {
+        self.hovered_row.filter(|_| self.hover_ready && self.visible && matches!(self.mode, Mode::Results)).and_then(|(index, _)| self.rows.get(index))
+    }
+
+    pub fn feedback_deadline(&self) -> Option<Instant> {
+        let toast = self.toast.as_ref().filter(|t| t.kind != ToastKind::Error).map(|t| t.until);
+        toast.into_iter().chain(self.hovered_row.filter(|_| !self.hover_ready).map(|(_, until)| until)).min()
     }
 
     /// Text an input method is composing; drawn at the caret until committed.
@@ -840,6 +871,7 @@ impl Overlay {
     }
 
     pub fn key(&mut self, ev: &KeyEvent, ctx: &dyn Context) -> Vec<Effect> {
+        self.hover(None);
         if self.toast.as_ref().is_some_and(|t| t.kind == ToastKind::Error) {
             self.toast = None;
         }
@@ -1194,6 +1226,28 @@ mod tests {
         o.paste_files(vec![row("one.txt")]);
         assert!(o.anchor.is_none());
         assert_eq!(o.targets().len(), 1);
+    }
+
+    #[test]
+    fn full_name_tooltip_waits_for_hover_and_never_keeps_an_idle_timer() {
+        let mut o = Overlay::default();
+        o.show(Some("café"), None);
+        o.set_results(o.seq, vec![row("café-日本-very-long-name.txt")], ResultsInfo::default());
+        assert!(o.hover(Some(0)));
+        let until = o.feedback_deadline().unwrap();
+        assert!(o.tooltip_row().is_none());
+        o.tick(until - Duration::from_millis(1));
+        assert!(o.tooltip_row().is_none(), "do not show before the kit tooltip delay");
+        o.tick(until);
+        assert_eq!(o.tooltip_row().unwrap().name, "café-日本-very-long-name.txt");
+        assert!(o.feedback_deadline().is_none(), "a visible tooltip does not poll");
+        o.key(&KeyEvent::new(Key::Down), &Ctx(false));
+        assert!(o.tooltip_row().is_none(), "keyboard navigation dismisses it");
+        o.hover(Some(0));
+        let until = o.feedback_deadline().unwrap();
+        o.tick(until);
+        o.hide();
+        assert!(o.tooltip_row().is_none() && o.feedback_deadline().is_none());
     }
 
     fn results(o: &mut Overlay, n: usize) {

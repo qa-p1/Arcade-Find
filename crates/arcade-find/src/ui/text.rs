@@ -118,6 +118,19 @@ impl Text {
         self.line(text, style, &[]).width
     }
 
+    /// Wrap a name at shaped glyph boundaries, retaining every character.
+    pub fn wrap_lines(&mut self, text: &str, style: Style, width: f32) -> Vec<String> {
+        let mut remaining = text;
+        let mut lines = Vec::new();
+        while !remaining.is_empty() {
+            let (_, cut) = self.fit_end(remaining, style, width);
+            let cut = if cut == 0 { remaining.chars().next().unwrap().len_utf8() } else { cut };
+            lines.push(remaining[..cut].to_string());
+            remaining = &remaining[cut..];
+        }
+        lines
+    }
+
     /// `text` shortened with "…" at the end to fit `max` (returns the cut byte length).
     pub fn fit_end(&mut self, text: &str, style: Style, max: f32) -> (String, usize) {
         let ell = self.width("…", style);

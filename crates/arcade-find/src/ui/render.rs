@@ -2,7 +2,7 @@
 //! creates a GPU context). Template B, launcher variant: every size, radius
 //! and type style comes from the Arcade design kit.
 
-use arcade_link::design::{icon as kit_icon, radius, size, text as kit, PathOp, TypeStyle};
+use arcade_link::design::{icon as kit_icon, radius, size, text as kit, PathOp, TypeStyle, SPACE};
 use resvg::tiny_skia::{Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, PixmapPaint, Rect, Stroke, Transform};
 
 use super::icons::Icons;
@@ -186,6 +186,20 @@ impl Renderer {
         Some(pm)
     }
 
+    fn tooltip_layout(&mut self, o: &Overlay, p: &Palette, s: f32) -> Option<(Rect, Vec<String>)> {
+        let row = o.tooltip_row()?;
+        let st = style(kit::CAPTION, kit::CAPTION.weight, p.text, s);
+        let pad = SPACE[3] * s;
+        let available = (m::WIDTH - SPACE[8] * 2.0) * s;
+        let lines = self.text.wrap_lines(&row.name, st, available - pad * 2.0);
+        let width = lines.iter().map(|line| self.text.width(line, st)).fold(0.0, f32::max) + pad * 2.0;
+        let height = lines.len() as f32 * kit::CAPTION.line * s + SPACE[2] * 2.0 * s;
+        let (index, _) = o.hovered_row?;
+        let row_y = o.layout().into_iter().find_map(|(y, entry)| matches!(entry, Entry::Row(i) if i == index).then_some(y))?;
+        let y = ((m::LIST_TOP + row_y + m::ROW + SPACE[1]) * s).min((o.height() - SPACE[1]) * s - height).max(SPACE[1] * s);
+        Some((Rect::from_xywh(SPACE[8] * s, y, width, height)?, lines))
+    }
+
     fn panel(&mut self, o: &Overlay, p: &Palette, s: f32, now: i64, previews: bool) -> Option<Pixmap> {
         let w = (m::WIDTH * s).round();
         let h = (o.height() * s).round();
@@ -210,6 +224,15 @@ impl Renderer {
             match &o.toast {
                 Some(t) => self.toast(&mut pm, &t.text, t.kind, y, p, s),
                 None => self.footer(&mut pm, o, previews, y, p, s),
+            }
+        }
+        if let Some((rect, lines)) = self.tooltip_layout(o, p, s) {
+            fill_round(&mut pm, rect.x(), rect.y(), rect.width(), rect.height(), radius::SM * s, p.panel);
+            stroke_round(&mut pm, rect.x(), rect.y(), rect.width(), rect.height(), radius::SM * s, p.border, s);
+            let st = style(kit::CAPTION, kit::CAPTION.weight, p.text, s);
+            let clip = (rect.left() as i32, rect.top() as i32, rect.right() as i32, rect.bottom() as i32);
+            for (index, line) in lines.iter().enumerate() {
+                self.text.draw(&mut pm, line, st, &[], rect.left() + SPACE[3] * s, rect.top() + SPACE[2] * s + index as f32 * kit::CAPTION.line * s, clip);
             }
         }
         Some(pm)
@@ -789,6 +812,30 @@ mod tests {
     use crate::ui::model::{ResultsInfo, Row};
     use find_core::kind::Kind;
     use std::path::PathBuf;
+
+    #[test]
+    fn long_unicode_name_tooltips_keep_all_text_inside_the_small_overlay() {
+        for palette in [Palette::light(), Palette::dark()] {
+            for scale in [1.0, 1.25] {
+                let mut renderer = Renderer::new();
+                let mut overlay = Overlay::default();
+                overlay.show(Some("long"), None);
+                let name = "café-日本-wide-name-".repeat(10) + ".txt";
+                overlay.set_results(overlay.seq, vec![row(&name, vec![])], ResultsInfo::default());
+                overlay.hover(Some(0));
+                overlay.tick(overlay.feedback_deadline().unwrap());
+                let (rect, lines) = renderer.tooltip_layout(&overlay, &palette, scale).unwrap();
+                assert_eq!(lines.concat(), name, "a tooltip must expose the complete name");
+                assert!(lines.len() > 1, "the long name wraps instead of clipping");
+                assert!(rect.left() >= 0.0 && rect.right() <= m::WIDTH * scale);
+                assert!(rect.top() >= 0.0 && rect.bottom() <= overlay.height() * scale);
+                let st = style(kit::CAPTION, kit::CAPTION.weight, palette.text, scale);
+                for line in lines {
+                    assert!(renderer.text.width(&line, st) <= rect.width() - SPACE[3] * 2.0 * scale + 0.1);
+                }
+            }
+        }
+    }
 
     fn row(name: &str, hl: Vec<(usize, usize)>) -> Row {
         Row {

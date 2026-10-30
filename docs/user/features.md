@@ -51,7 +51,7 @@ On macOS, Cmd replaces Ctrl for primary shortcuts.
 
 ## Change how Find looks and starts
 
-Settings include theme, start-at-login, result rows, whether recent items appear on open, hidden-file defaults, content search, the global shortcut, indexed locations, exclusions, and connected apps.
+Settings include Appearance (System / Light / Dark), Start at login, notifications, result rows, whether recent items appear on open, hidden-file defaults, content search, the terminal command, global shortcut, indexed locations, exclusions, and Connected apps. Reopen the three-step welcome from General at any time. Changes apply immediately. Settings runs separately and closes without quitting the background search.
 
 ## Use the command line
 
@@ -59,7 +59,7 @@ The **arcade-find** command can show or hide the overlay, run a name search, rep
 
 ## Use Find from the Arcade tray
 
-While Tools hosts Find, its submenu offers Open Find, Open Settings, Rescan index, Restart and Quit. Find keeps working independently. When Tools quits or crashes its own tray icon returns; an announced Tools restart waits up to five seconds to avoid a flash. Turning off **Connect with other Arcade apps** always restores Find’s icon.
+While Tools hosts Find, its submenu offers **Open Arcade Find**, **Settings**, **Rescan index**, **Restart Arcade Find** and **Quit Arcade Find**. Find keeps working independently. When Tools quits or crashes its own tray icon returns; an announced Tools restart waits up to five seconds to avoid a flash. Turning off **Connect with other Arcade apps** always restores Find’s icon.
 
 ## Back up and restore preferences
 

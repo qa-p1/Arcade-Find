@@ -460,8 +460,27 @@ impl ApplicationHandler<UiMsg> for App {
                 if self.press.as_ref().is_some_and(|p| p.moved_past(self.cursor)) {
                     self.start_drag();
                 }
+                let row = self.row_at(self.cursor.1);
+                if self.overlay.hover(row.filter(|_| self.press.is_none() && !self.dragging())) {
+                    self.resize_and_redraw();
+                }
+                if let Some(window) = self.window() {
+                    window.set_cursor(if row.is_some() {
+                        winit::window::CursorIcon::Pointer
+                    } else if self.cursor.1 < metrics::BAR as f64 {
+                        winit::window::CursorIcon::Text
+                    } else {
+                        winit::window::CursorIcon::Default
+                    });
+                }
+            }
+            WindowEvent::CursorLeft { .. } => {
+                if self.overlay.hover(None) {
+                    self.resize_and_redraw();
+                }
             }
             WindowEvent::MouseInput { state: ElementState::Pressed, button: MouseButton::Left, .. } => {
+                self.overlay.hover(None);
                 let Some(i) = self.row_at(self.cursor.1) else { return };
                 let now = Instant::now();
                 let double = self.last_click.is_some_and(|(t, j)| j == i && now - t < DOUBLE_CLICK);
@@ -503,8 +522,7 @@ impl ApplicationHandler<UiMsg> for App {
     }
 
     fn about_to_wait(&mut self, el: &ActiveEventLoop) {
-        let toast = self.overlay.toast.as_ref().map(|t| t.until);
-        match toast.into_iter().chain(self.leave_at).min() {
+        match self.overlay.feedback_deadline().into_iter().chain(self.leave_at).min() {
             Some(until) => el.set_control_flow(ControlFlow::WaitUntil(until)),
             None => el.set_control_flow(ControlFlow::Wait),
         }

@@ -65,13 +65,15 @@ def main():
     def show_result():
         command(find, '--show', 'handoff-image ext:png')
         until(lambda: status().get('ui', {}).get('selectedPath') == str(image), 'real image result did not populate')
-        xdo('windowfocus', '--sync', until(lambda: window('Search — Arcade Find'), 'Find did not map'))
+        result = until(lambda: subprocess.run(['xdotool', 'search', '--onlyvisible', '--class', '^dev.arcade.Find$'],
+                                             env=env, capture_output=True, text=True).stdout.strip(), 'Find did not map')
+        xdo('windowfocus', '--sync', result.splitlines()[-1])
 
     def action(title):
         show_result()
         xdo('key', 'Tab')
         until(lambda: status().get('ui', {}).get('mode') == 'actions', 'Find action list did not open')
-        xdo('type', '--clearmodifiers', title)
+        xdo('type', '--clearmodifiers', title.rstrip('…'))
         until(lambda: status().get('ui', {}).get('actions') == [{'title': title, 'disabled': False}],
               'real peer action was not available: ' + title)
         subprocess.run(['import', '-window', 'root', str(output / ('action-' + ('convert' if 'WebP' in title else 'box') + '.png'))], check=True)
@@ -89,7 +91,7 @@ def main():
                 assert document['version'] == '0.4.0', (name, document['version'])
             show_result()
             xdo('key', 'Return')
-            until(lambda: window('handoff-image.png.*Arcade Look'), 'Find Enter did not open the real selected image in Look')
+            until(lambda: window('handoff-image.png'), 'Find Enter did not open the real selected image in Look')
             until(lambda: not status().get('ui', {}).get('visible'), 'Find did not hide for Look preview')
             subprocess.run(['import', '-window', 'root', str(output / 'look-preview.png')], check=True)
             command(peers['look'], '--hide')

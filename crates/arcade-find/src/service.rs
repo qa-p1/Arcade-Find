@@ -316,7 +316,8 @@ impl Service {
         };
         let v = json!({ "visible": o.visible, "mode": mode, "query": o.input.text, "rows": o.rows.len(),
                         "selected": o.sel, "selectedPath": selected_path, "selectedCount": o.targets().len(),
-                        "toast": o.toast.as_ref().map(|toast| &toast.text), "actions": actions, "height": o.height() });
+                        "toast": o.toast.as_ref().map(|toast| &toast.text), "actions": actions,
+                        "tooltip": o.tooltip_row().map(|row| &row.name), "height": o.height() });
         *self.ui_state.lock().unwrap_or_else(|e| e.into_inner()) = v;
     }
 
@@ -537,7 +538,11 @@ impl Service {
         if preview {
             items.push(ActionItem::new(ActionId::Preview, "Quick Look", Glyph::Preview).hint("Enter"));
         }
-        items.push(ActionItem::new(ActionId::Open, if one { "Open" } else { "Open all" }, Glyph::Open).hint(if preview { "Shift+Enter" } else { "Enter" }));
+        items.push(ActionItem::new(ActionId::Open, if one { "Open with default app" } else { "Open all with default app" }, Glyph::Open).hint(if preview {
+            "Shift+Enter"
+        } else {
+            "Enter"
+        }));
         items.push(ActionItem::new(ActionId::Reveal, "Show in folder", Glyph::Reveal).hint("Ctrl+Enter"));
         items.push(ActionItem::new(ActionId::CopyPath, if one { "Copy path".to_string() } else { format!("Copy {n} paths") }, Glyph::Copy).hint("Ctrl+C"));
         if rows.iter().all(|r| !r.is_dir) || !cfg!(windows) {

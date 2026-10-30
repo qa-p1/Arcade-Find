@@ -18,7 +18,11 @@ def download(name):
     path = destination / name
     with path.open('wb') as stream:
         subprocess.run(['gh', 'api', '-H', 'Accept: application/octet-stream', f'repos/{repo}/releases/assets/{asset["id"]}'], stdout=stream, check=True)
-    digest = hashlib.file_digest(path.open('rb'), 'sha256').hexdigest()
+    hasher = hashlib.sha256()
+    with path.open('rb') as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b''):
+            hasher.update(block)
+    digest = hasher.hexdigest()
     assert path.stat().st_size == asset['size'], name
     if asset.get('digest'):
         assert asset['digest'] == 'sha256:' + digest, name

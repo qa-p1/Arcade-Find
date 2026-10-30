@@ -35,7 +35,7 @@ use smithay_client_toolkit::{
     registry_handlers,
     seat::{
         keyboard::{KeyEvent as WlKeyEvent, KeyboardHandler, Keysym, Modifiers},
-        pointer::{PointerEvent, PointerEventKind, PointerHandler},
+        pointer::{CursorIcon, PointerEvent, PointerEventKind, PointerHandler, ThemeSpec, ThemedPointer},
         Capability, SeatHandler, SeatState,
     },
     shell::{
@@ -121,7 +121,8 @@ struct Wl {
     /// Fractional scale (120ths), when the compositor sends one.
     frac_scale: Option<u32>,
     keyboard: Option<wl_keyboard::WlKeyboard>,
-    pointer: Option<wl_pointer::WlPointer>,
+    pointer: Option<ThemedPointer>,
+    cursor_icon: Option<CursorIcon>,
     mods: Mods,
     has_focus: bool,
     pointer_pos: (f64, f64),
@@ -197,6 +198,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
         frac_scale: None,
         keyboard: None,
         pointer: None,
+        cursor_icon: None,
         mods: Mods::default(),
         has_focus: false,
         pointer_pos: (0.0, 0.0),
@@ -336,7 +338,7 @@ impl Wl {
         if let Some(t) = self.toast_timer.take() {
             self.handle.remove(t);
         }
-        let Some(until) = self.overlay.toast.as_ref().map(|t| t.until) else { return };
+        let Some(until) = self.overlay.feedback_deadline() else { return };
         let timer = Timer::from_deadline(until);
         self.toast_timer = self
             .handle
@@ -514,7 +516,9 @@ impl SeatHandler for Wl {
             }
         }
         if capability == Capability::Pointer && self.pointer.is_none() {
-            self.pointer = self.seat_state.get_pointer(qh, &seat).ok();
+            let cursor_surface = self.compositor.create_surface(qh);
+            self.pointer = self.seat_state.get_pointer_with_theme(qh, &seat, self.shm.wl_shm(), cursor_surface, ThemeSpec::default()).ok();
+            self.cursor_icon = None;
             if self.data_device.is_none() {
                 self.data_device = self.data_manager.as_ref().map(|m| m.get_data_device(qh, &seat));
             }
@@ -528,9 +532,8 @@ impl SeatHandler for Wl {
             }
         }
         if capability == Capability::Pointer {
-            if let Some(p) = self.pointer.take() {
-                p.release();
-            }
+            self.pointer = None;
+            self.cursor_icon = None;
         }
     }
     fn remove_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
@@ -589,14 +592,31 @@ impl KeyboardHandler for Wl {
 }
 
 impl PointerHandler for Wl {
-    fn pointer_frame(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_pointer::WlPointer, events: &[PointerEvent]) {
+    fn pointer_frame(&mut self, conn: &Connection, _: &QueueHandle<Self>, _: &wl_pointer::WlPointer, events: &[PointerEvent]) {
         for ev in events {
             if !self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == &ev.surface) {
                 continue;
             }
             self.pointer_pos = ev.position;
+            if matches!(ev.kind, PointerEventKind::Enter { .. } | PointerEventKind::Motion { .. }) {
+                let icon = if self.row_at(ev.position.1).is_some() {
+                    CursorIcon::Pointer
+                } else if ev.position.1 >= metrics::SHADOW as f64 && ev.position.1 < (metrics::SHADOW + metrics::BAR) as f64 {
+                    CursorIcon::Text
+                } else {
+                    CursorIcon::Default
+                };
+                if matches!(ev.kind, PointerEventKind::Enter { .. }) || self.cursor_icon != Some(icon) {
+                    if let Some(pointer) = &self.pointer {
+                        if pointer.set_cursor(conn, icon).is_ok() {
+                            self.cursor_icon = Some(icon);
+                        }
+                    }
+                }
+            }
             match ev.kind {
                 PointerEventKind::Press { button: BTN_LEFT, serial, .. } => {
+                    self.overlay.hover(None);
                     let Some(i) = self.row_at(ev.position.1) else { continue };
                     let now = Instant::now();
                     let double = self.last_click.is_some_and(|(t, j)| j == i && now - t < DOUBLE_CLICK);
@@ -616,6 +636,10 @@ impl PointerHandler for Wl {
                     if self.drag.is_none() && self.press.as_ref().is_some_and(|(p, _)| p.moved_past(ev.position)) {
                         self.start_drag();
                     }
+                    let row = self.row_at(ev.position.1).filter(|_| self.press.is_none() && self.drag.is_none());
+                    if self.overlay.hover(row) {
+                        self.update();
+                    }
                 }
                 PointerEventKind::Release { button: BTN_LEFT, .. } => {
                     if let Some((p, _)) = self.press.take() {
@@ -627,6 +651,10 @@ impl PointerHandler for Wl {
                     }
                 }
                 PointerEventKind::Leave { .. } => {
+                    self.cursor_icon = None;
+                    if self.overlay.hover(None) {
+                        self.update();
+                    }
                     if self.drag.is_none() {
                         self.press = None;
                     }
