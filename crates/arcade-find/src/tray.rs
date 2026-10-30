@@ -60,10 +60,10 @@ mod imp {
             self.icon.clone()
         }
         fn tool_tip(&self) -> ksni::ToolTip {
-            ksni::ToolTip { title: "Arcade Find".into(), ..Default::default() }
+            ksni::ToolTip { title: "Arcade Find".into(), description: crate::settings_ui::TAGLINE.into(), ..Default::default() }
         }
         fn activate(&mut self, _x: i32, _y: i32) {
-            run(&self.svc, Item::Settings);
+            run(&self.svc, Item::Open);
         }
         fn menu(&self) -> Vec<ksni::MenuItem<Self>> {
             use ksni::menu::StandardItem;
@@ -72,17 +72,17 @@ mod imp {
             };
             vec![
                 item("Open Arcade Find", Item::Open),
-                item("Open Settings", Item::Settings),
+                item("Settings", Item::Settings),
                 item("Rescan index", Item::Rescan),
-                item("Restart Arcade Find", Item::Restart),
                 ksni::MenuItem::Separator,
+                item("Restart Arcade Find", Item::Restart),
                 item("Quit Arcade Find", Item::Quit),
             ]
         }
     }
 
     fn icon(px: u32) -> ksni::Icon {
-        let rgba = crate::ui::icons::app_icon_rgba(px);
+        let rgba = crate::ui::icons::tray_icon_rgba(px, crate::theme::system_dark());
         // Straight RGBA → ARGB32, network byte order.
         let mut data = Vec::with_capacity(rgba.len());
         for p in rgba.as_chunks::<4>().0 {
@@ -155,16 +155,21 @@ mod imp {
 
     fn prepare(svc: &Arc<Service>) -> Result<tray_icon::TrayIconBuilder, String> {
         let open = MenuItem::new("Open Arcade Find", true, None);
-        let settings = MenuItem::new("Open Settings", true, None);
+        let settings = MenuItem::new("Settings", true, None);
         let rescan = MenuItem::new("Rescan index", true, None);
         let restart = MenuItem::new("Restart Arcade Find", true, None);
         let quit = MenuItem::new("Quit Arcade Find", true, None);
         let menu = Menu::new();
-        menu.append_items(&[&open, &settings, &rescan, &restart, &PredefinedMenuItem::separator(), &quit]).map_err(|e| e.to_string())?;
+        menu.append_items(&[&open, &settings, &rescan, &PredefinedMenuItem::separator(), &restart, &quit]).map_err(|e| e.to_string())?;
         let px = 32;
-        let icon = Icon::from_rgba(crate::ui::icons::app_icon_rgba(px), px, px).map_err(|e| e.to_string())?;
-        let tray =
-            TrayIconBuilder::new().with_menu(Box::new(menu)).with_tooltip("Arcade Find").with_icon(icon).with_menu_on_left_click(cfg!(target_os = "macos"));
+        let icon = Icon::from_rgba(crate::ui::icons::tray_icon_rgba(px, crate::theme::system_dark()), px, px).map_err(|e| e.to_string())?;
+        let tray = TrayIconBuilder::new()
+            .with_menu(Box::new(menu))
+            .with_tooltip(crate::settings_ui::TAGLINE)
+            .with_icon(icon)
+            .with_menu_on_left_click(cfg!(target_os = "macos"));
+        #[cfg(target_os = "macos")]
+        let tray = tray.with_icon_as_template(true);
         let ids = [
             (open.id().clone(), Item::Open),
             (settings.id().clone(), Item::Settings),
@@ -187,7 +192,7 @@ mod imp {
                 if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = e {
                     if !cfg!(target_os = "macos") {
                         let weak = MENU.lock().unwrap_or_else(|e| e.into_inner()).1.clone();
-                        run(&weak, Item::Settings);
+                        run(&weak, Item::Open);
                     }
                 }
             }));

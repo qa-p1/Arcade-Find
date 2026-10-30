@@ -740,11 +740,14 @@ impl Renderer {
 }
 
 /// The kit's `shadow-pop` behind a `w`×`h` window whose panel is inset by
-/// `margin`: light 0 12 40 #10141a24, dark 0 16 48 #0008, fitted so it fades
-/// out completely inside the margin.
+/// `margin`, fitted so it fades out completely inside the margin.
 fn shadow(w: u32, h: u32, margin: f32, radius: f32, s: f32, dark: bool) -> Option<Pixmap> {
     let mut pm = Pixmap::new(w, h)?;
-    let (offset, alpha, colour) = if dark { (16.0, 0x88, Rgba::hex(0)) } else { (12.0, 0x24, Rgba::hex(0x10141a)) };
+    let theme = if dark { arcade_link::design::Theme::Dark } else { arcade_link::design::Theme::Light };
+    let pop = arcade_link::design::egui::visuals(theme, crate::link::ME).popup_shadow;
+    let [r, g, b, alpha] = pop.color.to_srgba_unmultiplied();
+    let colour = Rgba { r, g, b, a: alpha };
+    let offset = f32::from(pop.offset[1]);
     let offset = (offset * s * 0.5).min(margin / 3.0);
     // One pixel short of the window's edge, so the edge stays clear.
     let reach = margin - offset - s.max(1.0);

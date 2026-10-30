@@ -2,9 +2,9 @@
 //!
 //! | | Settings | Data (index, frecency, pins) | Runtime (instance socket) |
 //! |---|---|---|---|
-//! | Linux | `$XDG_CONFIG_HOME/arcade-find` | `$XDG_DATA_HOME/arcade-find` | `$XDG_RUNTIME_DIR/arcade-find` |
-//! | Windows | `%APPDATA%\Arcade\Arcade Find` | `%LOCALAPPDATA%\Arcade\Arcade Find` | named pipe |
-//! | macOS | `~/Library/Application Support/Arcade Find` | same | `$TMPDIR/arcade-find` |
+//! | Linux | `$XDG_CONFIG_HOME/arcade/find` | `$XDG_DATA_HOME/arcade/find` | `$XDG_RUNTIME_DIR/arcade/find` |
+//! | Windows | `%APPDATA%\Arcade\Find` | `%APPDATA%\Arcade\Find` | named pipe |
+//! | macOS | `~/Library/Application Support/Arcade/Find` | same | `$TMPDIR/arcade-find` |
 //!
 //! `ARCADE_FIND_HOME=<dir>` moves all three under `<dir>` (tests, portable
 //! use); `ARCADE_FIND_PROFILE=<name>` keeps a separate profile beside the
@@ -48,29 +48,10 @@ impl AppPaths {
         if let Some(root) = env_path("ARCADE_FIND_HOME") {
             return AppPaths::under(&root, &profile);
         }
-        let home = home_dir();
-        #[cfg(target_os = "linux")]
-        let (config, data, runtime) = {
-            let config = env_path("XDG_CONFIG_HOME").unwrap_or_else(|| home.join(".config")).join("arcade-find");
-            let data = env_path("XDG_DATA_HOME").unwrap_or_else(|| home.join(".local/share")).join("arcade-find");
-            let runtime = env_path("XDG_RUNTIME_DIR").map(|d| d.join("arcade-find")).unwrap_or_else(|| data.join("run"));
-            (config, data, runtime)
-        };
-        #[cfg(target_os = "macos")]
-        let (config, data, runtime) = {
-            let support = home.join("Library/Application Support/Arcade Find");
-            let runtime = env_path("TMPDIR").unwrap_or_else(std::env::temp_dir).join("arcade-find");
-            (support.clone(), support, runtime)
-        };
-        #[cfg(windows)]
-        let (config, data, runtime) = {
-            let roaming = env_path("APPDATA").unwrap_or_else(|| home.join("AppData/Roaming"));
-            let local = env_path("LOCALAPPDATA").unwrap_or_else(|| home.join("AppData/Local"));
-            let data = local.join("Arcade").join("Arcade Find");
-            (roaming.join("Arcade").join("Arcade Find"), data.clone(), data.join("run"))
-        };
-        #[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
-        let (config, data, runtime) = (home.join(".config/arcade-find"), home.join(".local/share/arcade-find"), home.join(".local/share/arcade-find/run"));
+        let dirs = arcade_link::paths::app_dirs("arcade.find");
+        let config = dirs.config;
+        let data = dirs.data;
+        let runtime = arcade_link::paths::runtime_dir().join("find");
         let mut p = AppPaths { config, data, runtime, profile: String::new(), isolated: false };
         if !profile.is_empty() {
             p.config = p.config.join("profiles").join(&profile);
@@ -79,6 +60,22 @@ impl AppPaths {
             p.profile = profile;
         }
         p
+    }
+
+    /// Link performs copy → verify → remove. A conflict stops startup rather
+    /// than silently loading defaults or discarding the user's old state.
+    pub fn migrate(&self) -> std::io::Result<bool> {
+        if self.isolated {
+            return Ok(false);
+        }
+        let report = arcade_link::paths::migrate_app_dirs("arcade.find");
+        if !report.kept.is_empty() {
+            return Err(std::io::Error::other(format!(
+                "Couldn't migrate Find's folders. The originals were kept. {}",
+                report.kept.iter().map(|(path, reason)| format!("{}: {reason}", path.display())).collect::<Vec<_>>().join("; ")
+            )));
+        }
+        Ok(!report.moved.is_empty())
     }
 
     pub fn under(root: &Path, profile: &str) -> AppPaths {
@@ -164,23 +161,7 @@ pub fn ensure_private_dir(dir: &Path) -> std::io::Result<()> {
 
 /// Writes a file atomically: a temporary sibling, fsync, rename.
 pub fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
-    use std::io::Write;
-    if let Some(dir) = path.parent() {
-        std::fs::create_dir_all(dir)?;
-    }
-    let tmp = path.with_extension(format!("tmp{}", std::process::id()));
-    let r = (|| {
-        let mut f = std::fs::File::create(&tmp)?;
-        f.write_all(bytes)?;
-        f.sync_all()
-    })();
-    match r {
-        Ok(()) => std::fs::rename(&tmp, path),
-        Err(e) => {
-            let _ = std::fs::remove_file(&tmp);
-            Err(e)
-        }
-    }
+    arcade_link::paths::write_atomic(path, bytes, true)
 }
 
 /// An absolute path for tests: `/a/b` on Unix, `C:\a\b` on Windows (where a
@@ -208,6 +189,35 @@ mod tests {
         assert_ne!(p.instance_name(), q.instance_name());
         assert!(valid_profile("a-b_1"));
         assert!(!valid_profile("../x"));
+    }
+
+    #[test]
+    fn concurrent_atomic_writes_never_share_a_temporary_file() {
+        let root = std::env::temp_dir().join(format!("find-atomic-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let path = std::sync::Arc::new(root.join("settings.json"));
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(8));
+        let workers: Vec<_> = (0..8)
+            .map(|id| {
+                let path = path.clone();
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    barrier.wait();
+                    for seq in 0..32 {
+                        let value = serde_json::json!({"writer": id, "sequence": seq, "payload": "x".repeat(4096)});
+                        write_atomic(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
+                    }
+                })
+            })
+            .collect();
+        for worker in workers {
+            worker.join().unwrap();
+        }
+        let value: serde_json::Value = serde_json::from_slice(&std::fs::read(&*path).unwrap()).unwrap();
+        assert_eq!(value["sequence"], 31);
+        assert_eq!(value["payload"].as_str().unwrap().len(), 4096);
+        assert_eq!(std::fs::read_dir(&root).unwrap().count(), 1);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

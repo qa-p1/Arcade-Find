@@ -57,7 +57,7 @@ const PAGES: [(Page, &str, &str); 6] = [
 enum Bg {
     LoginState(Option<bool>),
     LoginSaved(Result<bool, String>),
-    Settings(Settings),
+    SettingsChanged,
     Integration {
         hints: Vec<String>,
         channel: Option<String>,
@@ -97,6 +97,11 @@ struct SettingsApp {
     drives: Vec<PathBuf>,
     glyphs: Vec<(String, egui::TextureHandle)>,
     rescanning: bool,
+    save_tx: Sender<Settings>,
+    pending_saves: usize,
+    save_error: Option<String>,
+    closing: bool,
+    _window_lock: Option<instance::InstanceLock>,
 }
 
 /// The file another launch touches to bring an open Settings window forward.
@@ -105,6 +110,24 @@ pub fn focus_request(paths: &AppPaths) -> PathBuf {
 }
 
 pub fn run(paths: AppPaths) -> ExitCode {
+    let mut window_paths = paths.clone();
+    window_paths.runtime = paths.runtime.join("settings-window");
+    let window_lock = match instance::acquire(&window_paths) {
+        Ok(Some(lock)) => lock,
+        Ok(None) => {
+            return match arcade_link::paths::write_atomic(&focus_request(&paths), b"focus", true) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("arcade-find: Couldn't focus Settings. {error}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
+        Err(error) => {
+            eprintln!("arcade-find: Couldn't open Settings. {error}");
+            return ExitCode::FAILURE;
+        }
+    };
     crate::debug!("settings: loading settings");
     let (settings, _) = Settings::load(&paths.settings_file());
     crate::debug!("settings: reading system theme");
@@ -135,7 +158,8 @@ pub fn run(paths: AppPaths) -> ExitCode {
                     }
                 }
             }
-            let app = SettingsApp::new(paths, settings, cc.egui_ctx.clone());
+            let mut app = SettingsApp::new(paths, settings, cc.egui_ctx.clone());
+            app._window_lock = Some(window_lock);
             crate::debug!("settings: UI created");
             Ok(Box::new(app))
         }),
@@ -165,15 +189,28 @@ fn texture(ctx: &egui::Context, name: &str, rgba: Vec<u8>, px: u32) -> egui::Tex
 impl SettingsApp {
     fn new(paths: AppPaths, settings: Settings, ctx: egui::Context) -> SettingsApp {
         let (tx, rx) = channel();
+        let (save_tx, save_rx) = channel::<Settings>();
+        let (saved_tx, saved_paths, saved_ctx) = (tx.clone(), paths.clone(), ctx.clone());
+        // One writer preserves the order of rapid changes. The resident
+        // reload also stays off the UI thread.
+        std::thread::spawn(move || {
+            for settings in save_rx {
+                let result =
+                    settings.save(&saved_paths.settings_file()).map_err(|_| "Couldn't save settings. Check that the settings folder is writable.".to_string());
+                if result.is_ok() {
+                    let _ = instance::send(&saved_paths, &Command::Reload, Duration::from_secs(3));
+                }
+                let _ = saved_tx.send(Bg::Saved(result));
+                saved_ctx.request_repaint();
+            }
+        });
         let exclude_names = settings.exclude_names.join(", ");
         let (watch_tx, settings_path, focus_path, watch_ctx) = (tx.clone(), paths.settings_file(), focus_request(&paths), ctx.clone());
         let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
             let Ok(event) = event else { return };
             if event.paths.contains(&settings_path) {
-                if let Some(s) = std::fs::read(&settings_path).ok().and_then(|b| serde_json::from_slice(&b).ok()) {
-                    let _ = watch_tx.send(Bg::Settings(s));
-                    watch_ctx.request_repaint();
-                }
+                let _ = watch_tx.send(Bg::SettingsChanged);
+                watch_ctx.request_repaint();
             }
             if event.paths.contains(&focus_path) {
                 let _ = watch_tx.send(Bg::Focus);
@@ -220,6 +257,11 @@ impl SettingsApp {
             drives: find_core::mounts::MountTable::read().suggested_drives(),
             glyphs,
             rescanning: false,
+            save_tx,
+            pending_saves: 0,
+            save_error: None,
+            closing: false,
+            _window_lock: None,
         };
         app.refresh_status(&ctx);
         app.refresh_login(&ctx);
@@ -286,16 +328,12 @@ impl SettingsApp {
     /// Saves and tells the running instance (off the UI thread).
     fn save(&mut self, ctx: &egui::Context) {
         self.settings.sanitize();
-        let (tx, p, s, c) = (self.tx.clone(), self.paths.clone(), self.settings.clone(), ctx.clone());
-        apply_theme(ctx, s.theme);
-        std::thread::spawn(move || {
-            let r = s.save(&p.settings_file()).map_err(|_| "Couldn't save settings. Check that the settings folder is writable.".to_string());
-            if r.is_ok() {
-                let _ = instance::send(&p, &Command::Reload, Duration::from_secs(3));
-            }
-            let _ = tx.send(Bg::Saved(r));
-            c.request_repaint();
-        });
+        apply_theme(ctx, self.settings.theme);
+        if self.save_tx.send(self.settings.clone()).is_ok() {
+            self.pending_saves += 1;
+        } else {
+            self.save_error = Some("Couldn't save settings. Restart Settings and try again.".into());
+        }
     }
 
     fn command(&self, ctx: &egui::Context, cmd: Command, done: Option<&'static str>) {
@@ -343,7 +381,8 @@ impl SettingsApp {
         }
     }
 
-    fn drain(&mut self, ctx: &egui::Context) {
+    fn drain(&mut self, ctx: &egui::Context) -> bool {
+        let mut save_failed = false;
         while let Ok(m) = self.rx.try_recv() {
             match m {
                 Bg::LoginState(state) => self.login_state = state,
@@ -355,15 +394,25 @@ impl SettingsApp {
                             self.settings.start_at_login = Some(on);
                             self.save(ctx);
                         }
-                        Err(_) => self.toast("Couldn't change Start at login. Check your desktop's autostart folder.", Tone::Danger),
+                        Err(_) => {
+                            self.toast("Couldn't change Start at login. Check your desktop's autostart folder.", Tone::Danger);
+                            self.closing = false;
+                            save_failed = true;
+                        }
                     }
                 }
-                Bg::Settings(s) => {
-                    if s != self.settings {
-                        self.exclude_names = s.exclude_names.join(", ");
-                        self.settings = s;
-                        apply_theme(ctx, self.settings.theme);
-                        self.refresh_status(ctx);
+                Bg::SettingsChanged => {
+                    // A watch event may outlive the write that caused it.
+                    // Read the latest file instead of applying a stale value.
+                    if self.pending_saves == 0 && !self.login_pending {
+                        if let Some(s) = std::fs::read(self.paths.settings_file()).ok().and_then(|b| serde_json::from_slice::<Settings>(&b).ok()) {
+                            if s != self.settings {
+                                self.exclude_names = s.exclude_names.join(", ");
+                                self.settings = s;
+                                apply_theme(ctx, self.settings.theme);
+                                self.refresh_status(ctx);
+                            }
+                        }
                     }
                 }
                 Bg::Integration { hints, channel } => {
@@ -385,14 +434,36 @@ impl SettingsApp {
                     self.states = st;
                 }
                 Bg::Ripgrep(r) => self.ripgrep = Some(r),
-                Bg::Saved(Err(e)) => self.toast(e, Tone::Danger),
+                Bg::Saved(result) => {
+                    self.pending_saves = self.pending_saves.saturating_sub(1);
+                    if let Err(error) = result {
+                        self.save_error = Some(error);
+                        self.closing = false;
+                        save_failed = true;
+                    } else {
+                        self.save_error = None;
+                    }
+                }
                 Bg::Toast(m, tone) => self.toast(m, tone),
-                Bg::Saved(Ok(())) => {}
                 Bg::Focus => {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
                     ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
                 }
             }
+        }
+        save_failed
+    }
+
+    fn close_if_saved(&mut self, ctx: &egui::Context, requested: bool, save_failed: bool) {
+        let pending = self.pending_saves > 0 || self.login_pending;
+        if requested && (pending || save_failed) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        }
+        if requested && !save_failed {
+            self.closing = true;
+        }
+        if self.closing && !pending && !save_failed {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
     }
 
@@ -429,6 +500,14 @@ fn path_valid(p: &Path) -> bool {
     p.is_absolute() && p.is_dir()
 }
 
+fn folder_name(path: &Path) -> String {
+    if path == find_core::paths::home_dir() {
+        "Home".to_string()
+    } else {
+        path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string())
+    }
+}
+
 /// Small muted text under a list (`.section-note`).
 fn note(ui: &mut egui::Ui, kit: &Kit, text: &str) {
     ui.add_space(8.0);
@@ -444,7 +523,9 @@ fn note(ui: &mut egui::Ui, kit: &Kit, text: &str) {
 
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.drain(ctx);
+        theme::follow_native_theme(ctx);
+        let save_failed = self.drain(ctx);
+        let close_requested = ctx.input(|i| i.viewport().close_requested());
         // Follow a System appearance live.
         if self.settings.theme == find_core::settings::Theme::System {
             let dark = theme::system_dark();
@@ -468,14 +549,53 @@ impl eframe::App for SettingsApp {
         if kit.sidebar_with_brand(ctx, "Arcade Find", VERSION, brand, &items, &mut self.page) {
             self.page_changed(ctx);
         }
-        kit.page(ctx, |ui| match page {
-            Page::General => self.general(ui, &kit, ctx),
-            Page::Shortcuts => self.shortcuts(ui, &kit, ctx),
-            Page::Locations => self.locations_page(ui, &kit, ctx),
-            Page::Index => self.index(ui, &kit, ctx),
-            Page::Connected => self.connected(ui, &kit, ctx),
-            Page::About => self.about(ui, &kit, ctx),
-        });
+        let (page, title, _) = PAGES[self.page];
+        let description = match page {
+            Page::General => "How Find looks, starts and lists results.",
+            Page::Shortcuts => "The shortcut that opens Find, and the keys inside the search.",
+            Page::Locations => "The folders Find indexes, and what it skips.",
+            Page::Index => "What Find knows about your files.",
+            Page::Connected => "Which Arcade apps work with Find, and how.",
+            Page::About => "Version, updates, help and licences.",
+        };
+        let busy = self.rescanning || self.status.as_ref().and_then(|s| s.as_ref()).is_some_and(|s| s["engine"]["phase"] == "crawling");
+        let can_rescan = page == Page::Index && self.status.as_ref().is_some_and(|s| s.is_some());
+        let mut rescan = false;
+        kit.page_with_head_actions(
+            ctx,
+            title,
+            description,
+            |ui| {
+                if can_rescan {
+                    rescan = kit.button_state(ui, if busy { "Rescanning" } else { "Rescan now" }, ButtonKind::Primary, true, busy, false).clicked();
+                }
+            },
+            |ui| {
+                if let Some(error) = self.save_error.clone() {
+                    let mut retry = false;
+                    kit.notice_action(ui, &error, Tone::Danger, |ui| {
+                        retry = kit.button_state(ui, "Retry", ButtonKind::Default, true, self.pending_saves > 0, true).clicked();
+                    });
+                    ui.add_space(16.0);
+                    if retry {
+                        self.save(ctx);
+                    }
+                }
+                match page {
+                    Page::General => self.general(ui, &kit, ctx),
+                    Page::Shortcuts => self.shortcuts(ui, &kit, ctx),
+                    Page::Locations => self.locations_page(ui, &kit, ctx),
+                    Page::Index => self.index(ui, &kit, ctx),
+                    Page::Connected => self.connected(ui, &kit, ctx),
+                    Page::About => self.about(ui, &kit, ctx),
+                }
+            },
+        );
+        if rescan {
+            self.rescanning = true;
+            self.command(ctx, Command::Rescan, None);
+        }
+        self.close_if_saved(ctx, close_requested, save_failed);
         if let Some(t) = &self.toast {
             if !t.show(ctx, &kit) {
                 self.toast = None;
@@ -492,7 +612,7 @@ impl SettingsApp {
         let (esc, f1, close) =
             ctx.input(|i| (i.key_pressed(egui::Key::Escape), i.key_pressed(egui::Key::F1), i.modifiers.command && i.key_pressed(egui::Key::W)));
         if (esc && !editing && !self.recorder.recording) || close {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            self.closing = true;
         }
         if f1 {
             self.open_url(GUIDE_URL);
@@ -501,17 +621,16 @@ impl SettingsApp {
 
     fn general(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
         use find_core::settings::Theme;
-        kit.page_head(ui, "General", "How Find looks, starts and lists results.");
         let mut changed = false;
         kit.list(ui, |ui| {
-            kit.row(ui, "Appearance", "Follow the system, or always use light or dark.", |ui| {
+            kit.row(ui, "Appearance", "System, light or dark.", |ui| {
                 changed |= kit.segmented(ui, &mut self.settings.theme, &[(Theme::System, "System"), (Theme::Light, "Light"), (Theme::Dark, "Dark")]).changed();
             });
             let allowed = self.login_state.is_some() && !self.login_pending;
             // The login entry is the truth (Arcade Tools can switch it too).
             let mut login = self.login_state.unwrap_or(self.settings.start_at_login.unwrap_or(false));
             let description = if self.login_state.is_none() && !self.login_pending {
-                "Available for installed copies, not development builds or test profiles."
+                "Install Find to start it at login."
             } else if cfg!(target_os = "linux") && hotkey::hyprland::active() {
                 "Hyprland doesn't run autostart entries itself: add exec-once = arcade-find --background to your Hyprland config."
             } else {
@@ -580,7 +699,6 @@ impl SettingsApp {
     }
 
     fn shortcuts(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
-        kit.page_head(ui, "Shortcuts", "The shortcut that opens Find, and the keys inside the search.");
         let state = self.status.clone().flatten().map(|s| s["shortcut"].clone());
         let status = match state.as_ref().and_then(|s| s["mode"].as_str()) {
             Some("native") => "Registered with the system.".to_string(),
@@ -675,7 +793,6 @@ impl SettingsApp {
     }
 
     fn locations_page(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
-        kit.page_head(ui, "Locations", "The folders Find indexes, and what it skips.");
         let mut changed = false;
         // Folders dropped on the window are added to the index.
         let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().filter_map(|f| f.path.clone()).collect());
@@ -692,7 +809,7 @@ impl SettingsApp {
         kit.list(ui, |ui| {
             for (i, r) in self.settings.roots.iter().enumerate() {
                 let shown = expand_tilde(r);
-                kit.row_with_glyph(ui, None, "folder", r, &shown.display().to_string(), |ui| {
+                kit.row_with_glyph(ui, None, "folder", &folder_name(&shown), &shown.display().to_string(), |ui| {
                     let label = if only_one { "The last folder can't be removed" } else { "Remove" };
                     if kit.button_state(ui, "Remove", ButtonKind::Ghost, !only_one, false, true).on_hover_text(label).clicked() {
                         remove = Some(i);
@@ -757,7 +874,7 @@ impl SettingsApp {
         let mut remove = None;
         kit.list(ui, |ui| {
             for (i, r) in self.settings.exclude_paths.iter().enumerate() {
-                kit.row_with_glyph(ui, None, "folder", r, "Skipped with everything inside it.", |ui| {
+                kit.row_with_glyph(ui, None, "folder", &folder_name(&expand_tilde(r)), r, |ui| {
                     if kit.button_state(ui, "Remove", ButtonKind::Ghost, true, false, true).clicked() {
                         remove = Some(i);
                     }
@@ -789,7 +906,6 @@ impl SettingsApp {
 
     fn index(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
         let Some(status) = self.status.clone() else {
-            kit.page_head(ui, "Index", "What Find knows about your files.");
             kit.list(ui, |ui| {
                 for _ in 0..3 {
                     kit.skeleton_row(ui);
@@ -798,7 +914,6 @@ impl SettingsApp {
             return;
         };
         let Some(st) = status else {
-            kit.page_head(ui, "Index", "What Find knows about your files.");
             let mut start = false;
             let mut retry = false;
             kit.empty_state(ui, "search", "Arcade Find isn't running", "Start it to build and update the index.", |ui| {
@@ -830,15 +945,6 @@ impl SettingsApp {
             "reconciling" => format!("{} files · checking for changes", count(entries)),
             _ => format!("{} files indexed", count(entries)),
         };
-        let busy = self.rescanning || phase == "crawling";
-        let mut rescan = false;
-        kit.page_head_with(ui, "Index", &headline, |ui| {
-            rescan = kit.button_state(ui, if busy { "Rescanning" } else { "Rescan now" }, ButtonKind::Primary, true, busy, false).clicked();
-        });
-        if rescan {
-            self.rescanning = true;
-            self.command(ctx, Command::Rescan, None);
-        }
         if let Some(err) = e["lastError"].as_str() {
             kit.notice(ui, err, Tone::Danger);
             ui.add_space(10.0);
@@ -848,6 +954,7 @@ impl SettingsApp {
         let mut rescan_hours = self.settings.rescan_hours;
         let mut copy = None;
         kit.list(ui, |ui| {
+            kit.row(ui, "Files", &headline, |_| ());
             if let Some(cur) = e["progress"]["current"].as_str().filter(|c| !c.is_empty() && phase == "crawling") {
                 kit.row(ui, "Now scanning", cur, |_| ());
             }
@@ -898,7 +1005,6 @@ impl SettingsApp {
     }
 
     fn connected(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
-        kit.page_head(ui, "Connected apps", "Which Arcade apps work with Find, and how.");
         let mut changed = false;
         if !self.settings.link.enabled {
             let mut on = false;
@@ -1053,7 +1159,6 @@ impl SettingsApp {
     }
 
     fn about(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
-        kit.page_head(ui, "About", "Version, updates, help and licences.");
         let tools = self.registry.as_ref().and_then(|r| r.get(ids::TOOLS)).is_some();
         let channel = match self.channel.as_deref() {
             Some("stable") => "Stable",
@@ -1181,6 +1286,85 @@ pub fn diagnostics(locations: &Locations, channel: Option<&str>, status: Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rapid_changes_save_the_last_choice_and_close_waits_for_it() {
+        let ctx = egui::Context::default();
+        let root = std::env::temp_dir().join(format!("find-settings-save-{}", arcade_link::endpoint::new_token().unwrap()));
+        let paths = AppPaths::under(&root, "");
+        let mut app = SettingsApp::new(paths.clone(), Settings::default(), ctx.clone());
+        for index in 0..24 {
+            app.settings.rescan_hours = 1 + index;
+            app.save(&ctx);
+        }
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, true, false));
+        let commands = &output.viewport_output[&egui::ViewportId::ROOT].commands;
+        assert!(commands.contains(&egui::ViewportCommand::CancelClose));
+        assert!(!commands.contains(&egui::ViewportCommand::Close));
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while app.pending_saves > 0 && Instant::now() < deadline {
+            assert!(!app.drain(&ctx));
+            std::thread::yield_now();
+        }
+        assert_eq!(app.pending_saves, 0);
+        let saved: Settings = serde_json::from_slice(&std::fs::read(paths.settings_file()).unwrap()).unwrap();
+        assert_eq!(saved.rescan_hours, 24, "the last user choice must win");
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, false, false));
+        assert!(output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::Close));
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn a_save_error_keeps_settings_open_even_when_close_was_requested() {
+        let ctx = egui::Context::default();
+        let root = std::env::temp_dir().join(format!("find-settings-error-{}", arcade_link::endpoint::new_token().unwrap()));
+        let mut app = SettingsApp::new(AppPaths::under(&root, ""), Settings::default(), ctx.clone());
+        app.pending_saves = 1;
+        app.closing = true;
+        app.tx.send(Bg::Saved(Err("Couldn't save settings. Check the settings folder.".into()))).unwrap();
+        let failed = app.drain(&ctx);
+        assert!(failed);
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, true, failed));
+        let commands = &output.viewport_output[&egui::ViewportId::ROOT].commands;
+        assert!(commands.contains(&egui::ViewportCommand::CancelClose));
+        assert!(!commands.contains(&egui::ViewportCommand::Close));
+        assert!(!app.closing);
+        assert!(app.save_error.is_some());
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn folder_rows_name_the_folder_once_and_keep_the_full_path() {
+        let ctx = egui::Context::default();
+        arcade_link::design::egui::install_inter(&ctx);
+        arcade_link::design::apply_egui(&ctx, "light", link::ME);
+        let kit = Kit::for_theme(arcade_link::design::Theme::Light, link::ME);
+        let long = "a-long-folder-name-".repeat(7);
+        let root = std::env::temp_dir().join(format!("find-folder-layout-{}", std::process::id()));
+        let path = root.join(&long).display().to_string();
+        let settings = Settings { roots: vec![path.clone()], ..Settings::default() };
+        let mut app = SettingsApp::new(AppPaths::under(&root, ""), settings, ctx.clone());
+        for _ in 0..4 {
+            let output = ctx.run(
+                egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 520.0))), ..Default::default() },
+                |ctx| kit.page_with_head(ctx, "Locations", "The folders Find indexes, and what it skips.", |ui| app.locations_page(ui, &kit, ctx)),
+            );
+            let text: Vec<&str> = output
+                .shapes
+                .iter()
+                .filter_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text) => Some(text.galley.job.text.as_str()),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(text.iter().filter(|s| **s == path).count(), 1, "the full path appears once");
+            assert_eq!(text.iter().filter(|s| **s == long).count(), 1, "the folder has its own name");
+        }
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
 
     #[test]
     fn pages_follow_the_standard_order() {

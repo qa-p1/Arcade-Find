@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use std::sync::{mpsc, Arc, Mutex};
 
 use crate::installer::{self, DialogState, Options};
+use arcade_link::design::egui::components::{ButtonKind, Kit, Toast, Tone};
+use arcade_link::design::size;
 use arcade_link::install::{self, strings, Detection, Environment, Runtime};
 use arcade_link::receipt::ManagedBy;
 use eframe::egui;
@@ -103,7 +105,7 @@ fn helper(prompt: Prompt) -> Result<Outcome, String> {
     child.stdin.take().ok_or("dialog pipe is unavailable")?.write_all(&bytes).map_err(|e| e.to_string())?;
     let output = child.wait_with_output().map_err(|e| e.to_string())?;
     if !output.status.success() {
-        return Err("The install dialog could not open".into());
+        return Err("Couldn't open the install dialog. Try again.".into());
     }
     serde_json::from_slice(&output.stdout).map_err(|e| format!("invalid dialog reply: {e}"))
 }
@@ -148,13 +150,15 @@ struct Dialog {
     completed: Option<Completed>,
     /// Older pre-installer copies this install replaces (named in the prompt).
     legacy: Vec<PathBuf>,
+    toast: Option<Toast>,
+    theme: arcade_link::design::Theme,
 }
 
 fn format(s: &str, version: &str, from: &str) -> String {
     strings::format(s, crate::link::NAME, version, from, crate::VERSION)
 }
 
-/// Verbatim contract strings with only shared placeholders substituted.
+/// Shared contract strings with the standard's current button wording.
 pub fn text(state: &DialogState) -> (String, Option<String>, Vec<String>) {
     let all = strings::get();
     let newer = |installed: &str| {
@@ -170,9 +174,8 @@ pub fn text(state: &DialogState) -> (String, Option<String>, Vec<String>) {
         DialogState::OpenInstalled { version } => (&all.same_or_newer, version.as_str(), ""),
         DialogState::MoveToApplications => (&all.macos, crate::VERSION, ""),
     };
-    // egui's bundled fonts have no arrow glyph; "→" would show as a box.
-    let plain = |s: String| s.replace(" → ", " to ");
-    (plain(format(&dialog.title, version, from)), dialog.body.as_ref().map(|s| plain(format(s, version, from))), dialog.buttons.clone())
+    let buttons = dialog.buttons.iter().map(|s| if s == "Just run it once" { "Just run it".into() } else { s.clone() }).collect();
+    (format(&dialog.title, version, from), dialog.body.as_ref().map(|s| format(s, version, from)), buttons)
 }
 
 pub fn run_install(
@@ -200,21 +203,37 @@ fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
     };
     #[cfg(not(target_os = "linux"))]
     let legacy = Vec::new();
+    let title = if matches!(mode, Mode::Uninstall { .. }) { "Uninstall — Arcade Find" } else { "Install — Arcade Find" };
+    crate::theme::refresh_system_theme();
     let options = eframe::NativeOptions {
         centered: true,
         viewport: egui::ViewportBuilder::default()
-            .with_title("Arcade Find — Installation")
-            .with_inner_size([480.0, 250.0])
-            .with_resizable(false)
+            .with_title(title)
+            .with_app_id(crate::os::APP_ID)
+            .with_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
+            .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
             .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
         ..Default::default()
     };
     eframe::run_native(
-        "Arcade Find — Installation",
+        title,
         options,
-        Box::new(move |_cc| {
+        Box::new(move |cc| {
+            arcade_link::design::egui::install_inter(&cc.egui_ctx);
+            let appearance = find_core::Settings::load(&paths.settings_file()).0.theme;
+            let theme = crate::theme::kit_theme(appearance);
+            arcade_link::design::apply_egui(&cc.egui_ctx, if theme.is_dark() { "dark" } else { "light" }, crate::link::ME);
+            if let Ok(scale) = std::env::var("ARCADE_FIND_UI_SCALE") {
+                if let Ok(scale) = scale.parse::<f32>() {
+                    if (1.0..=1.25).contains(&scale) {
+                        cc.egui_ctx.set_zoom_factor(scale);
+                    }
+                }
+            }
+            let ctx = cc.egui_ctx.clone();
+            crate::theme::watch_system_theme(move || ctx.request_repaint());
             let (tx, rx) = mpsc::channel();
-            Ok(Box::new(Dialog { paths, mode, result, tx, rx, busy: false, error: None, completed: None, legacy }))
+            Ok(Box::new(Dialog { paths, mode, result, tx, rx, busy: false, error: None, completed: None, legacy, toast: None, theme }))
         }),
     )
     .map_err(|e| e.to_string())?;
@@ -279,105 +298,127 @@ impl eframe::App for Dialog {
                     *self.result.lock().unwrap_or_else(|e| e.into_inner()) = Some(done.outcome.clone());
                     self.completed = Some(done);
                 }
-                Err(e) => self.error = Some(e),
+                Err(error) => self.error = Some(error),
             }
         }
-        if ctx.input(|i| i.viewport().close_requested()) {
+        if ctx.input(|input| input.viewport().close_requested()) {
             if self.busy {
                 ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             } else if self.completed.is_none() {
-                // Closing the question answers nothing: don't install, don't start.
-                let mut result = self.result.lock().unwrap_or_else(|e| e.into_inner());
-                result.get_or_insert(Outcome::Exit);
+                self.result.lock().unwrap_or_else(|e| e.into_inner()).get_or_insert(Outcome::Exit);
             }
         }
-        egui::CentralPanel::default().show(ctx, |ui| {
-            ui.add_space(12.0);
+        if !self.busy && ctx.input(|input| input.key_pressed(egui::Key::Escape)) {
+            self.finish(ctx, Outcome::Exit);
+        }
+        crate::theme::follow_native_theme(ctx);
+        let appearance = std::fs::read(self.paths.settings_file())
+            .ok()
+            .and_then(|bytes| serde_json::from_slice::<find_core::Settings>(&bytes).ok())
+            .map(|s| s.theme)
+            .unwrap_or_default();
+        let theme = crate::theme::kit_theme(appearance);
+        if theme != self.theme {
+            arcade_link::design::apply_egui(ctx, if theme.is_dark() { "dark" } else { "light" }, crate::link::ME);
+            self.theme = theme;
+        }
+        ctx.request_repaint_after(std::time::Duration::from_secs(1));
+        let kit = Kit::for_theme(theme, crate::link::ME);
+        kit.page(ctx, |ui| {
+            kit.glyph_tile(ui, None, "search");
+            ui.add_space(16.0);
             if let Some(done) = &self.completed {
-                ui.heading("Arcade Find is installed");
-                if let Some(hint) = &done.hint {
-                    ui.add_space(12.0);
-                    ui.label(hint);
-                }
-                ui.add_space(12.0);
-                if ui.button("Open Arcade Find").clicked() {
-                    self.finish(ctx, done.outcome.clone());
-                }
+                kit.dialog_head(ui, "Arcade Find is installed", done.hint.as_deref().unwrap_or_default());
+                kit.dialog_actions(ui, |ui| {
+                    if kit.button(ui, "Open Arcade Find", ButtonKind::Primary).clicked() {
+                        self.finish(ctx, done.outcome.clone());
+                    }
+                });
                 return;
             }
             let mut clicked = None;
             ui.add_enabled_ui(!self.busy, |ui| match &mut self.mode {
                 Mode::Install { state, options, environment, managed, .. } => {
                     let (title, body, buttons) = text(state);
-                    ui.heading(title);
-                    if let Some(body) = body {
-                        ui.add_space(10.0);
-                        ui.label(body);
-                    }
+                    kit.dialog_head(ui, &title, body.as_deref().unwrap_or_default());
                     if *managed {
-                        ui.label(format(&strings::get().managed_by_tools, crate::VERSION, ""));
+                        kit.notice(ui, &format(&strings::get().managed_by_tools, crate::VERSION, ""), Tone::Neutral);
                     }
                     if let (Some(note), Some(old), DialogState::Install | DialogState::Update { .. }) =
                         (&strings::get().replaces_legacy, self.legacy.first(), &state)
                     {
-                        ui.label(format(note, crate::VERSION, &old.display().to_string()));
+                        kit.notice(ui, &format(note, crate::VERSION, &old.display().to_string()), Tone::Neutral);
                     }
                     ui.add_space(10.0);
-                    if matches!(state, DialogState::Install | DialogState::Update { .. } | DialogState::MoveToApplications) {
-                        ui.checkbox(&mut options.start_at_login, &strings::get().not_installed.options[0]);
+                    if !*managed && matches!(state, DialogState::Install | DialogState::Update { .. } | DialogState::MoveToApplications) {
+                        kit.checkbox(ui, &mut options.start_at_login, "Start at login");
                         #[cfg(target_os = "linux")]
-                        ui.checkbox(&mut options.remove_download, &strings::get().not_installed.options[1]);
+                        kit.checkbox(ui, &mut options.remove_download, "Remove the downloaded file");
                         #[cfg(target_os = "macos")]
                         {
-                            ui.checkbox(&mut options.install_cli, "Add the arcade-find terminal command");
+                            kit.checkbox(ui, &mut options.install_cli, "Add the arcade-find terminal command");
                             if !options.install_cli {
-                                let exe = environment.home.join("Applications/Arcade Find.app/Contents/MacOS/arcade-find");
-                                ui.small(install::platform::macos::cli_symlink_offer(environment, installer::CLI_NAME, &exe));
+                                let executable = environment.home.join("Applications/Arcade Find.app/Contents/MacOS/arcade-find");
+                                kit.notice(ui, &install::platform::macos::cli_symlink_offer(environment, installer::CLI_NAME, &executable), Tone::Neutral);
                             }
                         }
                     }
                     let _ = environment;
-                    ui.add_space(12.0);
-                    // The main action sits rightmost, as in the other Arcade prompts.
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        for (i, label) in buttons.iter().enumerate() {
-                            let button = if i == 0 { egui::Button::new(egui::RichText::new(label).strong()) } else { egui::Button::new(label) };
-                            if ui.add(button).clicked() {
-                                clicked = Some(i);
+                    kit.dialog_actions(ui, |ui| {
+                        for (index, label) in buttons.iter().enumerate().rev() {
+                            let kind = match index {
+                                0 => ButtonKind::Primary,
+                                1 => ButtonKind::Default,
+                                _ => ButtonKind::Ghost,
+                            };
+                            let label = if index == 0 && *managed { "Open Tools" } else { label };
+                            if kit.button_state(ui, label, kind, true, self.busy && index == 0, false).clicked() {
+                                clicked = Some(index);
                             }
                         }
                     });
                 }
                 Mode::Uninstall { remove_data, .. } => {
-                    ui.heading("Uninstall Arcade Find?");
-                    ui.label("Remove this installation, launcher, command and start-at-login entry.");
-                    ui.checkbox(remove_data, "Remove settings and data (index, history and pins)");
-                    ui.add_space(12.0);
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.add(egui::Button::new(egui::RichText::new("Uninstall").strong())).clicked() {
-                            clicked = Some(0);
-                        }
-                        if ui.button("Cancel").clicked() {
+                    kit.dialog_head(ui, "Uninstall Arcade Find?", "Remove this installation, launcher, command and start-at-login entry.");
+                    ui.add_space(10.0);
+                    kit.checkbox(ui, remove_data, "Remove settings and data (index, history and pins)");
+                    kit.dialog_actions(ui, |ui| {
+                        if kit.button(ui, "Cancel", ButtonKind::Default).clicked() {
                             clicked = Some(1);
+                        }
+                        if kit.button_state(ui, "Uninstall", ButtonKind::Destructive, true, self.busy, false).clicked() {
+                            clicked = Some(0);
                         }
                     });
                 }
             });
             match clicked {
                 Some(1) => self.finish(ctx, Outcome::Continue),
-                Some(i) => self.start(ctx, i),
+                Some(index) => self.start(ctx, index),
                 None => {}
             }
             if self.busy {
-                ui.horizontal(|ui| {
-                    ui.spinner();
-                    ui.label("Working…");
-                });
+                kit.notice(ui, "Working…", Tone::Neutral);
             }
             if let Some(error) = &self.error {
-                ui.colored_label(ui.visuals().error_fg_color, error);
+                let message = if matches!(self.mode, Mode::Uninstall { .. }) {
+                    "Couldn't uninstall Arcade Find. Check the app folder's permissions, then try again."
+                } else {
+                    "Couldn't install Arcade Find. Check the app folder's permissions, then try again."
+                };
+                kit.notice_action(ui, message, Tone::Danger, |ui| {
+                    if kit.button(ui, "Copy details", ButtonKind::Ghost).clicked() {
+                        ctx.copy_text(error.clone());
+                        self.toast = Some(Toast::copied());
+                    }
+                });
             }
         });
+        if let Some(toast) = &self.toast {
+            if !toast.show(ctx, &kit) {
+                self.toast = None;
+            }
+        }
     }
 }
 
@@ -385,13 +426,13 @@ impl eframe::App for Dialog {
 mod tests {
     use super::*;
     #[test]
-    fn uses_verbatim_shared_strings() {
+    fn uses_shared_copy_and_standard_button_wording() {
         let (title, body, buttons) = text(&DialogState::Install);
         assert_eq!(title, "Install Arcade Find?");
         assert_eq!(body.as_deref(), Some("This adds Arcade Find to the app launcher and your apps folder."));
-        assert_eq!(buttons, strings::get().not_installed.buttons);
+        assert_eq!(buttons, ["Install", "Just run it", "Don't ask again for this file"]);
         let update = text(&DialogState::Update { from: "0.2.1".into() }).0;
-        assert!(update.contains(&format!("0.2.1 to {}", env!("CARGO_PKG_VERSION"))), "{update}");
+        assert!(update.contains(&format!("0.2.1 → {}", env!("CARGO_PKG_VERSION"))), "{update}");
         let (title, body, _) = text(&DialogState::OpenInstalled { version: "99.0.0".into() });
         assert_eq!(title, "A newer Arcade Find is already installed.");
         assert!(body.unwrap().contains(&format!("99.0.0; this file is the older {}", env!("CARGO_PKG_VERSION"))));

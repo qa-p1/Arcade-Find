@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-10-30
+
+- New lime accent, Inter and the shared Arcade kit across search, Settings and the install prompt.
+- Settings uses the standard page order, fixed headings, readable folder rows, a single helper window and ordered saves that finish before close.
+- Composed input is supported through winit IME and Wayland text-input-v3.
+- Standard application identifiers and verified migration of existing folders, desktop and login entries. Existing shortcuts and preferences stay.
+- Monochrome tray glyph, left-click search, standard menu wording and shared Copied feedback.
+- Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
+
 ## 0.4.3 — 2026-10-19
 
 - A helper an app starts from its own image (such as a settings window) keeps

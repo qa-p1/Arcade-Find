@@ -172,6 +172,21 @@ pub fn setting_name(theme: Theme) -> &'static str {
 /// 0 unknown, 1 dark, 2 light — refreshed off the UI thread.
 static SYSTEM: AtomicU8 = AtomicU8::new(0);
 
+/// Native events keep System appearance live on Windows/macOS. Linux uses
+/// its portal signal because the native widget theme can differ.
+pub fn native_system_theme(dark: bool) {
+    SYSTEM.store(if dark { 1 } else { 2 }, Ordering::Relaxed);
+}
+
+pub fn follow_native_theme(ctx: &eframe::egui::Context) {
+    #[cfg(any(windows, target_os = "macos"))]
+    if let Some(theme) = ctx.input(|input| input.raw.system_theme) {
+        native_system_theme(theme == eframe::egui::Theme::Dark);
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    let _ = ctx;
+}
+
 pub fn system_dark() -> bool {
     match SYSTEM.load(Ordering::Relaxed) {
         1 => true,

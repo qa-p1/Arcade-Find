@@ -177,20 +177,22 @@ pub fn app_icon_svg() -> String {
 
 /// RGBA pixels of the launcher icon at `px` (straight alpha).
 pub fn app_icon_rgba(px: u32) -> Vec<u8> {
-    straight(render_svg(&app_icon_svg(), px, Rgba::hex(0)), px)
+    straight(render_svg(&app_icon_svg(), px, Palette::light().text), px)
 }
 
 /// The tray icon: Find's glyph, monochrome (STANDARD §8), white for dark
 /// panels or black for light ones and macOS template images.
 pub fn tray_icon_rgba(px: u32, white: bool) -> Vec<u8> {
-    let colour = if white { Rgba::hex(0xffffff) } else { Rgba::hex(0) };
+    let colour =
+        if white { Rgba::hex(arcade_link::design::palette(arcade_link::design::Theme::Light, crate::link::ME).on_fill) } else { Palette::light().text };
     straight(render_svg(FIND_GLYPH, px, colour), px)
 }
 
 /// An Arcade app's glyph as a white mask (straight RGBA), for kit glyph tiles.
 pub fn glyph_mask_rgba(app_id: &str, px: u32) -> Vec<u8> {
     let svg = if app_id == crate::link::ME { FIND_GLYPH } else { app_svg(AppGlyph::of(app_id)) };
-    straight(render_svg(svg, px, Rgba::hex(0xffffff)), px)
+    let mask = arcade_link::design::palette(arcade_link::design::Theme::Light, crate::link::ME).on_fill;
+    straight(render_svg(svg, px, Rgba::hex(mask)), px)
 }
 
 fn straight(pm: Option<Pixmap>, px: u32) -> Vec<u8> {
@@ -220,7 +222,7 @@ pub fn app_icon_png(px: u32) -> Vec<u8> {
     if !kit.is_empty() {
         return kit.to_vec();
     }
-    render_svg(&app_icon_svg(), px, Rgba::hex(0)).and_then(|p| p.encode_png().ok()).unwrap_or_default()
+    render_svg(&app_icon_svg(), px, Palette::light().text).and_then(|p| p.encode_png().ok()).unwrap_or_default()
 }
 
 /// The kit's Windows icon (16–256 px).

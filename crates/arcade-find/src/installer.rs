@@ -15,7 +15,7 @@ use find_core::Settings;
 use serde::{Deserialize, Serialize};
 
 pub const CLI_NAME: &str = "arcade-find";
-pub const DESKTOP_ID: &str = "arcade-find";
+pub const DESKTOP_ID: &str = "dev.arcade.Find";
 
 pub fn app_info() -> AppInfo {
     AppInfo {
@@ -25,9 +25,74 @@ pub fn app_info() -> AppInfo {
         desktop_id: DESKTOP_ID.into(),
         cli_name: CLI_NAME.into(),
         background_args: vec!["--background".into()],
-        legacy_desktop_ids: vec![DESKTOP_ID.into()],
+        legacy_desktop_ids: vec!["arcade-find".into()],
         autostart_id: DESKTOP_ID.into(),
     }
+}
+
+/// Shared installation owns these files; Find supplies its standard desktop
+/// metadata after the shared repair/ownership checks have succeeded.
+#[cfg(target_os = "linux")]
+pub(crate) fn finish_desktop_metadata(receipt: &Receipt) -> io::Result<()> {
+    let Some(path) = &receipt.integration.desktop_entry else { return Ok(()) };
+    let content = fs::read_to_string(path)?;
+    if !content.lines().any(|line| line == format!("X-Arcade-Id={}", crate::link::ME)) {
+        return Err(io::Error::other("Couldn't update the launcher. Its ownership marker changed."));
+    }
+    let mut section = "";
+    let mut result = String::new();
+    for line in content.lines() {
+        if line.starts_with('[') {
+            section = line;
+        }
+        if section == "[Desktop Entry]" && ["Comment=", "Keywords=", "StartupWMClass="].iter().any(|key| line.starts_with(key)) {
+            continue;
+        }
+        let line = match (section, line) {
+            ("[Desktop Entry]", "Categories=Utility;") => "Categories=Utility;FileTools;",
+            ("[Desktop Action Settings]", "Name=Open Settings") => "Name=Settings",
+            ("[Desktop Action Quit]", "Name=Quit") => "Name=Quit Arcade Find",
+            _ => line,
+        };
+        result.push_str(line);
+        result.push('\n');
+        if section == "[Desktop Entry]" && line == "Name=Arcade Find" {
+            result += &format!("Comment={}\nKeywords=search;find;files;folders;locate;\nStartupWMClass={}\n", crate::settings_ui::TAGLINE, DESKTOP_ID);
+        }
+    }
+    arcade_link::paths::write_atomic(path, result.as_bytes(), false)
+}
+
+/// Refresh legacy identifiers only for a proven, installed AppImage. The
+/// shared installer creates and verifies the new entries before cleanup.
+#[cfg(target_os = "linux")]
+pub fn migrate_integration(paths: &AppPaths) -> io::Result<()> {
+    if paths.isolated {
+        return Ok(());
+    }
+    let environment = Environment::discover()?;
+    let runtime = Runtime::discover()?;
+    let detection = install::detect(&environment, crate::link::ME, &runtime)?;
+    if detection.state != State::InstalledHere || !runtime.is_appimage() {
+        return Ok(());
+    }
+    let Some(receipt) = detection.receipt else { return Ok(()) };
+    let current = format!("{DESKTOP_ID}.desktop");
+    if receipt.integration.desktop_entry.as_ref().is_some_and(|p| p.file_name().is_some_and(|n| n == current.as_str())) {
+        return Ok(());
+    }
+    let mut options = Options::defaults(&environment, paths);
+    options.remove_download = false;
+    options.channel = receipt.channel.clone();
+    options.start_at_login = receipt.integration.autostart.as_ref().is_some_and(|path| install::autostart_enabled(path));
+    let updated = install_copy(&environment, &runtime, paths, &options)?;
+    if let Some(old) = receipt.integration.autostart.filter(|path| updated.integration.autostart.as_ref() != Some(path)) {
+        let content = fs::read_to_string(&old).unwrap_or_default();
+        if content.lines().any(|line| line == format!("X-Arcade-Id={}", crate::link::ME)) {
+            remove_file(&old)?;
+        }
+    }
+    Ok(())
 }
 
 pub fn method() -> InstallMethod {
@@ -260,6 +325,7 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
             environment.receipts().write(&receipt)?;
         }
     }
+    finish_desktop_metadata(&receipt)?;
     // The install choice is reflected in Settings on the next resident start.
     let (mut settings, _) = Settings::load(&paths.settings_file());
     settings.start_at_login = Some(options.start_at_login);
@@ -328,7 +394,7 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
     }
     let cli = if options.install_cli { Some(macos::install_cli(environment, CLI_NAME, &exe)?) } else { None };
     let autostart = if options.start_at_login {
-        let path = environment.home.join("Library/LaunchAgents/arcade.find.plist");
+        let path = environment.home.join("Library/LaunchAgents/dev.arcade.Find.plist");
         arcade_link::paths::write_atomic(&path, crate::autostart::plist(&exe.to_string_lossy()).as_bytes(), true)?;
         Some(path)
     } else {
@@ -380,7 +446,9 @@ pub fn repair(environment: &Environment, runtime: &Runtime) -> io::Result<Receip
         // An explicitly invoked --repair from a moved AppImage is consent to
         // repoint this receipt; a dev CLI repairs the recorded copy only.
         let moved = (d.state != State::DevBuild && d.is_app_image).then_some(d.running_from.as_path());
-        install::repair(environment, &app_info(), moved)
+        let receipt = install::repair(environment, &app_info(), moved)?;
+        finish_desktop_metadata(&receipt)?;
+        Ok(receipt)
     }
     #[cfg(target_os = "macos")]
     {

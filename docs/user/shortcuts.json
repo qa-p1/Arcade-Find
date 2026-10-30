@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "app": "arcade.find",
-  "version": "0.4.3",
+  "version": "0.5.0",
   "groups": [
     {
       "title": "Global",

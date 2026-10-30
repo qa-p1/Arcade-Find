@@ -232,6 +232,10 @@ impl Service {
         let _ = std::thread::Builder::new().name("find-login".into()).spawn(move || {
             if let Some(svc) = worker.upgrade() {
                 let _change = svc.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
+                #[cfg(target_os = "linux")]
+                if let Err(error) = crate::installer::migrate_integration(&svc.paths) {
+                    eprintln!("arcade-find: Couldn't update desktop integration. {error}");
+                }
                 let mut settings = svc.settings();
                 let before = settings.start_at_login;
                 if let Err(e) = crate::autostart::sync(&svc.paths, &mut settings) {
@@ -632,7 +636,10 @@ impl Service {
                 let text = rows.iter().map(|r| r.path.to_string_lossy()).collect::<Vec<_>>().join("\n");
                 let n = rows.len();
                 self.worker("find-copy", move |s| match crate::os::copy_text(text) {
-                    Ok(()) => s.toast(if n == 1 { "Copied path".to_string() } else { format!("Copied {n} paths") }, ToastKind::Info),
+                    Ok(()) => s.toast(
+                        if n == 1 { "Copied".to_string() } else { format!("Copied {} paths", arcade_link::design::format::format_count(n as i64)) },
+                        ToastKind::Copied,
+                    ),
                     Err(e) => s.toast(e, ToastKind::Error),
                 });
             }
@@ -640,14 +647,16 @@ impl Service {
                 let paths: Vec<PathBuf> = rows.iter().map(|r| r.path.clone()).collect();
                 let n = paths.len();
                 self.worker("find-copy", move |s| match crate::os::copy_files(paths) {
-                    Ok(()) => s.toast(if n == 1 { "Copied file".to_string() } else { format!("Copied {n} files") }, ToastKind::Info),
+                    Ok(()) => s.toast(
+                        if n == 1 { "Copied".to_string() } else { format!("Copied {} paths", arcade_link::design::format::format_count(n as i64)) },
+                        ToastKind::Copied,
+                    ),
                     Err(e) => s.toast(e, ToastKind::Error),
                 });
             }
-            Effect::CopyText(t) => self.worker("find-copy", move |s| {
-                if let Err(e) = crate::os::copy_text(t) {
-                    s.toast(e, ToastKind::Error);
-                }
+            Effect::CopyText(t) => self.worker("find-copy", move |s| match crate::os::copy_text(t) {
+                Ok(()) => s.toast("Copied", ToastKind::Copied),
+                Err(e) => s.toast(e, ToastKind::Error),
             }),
             Effect::Rename { row, new_name } => self.worker("find-rename", move |s| match crate::os::rename_noreplace(&row.path, &new_name) {
                 Ok(to) => {
@@ -925,7 +934,7 @@ impl Service {
             },
             Command::Status => {
                 let st = self.engine.status();
-                json!({ "ok": true, "version": crate::VERSION, "pid": std::process::id(), "background": self.background,
+                json!({ "ok": true, "running": true, "version": crate::VERSION, "pid": std::process::id(), "background": self.background,
                         "engine": st, "shortcut": self.shortcut_state(), "tray": self.tray_state().as_str(),
                         "ui": self.ui_state.lock().map(|v| v.clone()).unwrap_or(Value::Null),
                         "activity": self.activity.lock().map(|a| a.iter().map(|(at, text)| json!({ "at": at, "text": text })).collect::<Vec<_>>()).unwrap_or_default(),

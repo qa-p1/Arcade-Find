@@ -210,7 +210,8 @@ def main():
         properties = dbus.Interface(watcher.bus.get_object(name, path), PROPERTIES)
         identity = str(properties.Get(ITEM, "Id"))
         # ksni uses the app's id; Tauri's libappindicator prefixes its tray id.
-        assert identity in ("arcade-" + app, f"tray-icon tray app arcade-{app}-tray"), identity
+        expected_ids = ("dev.arcade.Find",) if app == "find" else ("arcade-" + app, f"tray-icon tray app arcade-{app}-tray")
+        assert identity in expected_ids, identity
         assert str(properties.Get(ITEM, "Status")) == "Active"
         assert str(properties.Get(ITEM, "Title")) == "Arcade " + app.title()
         try:
@@ -221,7 +222,12 @@ def main():
         exported = dbus.Interface(watcher.bus.get_object(name, str(properties.Get(ITEM, "Menu"))), MENU)
         _, layout = exported.GetLayout(dbus.Int32(0), dbus.Int32(-1), dbus.Array([], signature="s"))
         labels = {str(node[1]["label"]): int(node[0]) for node in layout[2] if "label" in node[1]}
-        assert {"Open Settings", "Restart Arcade " + app.title(), "Quit Arcade " + app.title()} <= labels.keys()
+        settings_label = "Settings" if app == "find" else "Open Settings"
+        assert {settings_label, "Restart Arcade " + app.title(), "Quit Arcade " + app.title()} <= labels.keys()
+        if app == "find":
+            order = [str(node[1].get("label", "separator")) for node in layout[2]]
+            assert order == ["Open Arcade Find", "Settings", "Rescan index", "separator", "Restart Arcade Find", "Quit Arcade Find"], order
+            assert str(properties.Get(ITEM, "ToolTip")[3]) == "Press a shortcut, type, and any file or folder shows up."
         return exported, labels
 
     def click(label):
@@ -299,7 +305,16 @@ def main():
         assert watcher.registrations == registered_before, "icon flashed during Tools restart grace"
         recovery(tools)
 
-        click("Open Settings")
+        if app == "find":
+            name, path, _ = next(iter(watcher.items.values()))
+            dbus.Interface(watcher.bus.get_object(name, path), ITEM).Activate(dbus.Int32(0), dbus.Int32(0))
+            def overlay_visible():
+                reply = subprocess.run([str(binary), "--status"], env=env, text=True, capture_output=True, timeout=5)
+                return reply.returncode == 0 and json.loads(reply.stdout).get("ui", {}).get("visible") is True
+            until(overlay_visible, "tray left-click did not open search")
+            subprocess.run([str(binary), "--hide"], env=env, check=True, timeout=5)
+            until(lambda: not overlay_visible(), "search did not hide")
+        click("Settings" if app == "find" else "Open Settings")
         def settings_visible():
             result = subprocess.run(["xdotool", "search", "--onlyvisible", "--name", "Arcade " + app.title()],
                                     env=env, capture_output=True, timeout=3)

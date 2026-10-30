@@ -6,6 +6,16 @@ use std::path::{Path, PathBuf};
 /// The OS identifier (STANDARD §10): bundle id, AppUserModelID, desktop
 /// file, Wayland app_id and X11 WM_CLASS.
 pub const APP_ID: &str = "dev.arcade.Find";
+
+/// Set the process identity before constructing any native window or tray.
+pub fn init_app_identity() {
+    #[cfg(windows)]
+    {
+        let id: Vec<u16> = APP_ID.encode_utf16().chain(Some(0)).collect();
+        // SAFETY: live, NUL-terminated UTF-16 input for the Win32 call.
+        unsafe { windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID(id.as_ptr()) };
+    }
+}
 use std::sync::mpsc;
 use std::sync::OnceLock;
 

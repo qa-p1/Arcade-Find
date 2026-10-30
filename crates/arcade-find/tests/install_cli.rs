@@ -68,6 +68,11 @@ fn cli_install_status_move_repair_and_receipt_uninstall() {
     let desktop = PathBuf::from(receipt["integration"]["desktopEntry"].as_str().unwrap());
     let entry = std::fs::read_to_string(&desktop).unwrap();
     assert!(entry.contains("X-Arcade-Id=arcade.find"));
+    assert_eq!(desktop.file_name().unwrap(), "dev.arcade.Find.desktop");
+    assert!(entry.contains("StartupWMClass=dev.arcade.Find"));
+    assert!(entry.contains("Comment=Press a shortcut, type, and any file or folder shows up."));
+    assert!(entry.contains("Categories=Utility;FileTools;"));
+    assert!(entry.contains("[Desktop Action Settings]\nName=Settings"));
     assert!(entry.contains("--uninstall"));
     assert!(entry.contains("--settings"));
     assert_eq!(receipt["integration"]["icons"].as_array().unwrap().len(), 10);
@@ -110,4 +115,33 @@ fn remove_data_is_explicit_and_dev_or_inherited_appimage_never_installs() {
     let output = fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).arg("--arcade-manifest").output().unwrap();
     let manifest: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(manifest["install"], "dev");
+}
+
+#[test]
+fn legacy_folders_are_verified_before_removal_and_keep_shortcuts_and_history() {
+    let fixture = Fixture::new();
+    let config = fixture.root.join("config/arcade-find");
+    let data = fixture.root.join("data/arcade-find");
+    std::fs::create_dir_all(&config).unwrap();
+    std::fs::create_dir_all(&data).unwrap();
+    let settings = serde_json::json!({"schema":1,"shortcut":"Ctrl+Alt+J","roots":[fixture.root],"theme":"light"});
+    std::fs::write(config.join("settings.json"), serde_json::to_vec(&settings).unwrap()).unwrap();
+    std::fs::write(data.join("pins.json"), b"[\"kept\"]").unwrap();
+    std::fs::write(data.join("frecency.json"), b"history fixture").unwrap();
+    // Startup performs migration before attempting to create a display. This
+    // fixture deliberately has no display; its exit is not a native UI pass.
+    let output = fixture
+        .command(&fixture.binary)
+        .env_remove("ARCADE_FIND_HOME")
+        .env("XDG_CACHE_HOME", fixture.root.join("cache"))
+        .env("ARCADE_NO_INSTALL_PROMPT", "1")
+        .arg("--background")
+        .output()
+        .unwrap();
+    let migrated: serde_json::Value = serde_json::from_slice(&std::fs::read(fixture.root.join("config/arcade/find/settings.json")).unwrap()).unwrap();
+    assert_eq!(migrated["shortcut"], "Ctrl+Alt+J", "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(migrated["theme"], "light");
+    assert_eq!(std::fs::read(fixture.root.join("data/arcade/find/pins.json")).unwrap(), b"[\"kept\"]");
+    assert_eq!(std::fs::read(fixture.root.join("data/arcade/find/frecency.json")).unwrap(), b"history fixture");
+    assert!(!config.exists() && !data.exists(), "only verified originals may be removed");
 }

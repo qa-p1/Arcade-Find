@@ -1,5 +1,28 @@
 # Status
 
+## 2026-10-30: recovery and verification in progress
+
+Continuing draft PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
+
+- The paused scratch checkout was cleared. Recovered the implementation from
+  the preserved checkout and recorded edits onto the existing PR branch.
+- Link PR #22 is merged and its `tag.yml` created `v0.4.7` at
+  `a30bcc80bffc2c202ee4230f8623fcc45be95223` (run 41002783290).
+  Find now pins that real tag and syncs its kit files with recorded hashes.
+- Earlier evidence: all 48 Settings captures in run 40917884604 were reviewed.
+  Row overlap and long folder names required the shared fix in Link PR #22.
+  This head still needs a new real screenshot matrix and visual review.
+- Recovered fixed page headings, folder titles, Settings singleton/ordered
+  saves, kit install prompt, tray wording/clicks, copy feedback, identifiers,
+  migration and project scaffolding. These are implementation, not verification.
+- The local sandbox rejects private Unix sockets with EPERM. The full native
+  and IPC checks must pass in CI; no blocked check is counted as passed.
+- Known remaining native issue: winit cannot hide a Wayland window with
+  `set_visible(false)`. Its lifecycle repair and compositor regression remain
+  to be recovered and verified before release.
+- Release workflow integration, the beta rehearsal, final native/three-OS
+  checks, updated screenshots and release/Tools verification remain open.
+
 ## 2026-10-29: overhaul (FIND.md) in progress, branch `claude/arcade-overhaul-q3xegk`
 
 Not released. Work so far, checked locally with `cargo fmt --check`, `cargo clippy -D warnings`,

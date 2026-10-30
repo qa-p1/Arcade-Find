@@ -191,6 +191,7 @@ fn attach_console() {
 
 fn main() -> ExitCode {
     arcade_link::childenv::on_startup();
+    arcade_find::os::init_app_identity();
     attach_console();
     let args = match parse_args() {
         Ok(a) => a,
@@ -202,6 +203,27 @@ fn main() -> ExitCode {
     let paths = AppPaths::discover();
     let action = args.action.clone().unwrap_or_default();
     let original_args: Vec<String> = std::env::args().skip(1).collect();
+    if !matches!(
+        action.as_str(),
+        "--help"
+            | "-h"
+            | "--version"
+            | "--arcade-manifest"
+            | "--status"
+            | "--search"
+            | "--integration-status"
+            | "--snapshot"
+            | "--export-icon"
+            | "--install-dialog"
+    ) {
+        if let Err(error) = paths.migrate() {
+            eprintln!("arcade-find: {error}");
+            return ExitCode::FAILURE;
+        }
+        if let Err(error) = arcade_link::logs::capture_stderr(&paths.log_dir(), "arcade-find") {
+            eprintln!("arcade-find: Couldn't open the log. {error}");
+        }
+    }
     match action.as_str() {
         "--help" | "-h" => {
             out(HELP);
@@ -280,7 +302,7 @@ fn main() -> ExitCode {
                 return match c {
                     Command::Search { .. } => print_search(&reply, args.json),
                     Command::Status => {
-                        out(serde_json::to_string_pretty(&reply).unwrap_or_default());
+                        out(serde_json::to_string(&reply).unwrap_or_default());
                         ExitCode::SUCCESS
                     }
                     _ if reply["ok"] == true => ExitCode::SUCCESS,
@@ -301,7 +323,7 @@ fn main() -> ExitCode {
             return print_search(&search_offline(&paths, query, limit.unwrap_or(20), hidden.unwrap_or(false)), args.json);
         }
         Some(Command::Status) => {
-            out(serde_json::json!({ "ok": false, "running": false }));
+            out(serde_json::json!({ "ok": false, "running": false, "version": VERSION, "link": {"listening": false} }));
             return ExitCode::from(3);
         }
         Some(Command::Quit | Command::Hide | Command::Rescan | Command::Reload) => {
