@@ -295,7 +295,7 @@ pub enum Effect {
         title: String,
         targets: Vec<Row>,
     },
-    /// Fetch clipboard text and call [`Overlay::paste`].
+    /// Fetch clipboard text or file references.
     Paste,
     OpenSettings,
     OpenGuide,
@@ -731,6 +731,19 @@ impl Overlay {
             && find_core::query::Query::parse_with(&format!("/{text}"), 0, &|_| 0).content.is_some()
     }
 
+    /// Restore copied file references as selected results without interpreting
+    /// their absolute paths as a content-search query.
+    pub fn paste_files(&mut self, rows: Vec<Row>) {
+        let _ = self.show(None, None);
+        self.seq += 1;
+        self.shown_seq = self.seq;
+        self.empty_open = false;
+        self.info = ResultsInfo { matched: rows.len(), ..ResultsInfo::default() };
+        self.rows = rows;
+        self.nav = true;
+        self.anchor = (self.rows.len() > 1).then(|| self.rows.len() - 1);
+    }
+
     pub fn paste(&mut self, text: &str) -> Vec<Effect> {
         let line = text.lines().next().unwrap_or("").trim_end();
         match &mut self.mode {
@@ -1163,6 +1176,24 @@ mod tests {
             last = o.key(&if c == ' ' { KeyEvent::new(Key::Space) } else { KeyEvent::ch(c) }, ctx);
         }
         last
+    }
+
+    #[test]
+    fn pasted_files_keep_selection_and_reject_stale_search_results() {
+        let mut o = Overlay { recent_on_open: true, ..Overlay::default() };
+        o.show(Some("/old content search"), None);
+        let old_seq = o.seq;
+        o.paste_files(vec![row("café.txt"), row("日本.txt")]);
+        assert!(o.input.text.is_empty());
+        assert_eq!(o.targets().len(), 2);
+        assert_eq!(o.targets()[1].name, "日本.txt");
+        assert!(o.nav && !o.empty_open);
+        assert!(o.refresh().is_empty(), "index notifications must not replace pasted files with recents");
+        assert!(!o.set_results(old_seq, vec![], ResultsInfo::default()));
+        assert_eq!(o.rows.len(), 2);
+        o.paste_files(vec![row("one.txt")]);
+        assert!(o.anchor.is_none());
+        assert_eq!(o.targets().len(), 1);
     }
 
     fn results(o: &mut Overlay, n: usize) {

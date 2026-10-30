@@ -286,8 +286,18 @@ real_shelf_drag_checks() {
   [[ -n "$single" ]] || $typer shift+Down
   sleep 0.3
   local fx top; read -r fx top <<<"$($find_top)"
+  local tx=$((sx + sw / 2)) ty=$((sy + sh - 30)) height
+  height=$(status_field ui.height)
+  # The default Shelf capsule is centred underneath Find. A drop onto the
+  # covered capsule returns to Find and is correctly cancelled; the target
+  # must actually be exposed before testing the outbound drag protocol.
+  if ((tx >= fx - 340 && tx < fx + 340 && ty >= top && ty < top + ${height%.*})); then
+    bad "$name: Shelf drop target is covered by the Find overlay"
+    return
+  fi
+  $shot "$OUT/$name-drag-before.png"
   # Press inside the two-row selection (the first row), drag onto Shelf.
-  $dragger "$fx" $((top + 56 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
+  $dragger "$fx" $((top + 56 + 6 + 26)) "$tx" "$ty"
   sleep 1.5
   shelf_rows >"$T/rows" 2>/dev/null || true
   if [[ -n "$single" ]]; then
@@ -332,6 +342,7 @@ if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype 
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
 for_window [app_id="dev.arcade.Find"] floating enable
+for_window [app_id="arcade.shelf"] floating enable, move position 40 40
 EOF
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman dbus-run-session -- sway -c "$T/sway.conf" >"$OUT/sway.log" 2>&1 &
   PIDS+=($!)
@@ -433,6 +444,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   x_shelf_rect() {
     local w; w=$(xdotool search --onlyvisible --name '^Arcade Shelf$' 2>/dev/null | head -1)
     [[ -n "$w" ]] || return 1
+    xdotool windowmove --sync "$w" 40 40
     eval "$(xdotool getwindowgeometry --shell "$w")"
     echo "$X $Y $WIDTH $HEIGHT"
   }

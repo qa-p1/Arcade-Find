@@ -164,7 +164,12 @@ pub fn trash(paths: &[PathBuf]) -> Result<(), String> {
 enum ClipReq {
     Text(String, mpsc::Sender<Result<(), String>>),
     Files(Vec<PathBuf>, mpsc::Sender<Result<(), String>>),
-    Get(mpsc::Sender<Option<String>>),
+    Get(mpsc::Sender<Option<ClipboardValue>>),
+}
+
+pub(crate) enum ClipboardValue {
+    Text(String),
+    Files(Vec<PathBuf>),
 }
 
 /// The clipboard lives on its own thread for the life of the app: on X11
@@ -189,7 +194,15 @@ fn clipboard() -> &'static mpsc::Sender<ClipReq> {
                         let _ = reply.send(r);
                     }
                     ClipReq::Get(reply) => {
-                        let _ = reply.send(cb.as_mut().and_then(|c| c.get_text().ok()));
+                        let value = cb.as_mut().and_then(|c| {
+                            if let Ok(paths) = c.get().file_list() {
+                                if !paths.is_empty() {
+                                    return Some(ClipboardValue::Files(paths));
+                                }
+                            }
+                            c.get_text().ok().map(ClipboardValue::Text)
+                        });
+                        let _ = reply.send(value);
                     }
                 }
             }
@@ -211,6 +224,13 @@ pub fn copy_files(paths: Vec<PathBuf>) -> Result<(), String> {
 }
 
 pub fn paste_text() -> Option<String> {
+    match paste_value()? {
+        ClipboardValue::Text(text) => Some(text),
+        ClipboardValue::Files(_) => None,
+    }
+}
+
+pub(crate) fn paste_value() -> Option<ClipboardValue> {
     let (tx, rx) = mpsc::channel();
     clipboard().send(ClipReq::Get(tx)).ok()?;
     rx.recv_timeout(std::time::Duration::from_secs(2)).ok().flatten()

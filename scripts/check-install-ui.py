@@ -33,6 +33,40 @@ def main():
     captures = []
     with (output / 'dialogs.log').open('w') as log:
         for theme in ('light', 'dark'):
+            for scale in ('1', '1.25'):
+                config = home / 'config/settings.json'
+                config.write_text(json.dumps({'schema': 1, 'theme': theme, 'welcomeComplete': False}))
+                child = subprocess.Popen([str(binary), '--settings-window'],
+                                         env=dict(os.environ, ARCADE_FIND_UI_SCALE=scale), stdout=log, stderr=log)
+                try:
+                    deadline = time.monotonic() + 15
+                    identifier = None
+                    while time.monotonic() < deadline and child.poll() is None:
+                        result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--pid', str(child.pid)],
+                                                capture_output=True, text=True)
+                        if result.returncode == 0:
+                            identifier = result.stdout.splitlines()[-1]
+                            break
+                        time.sleep(.05)
+                    assert identifier, (theme, scale, 'welcome did not map')
+                    subprocess.run(['xdotool', 'windowfocus', '--sync', identifier], check=True)
+                    subprocess.run(['xdotool', 'windowsize', '--sync', identifier, '720', '520'], check=True)
+                    time.sleep(.35)
+                    subprocess.run(['import', '-window', identifier, str(output / f'welcome-{theme}-{scale}.png')], check=True)
+                    zoom = float(scale)
+                    subprocess.run(['xdotool', 'mousemove', '--window', identifier,
+                                    str(round(720 - 70 * zoom)), str(round(48 * zoom)), 'click', '1'], check=True)
+                    deadline = time.monotonic() + 10
+                    while time.monotonic() < deadline and not json.loads(config.read_text()).get('welcomeComplete'):
+                        time.sleep(.05)
+                    assert json.loads(config.read_text()).get('welcomeComplete'), 'Skip did not complete welcome'
+                    subprocess.run(['xdotool', 'key', 'ctrl+w'], check=True)
+                    assert child.wait(timeout=10) == 0
+                finally:
+                    if child.poll() is None:
+                        child.terminate()
+                        child.wait(timeout=10)
+        for theme in ('light', 'dark'):
             (home / 'config/settings.json').write_text(json.dumps({'schema': 1, 'theme': theme, 'welcomeComplete': True}))
             for scale in ('1', '1.25'):
                 for label, state in states:
@@ -73,6 +107,7 @@ def main():
     assert len(captures) == 16
     assert not Path(environment['registry']).exists(), 'dialog inspection created integration'
     (output / 'captures.json').write_text(json.dumps(captures, indent=2) + '\n')
+    print('4 real welcome views captured; Skip completes welcome at minimum size and 125% text.')
     print('16 real install/update/open/uninstall views captured; Esc leaves without installation. Visual review is required.')
 
 

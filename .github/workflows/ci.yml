@@ -85,7 +85,7 @@ jobs:
         with:
           cache-on-failure: true
       - name: Session tools
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool x11-utils imagemagick dbus python3-dbus python3-gi ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool xclip x11-utils imagemagick dbus python3-dbus python3-gi ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 libxcb-xinerama0 libxcb-xkb1
       - name: Build the old backend for the lifecycle regression
         run: |
           git fetch --depth 1 origin 041ccef4794ac3c5c9f54b8e901239df6fd4e786

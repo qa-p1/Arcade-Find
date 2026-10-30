@@ -40,6 +40,19 @@ def main():
         raise SystemExit('Build --example e2e-pointer alongside the native binary before running this check.')
     cli = Path(os.environ['ARCADE_LINK_CLI']).resolve()
     env = dict(os.environ, ARCADE_LINK_CLI=str(cli))
+    old = os.environ.get('ARCADE_FIND_OLD_WAYLAND_BIN')
+    if old:
+        regression = subprocess.run([sys.executable, str(link / 'tools/e2e.py'), 'run', '--',
+                                     sys.executable, 'tests/clipboard-paste.py', old],
+                                    env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        evidence = ROOT / 'target/e2e/clipboard-old-regression.log'
+        evidence.parent.mkdir(parents=True, exist_ok=True)
+        evidence.write_text(regression.stdout)
+        if regression.returncode == 0 or 'file-list paste did not restore the copied files' not in regression.stdout:
+            raise SystemExit('The released clipboard regression was not reproduced; see ' + str(evidence))
+        print('Old clipboard regression reproduced: copied file references were not pasted.')
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/clipboard-paste.py', str(binary), env=env)
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/file-actions.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-native.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-install-ui.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/tray-registration.py', str(binary), str(cli), 'find', env=env)

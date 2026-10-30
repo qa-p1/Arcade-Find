@@ -48,6 +48,7 @@ pub enum UiMsg {
     /// The index changed: re-run the query.
     Refresh,
     Paste(String),
+    PasteFiles(Vec<PathBuf>),
     /// Settings were reloaded: re-read display settings.
     Settings,
     /// The system theme changed.
@@ -310,7 +311,8 @@ impl Service {
         };
         let selected_path = o.rows.get(o.sel).map(|r| r.path.to_string_lossy().into_owned());
         let v = json!({ "visible": o.visible, "mode": mode, "query": o.input.text, "rows": o.rows.len(),
-                        "selected": o.sel, "selectedPath": selected_path, "height": o.height() });
+                        "selected": o.sel, "selectedPath": selected_path, "selectedCount": o.targets().len(),
+                        "toast": o.toast.as_ref().map(|toast| &toast.text), "height": o.height() });
         *self.ui_state.lock().unwrap_or_else(|e| e.into_inner()) = v;
     }
 
@@ -723,10 +725,10 @@ impl Service {
                 }
                 self.worker("find-peer", move |s| s.run_peer(action, title, targets));
             }
-            Effect::Paste => self.worker("find-paste", move |s| {
-                if let Some(t) = crate::os::paste_text() {
-                    s.send(UiMsg::Paste(t));
-                }
+            Effect::Paste => self.worker("find-paste", move |s| match crate::os::paste_value() {
+                Some(crate::os::ClipboardValue::Text(t)) => s.send(UiMsg::Paste(t)),
+                Some(crate::os::ClipboardValue::Files(paths)) => s.send(UiMsg::PasteFiles(paths)),
+                None => s.send(UiMsg::Toast("Couldn't read the clipboard. Copy text or files, then try again.".into(), ToastKind::Error)),
             }),
             Effect::OpenSettings => {
                 out.hide = true;
@@ -879,6 +881,18 @@ impl Service {
             UiMsg::Paste(t) => {
                 for e in o.paste(&t) {
                     out.merge(self.effect(o, e));
+                }
+            }
+            UiMsg::PasteFiles(paths) => {
+                let pins = self.pins.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                let rows: Vec<_> = paths.iter().map(|path| row_from_path(path, None, pins.contains(path))).collect();
+                if rows.iter().any(|row| row.missing) {
+                    o.toast("Couldn't read a pasted file. Check that it still exists, then try again.", ToastKind::Error);
+                } else {
+                    self.search.cancel.lock().unwrap_or_else(|e| e.into_inner()).store(true, Ordering::SeqCst);
+                    o.paste_files(rows);
+                    self.search.latest.store(o.seq, Ordering::SeqCst);
+                    out.show = true;
                 }
             }
             UiMsg::Settings => {
