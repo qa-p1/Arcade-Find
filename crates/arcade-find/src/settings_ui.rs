@@ -64,6 +64,7 @@ enum Bg {
     },
     Status(Option<Value>),
     Registry(Registry, Vec<(String, AppState)>, Option<String>),
+    DesktopBindings(Result<hotkey::hyprland::DesktopBindings, String>),
     Ripgrep(Option<find_core::content::Ripgrep>),
     Saved(Result<(), String>),
     Toast(String, Tone),
@@ -86,6 +87,8 @@ struct SettingsApp {
     status_at: Option<Instant>,
     registry: Option<Registry>,
     registry_error: Option<String>,
+    desktop_bindings: hotkey::hyprland::DesktopBindings,
+    desktop_bindings_error: Option<String>,
     states: Vec<(String, AppState)>,
     ripgrep: Option<Option<find_core::content::Ripgrep>>,
     tx: Sender<Bg>,
@@ -263,6 +266,8 @@ impl SettingsApp {
             status_at: None,
             registry: None,
             registry_error: None,
+            desktop_bindings: hotkey::hyprland::DesktopBindings::default(),
+            desktop_bindings_error: None,
             states: Vec::new(),
             ripgrep: None,
             tx,
@@ -342,6 +347,7 @@ impl SettingsApp {
             let states = app_ids(&reg).into_iter().map(|id| (id.clone(), app_state(&loc, &reg, &id, &me))).collect();
             let error = registry_read_error(&loc.registry);
             let _ = tx.send(Bg::Registry(reg, states, error));
+            let _ = tx.send(Bg::DesktopBindings(hotkey::hyprland::desktop_bindings()));
             c.request_repaint();
         });
     }
@@ -461,6 +467,13 @@ impl SettingsApp {
                     self.registry = Some(r);
                     self.states = st;
                 }
+                Bg::DesktopBindings(result) => match result {
+                    Ok(bindings) => {
+                        self.desktop_bindings = bindings;
+                        self.desktop_bindings_error = None;
+                    }
+                    Err(error) => self.desktop_bindings_error = Some(error),
+                },
                 Bg::Ripgrep(r) => self.ripgrep = Some(r),
                 Bg::Saved(result) => {
                     self.pending_saves = self.pending_saves.saturating_sub(1);
@@ -502,8 +515,8 @@ impl SettingsApp {
     fn page_changed(&mut self, ctx: &egui::Context) {
         match PAGES[self.page].0 {
             Page::General => self.refresh_login(ctx),
-            Page::Index | Page::Shortcuts | Page::About => self.refresh_status(ctx),
-            Page::Connected => {
+            Page::Index | Page::About => self.refresh_status(ctx),
+            Page::Shortcuts | Page::Connected => {
                 self.refresh_registry(ctx);
                 self.refresh_status(ctx);
             }
@@ -590,11 +603,15 @@ impl eframe::App for SettingsApp {
             }
         }
         let page = PAGES[self.page].0;
-        // While open, the Index page refreshes every 2 s.
-        if page == Page::Index {
+        // Data and desktop binding snapshots refresh only while their page
+        // is open. Reading the compositor never blocks key recording.
+        if page == Page::Index || page == Page::Shortcuts || self.welcome {
             if self.status_at.is_some_and(|t| t.elapsed() > Duration::from_secs(2)) {
                 self.status_at = Some(Instant::now());
                 self.refresh_status(ctx);
+                if page == Page::Shortcuts || self.welcome {
+                    self.refresh_registry(ctx);
+                }
             }
             ctx.request_repaint_after(Duration::from_secs(2));
         }
@@ -718,6 +735,7 @@ impl SettingsApp {
         kit.welcome_head(ui, self.glyph("brand"), "search", "Arcade Find", TAGLINE);
         kit.section_head(ui, "1. Choose your shortcut");
         let mut changed = false;
+        let desktop_bindings = self.desktop_bindings.clone();
         kit.list(ui, |ui| {
             let spec = ShortcutSpec {
                 title: "Open Arcade Find",
@@ -729,9 +747,17 @@ impl SettingsApp {
                 self.registry
                     .as_ref()
                     .and_then(|registry| registry.shortcut_owner(link::ME, accelerator))
+                    .or_else(|| desktop_bindings.conflict(accelerator))
                     .or_else(|| hotkey::known_conflict(accelerator).map(str::to_string))
             });
         });
+        if let Some(error) = &self.desktop_bindings_error {
+            kit.notice_action(ui, error, Tone::Warn, |ui| {
+                if kit.button(ui, "Retry", ButtonKind::Default).clicked() {
+                    self.refresh_registry(ctx);
+                }
+            });
+        }
         kit.section_head(ui, "2. Connect your apps");
         kit.list(ui, |ui| {
             changed |= kit
@@ -860,6 +886,7 @@ impl SettingsApp {
             None => "Arcade Find isn't running, so the shortcut isn't active.".to_string(),
         };
         let registry = self.registry.clone();
+        let desktop_bindings = self.desktop_bindings.clone();
         let mut changed = false;
         kit.list(ui, |ui| {
             let spec = ShortcutSpec { title: "Open Arcade Find", description: &status, default: find_core::settings::DEFAULT_SHORTCUT, allow_clear: false };
@@ -867,9 +894,17 @@ impl SettingsApp {
                 registry
                     .as_ref()
                     .and_then(|r| r.shortcut_owner(link::ME, accelerator))
+                    .or_else(|| desktop_bindings.conflict(accelerator))
                     .or_else(|| hotkey::known_conflict(accelerator).map(|what| format!("{what} (usually)")))
             });
         });
+        if let Some(error) = &self.desktop_bindings_error {
+            kit.notice_action(ui, error, Tone::Warn, |ui| {
+                if kit.button(ui, "Retry", ButtonKind::Default).clicked() {
+                    self.refresh_registry(ctx);
+                }
+            });
+        }
         if let Some(what) = hotkey::known_conflict(&self.settings.shortcut) {
             ui.add_space(10.0);
             kit.notice(ui, &format!("Usually used by {what}."), Tone::Warn);

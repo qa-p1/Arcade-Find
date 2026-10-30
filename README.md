@@ -149,7 +149,7 @@ Settings, pins, history and the index are kept unless you choose to remove them 
 - Find's input does not yet support IME text input or right-to-left text.
 - Windows and macOS integration is build/CI only, not verified on a real desktop.
 
-## Build from source
+## Development
 
 Requires Rust 1.88 or later. On Linux, install the Wayland and XKB development packages:
 
@@ -157,16 +157,20 @@ Requires Rust 1.88 or later. On Linux, install the Wayland and XKB development p
 sudo apt install libxkbcommon-dev libwayland-dev
 ```
 
-Build and test:
+The toolchain is pinned in `rust-toolchain.toml`. The shared entry points are:
 
 ```sh
-cargo build --release -p arcade-find
-cargo test --workspace
-scripts/e2e-linux.sh target/release/arcade-find
-python3 scripts/bench_real.py --files 1000000
+scripts/dev --settings
+scripts/check
+scripts/package
+scripts/sync-design
 ```
 
-The end-to-end script needs Sway, grim, wtype, Xvfb and xdotool.
+`scripts/check` runs the same source, lint, test, design and native checks as CI.
+See [testing](docs/dev/testing.md) for the isolated desktop prerequisites and
+real peer setup, and [packaging](docs/dev/packaging.md) for installers and releases.
+Use `scripts/check --core-only` when checking source on a machine without a
+desktop test environment; that does not count as native verification.
 
 ## Documentation
 

@@ -4,6 +4,17 @@
 
 Continuing PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
 
+- CI 41042829030 passed source/tests and all installer checks on three OSes.
+  Its native suite passed Settings lifecycle/geometry/live themes, all nine
+  tray checks, the eight-cycle Wayland fallback regression and real Shelf
+  handoff/background relaunch. The earlier shutdown crash is fixed by joining
+  the borrowed-display drag worker before the event loop destroys its display.
+- That native suite exposed covered Shelf drop targets and missing XCB
+  dependencies. Those test-environment repairs still need a green native run.
+  File-list paste had a real implementation gap; the model regression passes,
+  and the real clipboard check is pending after correcting a fixture query
+  that also matched its parent folder. No native clipboard pass is claimed.
+
 - Link PRs #22/#23 fixed measured row layout and disabled-text contrast.
   All 96 Settings page top/bottom captures from run 41007834210 were
   inspected in both themes, both sizes and both text scales. Repeated-row

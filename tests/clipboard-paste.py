@@ -64,7 +64,7 @@ def main():
         resident = subprocess.Popen([str(binary), '--background'], env=env, stdout=log, stderr=log)
         try:
             until(lambda: status().get('engine', {}).get('phase') == 'ready', 'clipboard index did not finish')
-            assert command('--show', 'clipboard-file').returncode == 0
+            assert command('--show', 'clipboard-file ext:txt').returncode == 0
             until(lambda: status().get('ui', {}).get('rows') == 2, 'clipboard files did not populate')
             identifier = until(window, 'clipboard overlay did not map')
             xdo('windowfocus', '--sync', identifier)

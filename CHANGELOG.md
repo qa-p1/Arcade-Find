@@ -9,6 +9,7 @@
 - Monochrome tray glyph, left-click search, standard menu wording and shared Copied feedback.
 - Welcome and notification preferences, standard keyboard commands, per-monitor window geometry and pair-specific Connected apps copy.
 - Fixed Settings file-watch feedback, concurrent saves and the Wayland fallback's actual Show/Hide lifecycle without leaking drag workers.
+- File-list paste restores copied file references and preserves multi-selection; shortcut recording checks the running Hyprland bindings as well as Arcade's registry.
 - Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
 
 ## 0.4.3 — 2026-10-19
