@@ -7,7 +7,6 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
-import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser(description=__doc__)
@@ -16,7 +15,7 @@ parser.add_argument('output', type=Path)
 parser.add_argument('--channel', choices=['stable', 'beta', 'nightly'], required=True)
 parser.add_argument('--notes', required=True)
 args = parser.parse_args()
-version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
+version = subprocess.check_output([sys.executable, str(ROOT / 'scripts/check-version.py')], text=True).strip()
 args.output.mkdir(parents=True, exist_ok=False)
 for path in sorted(args.built.iterdir()):
     if path.is_file() and path.suffix.lower() in ('.appimage', '.exe', '.dmg'):

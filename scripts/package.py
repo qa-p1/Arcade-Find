@@ -4,11 +4,10 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 os.chdir(ROOT)
-version = tomllib.loads((ROOT / 'Cargo.toml').read_text())['workspace']['package']['version']
+version = subprocess.check_output([sys.executable, str(ROOT / 'scripts/check-version.py')], text=True).strip()
 target = Path(os.environ.get('CARGO_TARGET_DIR', 'target')).resolve()
 
 def run(*args): subprocess.run(args, check=True)
