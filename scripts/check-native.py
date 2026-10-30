@@ -41,7 +41,7 @@ def main():
     env = dict(os.environ, ARCADE_NO_INSTALL_PROMPT='1')
     config = Path(env['ARCADE_FIND_HOME']) / 'config/settings.json'
     config.parent.mkdir(parents=True, exist_ok=True)
-    settings = {'schema': 1, 'roots': [str(files)], 'theme': 'light', 'showRecentOnOpen': True, 'shortcut': 'Ctrl+Alt+F'}
+    settings = {'schema': 1, 'welcomeComplete': True, 'roots': [str(files)], 'theme': 'light', 'showRecentOnOpen': True, 'shortcut': 'Ctrl+Alt+F'}
 
     def save():
         temporary = config.with_suffix('.tmp')
@@ -51,6 +51,7 @@ def main():
     save()
     processes = []
     report = []
+    memory = []
     with (OUT / 'native.log').open('w') as log:
         resident = subprocess.Popen([str(binary), '--background'], env=env, stdout=log, stderr=log)
         processes.append(resident)
@@ -97,6 +98,8 @@ def main():
                 time.sleep(.45)
                 capture(overlay, 'overlay-' + theme)
                 command('--hide')
+                if not memory:
+                    memory.append(int(next(line.split()[1] for line in Path(f'/proc/{pid}/status').read_text().splitlines() if line.startswith('VmRSS:'))))
                 for scale in ('1', '1.25'):
                     helper = subprocess.Popen([str(binary), '--settings-window'], env=dict(env, ARCADE_FIND_UI_SCALE=scale), stdout=log, stderr=log)
                     processes.append(helper)
@@ -120,6 +123,8 @@ def main():
                     xdo('key', 'ctrl+w')
                     assert helper.wait(timeout=10) == 0
                     assert status()['pid'] == pid, 'closing Settings replaced or quit the resident'
+            memory.append(int(next(line.split()[1] for line in Path(f'/proc/{pid}/status').read_text().splitlines() if line.startswith('VmRSS:'))))
+            assert memory[-1] <= memory[0] + 8192, ('resident memory grew across Settings helpers', memory)
             # Live theme changes reach an already-open native settings process.
             helper = subprocess.Popen([str(binary), '--settings-window'], env=env, stdout=log, stderr=log)
             processes.append(helper)
@@ -134,11 +139,33 @@ def main():
             assert light != dark, (light, dark, 'theme did not change on the live window')
             xdo('key', 'ctrl+w')
             assert helper.wait(timeout=10) == 0
+            # Native geometry survives closing the helper, independent of the
+            # resident. This fails when every launch uses the default size.
+            helper = subprocess.Popen([str(binary), '--settings-window'], env=env, stdout=log, stderr=log)
+            processes.append(helper)
+            identifier = until(lambda: window(helper.pid, 'Settings — Arcade Find'), 'geometry Settings did not map')
+            xdo('windowfocus', '--sync', identifier)
+            xdo('windowsize', '--sync', identifier, 900, 650)
+            xdo('windowmove', '--sync', identifier, 100, 80)
+            time.sleep(.4)
+            xdo('key', 'ctrl+w')
+            assert helper.wait(timeout=10) == 0
+            helper = subprocess.Popen([str(binary), '--settings-window'], env=env, stdout=log, stderr=log)
+            processes.append(helper)
+            identifier = until(lambda: window(helper.pid, 'Settings — Arcade Find'), 'geometry restore did not map')
+            geometry = dict(line.split('=', 1) for line in xdo('getwindowgeometry', '--shell', identifier).splitlines())
+            assert tuple(int(geometry[key]) for key in ('X', 'Y', 'WIDTH', 'HEIGHT')) == (100, 80, 900, 650), geometry
+            xdo('windowfocus', '--sync', identifier)
+            xdo('key', 'ctrl+w')
+            assert helper.wait(timeout=10) == 0
             # Focus loss caused by mapping is ignored, later focus loss hides.
-            other = subprocess.Popen(['xmessage', '-buttons', 'OK:0', '-timeout', '20', 'Find focus check'], env=env, stdout=log, stderr=log)
+            focus_title = 'Find focus probe ' + str(os.getpid())
+            other = subprocess.Popen(['xmessage', '-title', focus_title, '-buttons', 'OK:0', '-timeout', '20', 'Find focus check'], env=env, stdout=log, stderr=log)
             processes.append(other)
+            # Xt xmessage does not publish _NET_WM_PID; its unique ASCII
+            # title belongs to the process just created in this private server.
             def other_window():
-                result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--pid', str(other.pid)], text=True, capture_output=True)
+                result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--name', '^' + focus_title + '$'], text=True, capture_output=True)
                 return result.stdout.splitlines()[-1] if result.returncode == 0 else None
             focus_target = until(other_window, 'focus target did not map')
             command('--show', 'report')
@@ -161,7 +188,7 @@ def main():
             until(lambda: status().get('ui', {}).get('visible') is False, 'Esc did not close the overlay')
             assert status()['pid'] == pid
             print(f'Native UI: {len(report)} real screenshots; settings singleton, close/reopen, Unicode and second-launch lifecycle passed.')
-            (OUT / 'results.json').write_text(json.dumps({'captures': report, 'residentPid': pid}, indent=2))
+            (OUT / 'results.json').write_text(json.dumps({'captures': report, 'residentPid': pid, 'residentRssKiB': memory}, indent=2))
         finally:
             command('--quit', check=False)
             for process in processes:

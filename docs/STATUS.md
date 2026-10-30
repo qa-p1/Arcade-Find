@@ -1,37 +1,38 @@
 # Status
 
-## 2026-10-30: Find 0.5.0 verification in progress
+## 2026-10-30: Find 0.5.0 final native verification in progress
 
 Continuing PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
 
-- Recovered the paused implementation onto the existing branch; source is
-  checkpointed remotely. No completed app is being overhauled again.
-- Link PRs #22 and #23 fixed the real Settings layout and disabled-text bugs.
-  `tag.yml` created v0.4.8 at `390f5ede7d5f448e544cf0768d8a0a4c1946345e`
-  (run 41007600045); both Rust dependencies and synced files use that tag.
-- Settings uses fixed page headings, wrapping paths, singleton focus, one
-  ordered save worker and retryable errors. The watch-loop regression fails
-  the old handler and passes the repair. CI run 41007834210 captured 96
-  top/bottom page views and checked that headings stay fixed while scrolling;
-  visual review of this new matrix is pending.
-- The migration check now uses a mutating non-resident entry point, rather
-  than waiting indefinitely for a background process. The local check passes
-  and verifies the saved shortcut, theme, pins and history.
-- Wayland fallback lifecycle repaired: hidden windows do not paint/map;
-  Hide releases the toplevel role, Show recreates it, and one drag worker
-  retains each active origin safely. A compositor regression checks actual
-  mapping and repeated cycles, including an old-code failure. CI is pending.
-- Local Rustfmt and Clippy are clean. The design script verifies 190 actual
-  renderer contrast pairs, including every file-kind fill in both themes.
-- Project scripts and the new manual release flow are implemented. The old
-  tag-push publisher remains until a draft beta proves the replacement.
-- The local sandbox rejects private Unix sockets with EPERM. Native and IPC
-  checks run in CI; blocked local checks are never recorded as passed.
-- Full native/three-OS installer checks, visual review, updated documentation
-  screenshots, beta rehearsal, stable release and Tools verification remain.
-- Owner desktop checks remain: Hyprland shortcuts, placement, focus timing,
-  tray clicks and physical IME; platform login items and Windows identity;
-  a real Tools self-update on the owner's machine.
+- Link PRs #22/#23 fixed measured row layout and disabled-text contrast.
+  All 96 Settings page top/bottom captures from run 41007834210 were
+  inspected in both themes, both sizes and both text scales. Repeated-row
+  warnings and overlap are gone. One primary/secondary action ordering issue
+  was found and fixed in the app.
+- Link PR #24 supplies welcome/disclosure components and pair descriptions.
+  Its full CI passed on the PR and merge. `tag.yml` created v0.4.9 at
+  `124d44178909601afc20e957a6a37f7fc6df660f`; Find pins and syncs that tag.
+- Current local checks: Rustfmt/Clippy zero warnings, eight focused Settings
+  tests, docs/shortcut generation, 24 vendored hashes, and 190 contrast pairs
+  from the actual renderer palette pass. Full native/IPC checks cannot run
+  locally because private Unix sockets are denied with EPERM; CI runs them.
+- CI run 41008814273: Linux, Windows and macOS source/test jobs passed.
+  Linux AppImage install/repair/re-exec/uninstall and Windows installer checks
+  passed. Mac packaging built the DMG but failed in a stale cleanup trap;
+  a new regression reproduces that failure and passes after the repair.
+- That run's native Settings captures include populated Index pages, singleton
+  focus, close/reopen and live themes. The suite stopped at an xmessage focus
+  probe: Xt does not publish `_NET_WM_PID`. The unique-title lookup is fixed;
+  this native job is not counted as passed. New geometry, install-dialog and
+  lifecycle checks still need CI and visual review.
+- Welcome, Notifications, common keyboard commands and local per-monitor
+  window records complete remaining shared conventions. No overlay capability
+  or useful app feature was removed.
+- Beta rehearsal, final native/three-OS installer checks, refreshed README/
+  guide screenshots, stable publication and Tools verification remain open.
+- Owner-only desktop checks: Hyprland shortcuts, placement, 100 ms warm-open
+  budget, focus timing, tray clicks and physical IME; platform login items,
+  macOS permissions and Windows identity; actual Tools self-update.
 
 ## 2026-10-29: overhaul (FIND.md) in progress, branch `claude/arcade-overhaul-q3xegk`
 

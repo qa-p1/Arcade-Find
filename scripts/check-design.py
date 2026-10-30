@@ -36,7 +36,7 @@ def main():
         if re.search(r'Rgba::hex\(\s*0x[0-9a-fA-F]{6}|#[0-9a-fA-F]{6}\b|size:\s*\d+(?:\.\d+)?\s*\*', source):
             errors.append(f'{file.relative_to(ROOT)}: literal colour or font size')
     settings = ''.join((ROOT / ('crates/arcade-find/src/' + name)).read_text(encoding='utf-8') for name in ('settings_ui.rs', 'installer_ui.rs'))
-    if any(value in settings for value in ('egui::Button::', 'ui.checkbox(', 'ui.radio_value(', 'egui::TextEdit::', 'fn apply_visuals(ctx: &egui::Context, t:')):
+    if any(value in settings for value in ('egui::Button::', 'ui.checkbox(', 'ui.radio_value(', 'egui::TextEdit::', 'fn apply_visuals(ctx: &egui::Context, t:', 'egui::CollapsingHeader::')):
         errors.append('Settings must use the shared egui components')
     if errors:
         sys.exit('\n'.join(errors))

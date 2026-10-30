@@ -48,7 +48,7 @@ def main():
     with (output / 'settings.log').open('w') as log:
         for theme in ('light', 'dark'):
             for scale in ('1', '1.25'):
-                config.write_text(json.dumps({'schema': 1, 'theme': theme, 'roots': [str(long_path)], 'shortcut': 'Ctrl+Alt+F'}))
+                config.write_text(json.dumps({'schema': 1, 'welcomeComplete': True, 'theme': theme, 'roots': [str(long_path)], 'shortcut': 'Ctrl+Alt+F'}))
                 process = subprocess.Popen([str(binary), '--settings-window'], env=dict(os.environ, ARCADE_FIND_UI_SCALE=scale, ARCADE_FIND_DEBUG='1'), stdout=log, stderr=log)
                 try:
                     try:

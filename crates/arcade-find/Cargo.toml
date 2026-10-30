@@ -23,7 +23,7 @@ serde_json.workspace = true
 semver = "1"
 notify = "8"
 fs2 = "0.4"
-arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v0.4.8", features = ["watch", "install", "trayhost", "design", "design-egui"] }
+arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v0.4.9", features = ["watch", "install", "trayhost", "design", "design-egui"] }
 interprocess = "2.4"
 getrandom = "0.4"
 # Overlay rendering (software; no GPU context is created for the overlay).
@@ -37,6 +37,7 @@ global-hotkey = "0.8"
 arboard = { version = "3.6", default-features = false, features = ["wayland-data-control"] }
 trash = "5"
 open = "5"
+notify-rust = "=4.17.0"
 
 [target.'cfg(unix)'.dependencies]
 libc.workspace = true
@@ -46,7 +47,7 @@ smithay-client-toolkit = { version = "0.19", default-features = false, features 
 # "system": libwayland, so the winit window's connection can be shared
 # (dragging out on Wayland without layer shell).
 wayland-client = { version = "0.31", features = ["system"] }
-x11rb = "0.13"
+x11rb = { version = "0.13", features = ["randr"] }
 ksni = { version = "0.3", features = ["blocking"] }
 zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
 
@@ -54,11 +55,11 @@ zbus = { version = "5", default-features = false, features = ["blocking-api", "a
 tray-icon = "0.24"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Registry", "Win32_UI_Shell", "Win32_System_Com", "Win32_UI_Shell_Common", "Win32_System_Ole", "Win32_System_Memory", "Win32_System_DataExchange", "Win32_Graphics_Gdi", "Win32_System_Console"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging", "Win32_Graphics_Dwm", "Win32_System_Registry", "Win32_UI_Shell", "Win32_UI_HiDpi", "Win32_System_Com", "Win32_UI_Shell_Common", "Win32_System_Ole", "Win32_System_Memory", "Win32_System_DataExchange", "Win32_Graphics_Gdi", "Win32_System_Console"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6"
-objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSRunningApplication", "NSWorkspace", "NSResponder", "NSPasteboard", "NSPasteboardItem", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSImage", "NSView", "objc2-core-foundation"] }
+objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSApplication", "NSRunningApplication", "NSWorkspace", "NSResponder", "NSPasteboard", "NSPasteboardItem", "NSDragging", "NSDraggingItem", "NSDraggingSession", "NSEvent", "NSScreen", "NSImage", "NSView", "objc2-core-foundation"] }
 objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSString", "NSArray", "NSURL", "NSGeometry", "NSObject", "objc2-core-foundation"] }
 
 [build-dependencies]

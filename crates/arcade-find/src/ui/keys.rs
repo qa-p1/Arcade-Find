@@ -26,6 +26,7 @@ pub fn from_keysym(sym: smithay_client_toolkit::seat::keyboard::Keysym, utf8: Op
         K::Page_Up | K::KP_Page_Up => Key::PageUp,
         K::Page_Down | K::KP_Page_Down => Key::PageDown,
         K::space | K::KP_Space => Key::Space,
+        K::F1 => Key::F1,
         K::F2 => Key::F2,
         K::F5 => Key::F5,
         other => match other.key_char() {
@@ -56,6 +57,7 @@ pub fn from_winit(logical: &winit::keyboard::Key, text: Option<&str>, mods: Mods
             N::PageUp => Key::PageUp,
             N::PageDown => Key::PageDown,
             N::Space => Key::Space,
+            N::F1 => Key::F1,
             N::F2 => Key::F2,
             N::F5 => Key::F5,
             _ => Key::Other,

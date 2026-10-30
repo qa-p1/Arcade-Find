@@ -64,6 +64,7 @@ pub enum Key {
     PageUp,
     PageDown,
     Space,
+    F1,
     F2,
     F5,
     Other,
@@ -297,6 +298,8 @@ pub enum Effect {
     /// Fetch clipboard text and call [`Overlay::paste`].
     Paste,
     OpenSettings,
+    OpenGuide,
+    Quit,
     /// Fill the action list for these rows ([`Overlay::set_actions`]).
     WantActions(Vec<Row>),
 }
@@ -829,6 +832,18 @@ impl Overlay {
         }
         let primary = ev.primary();
         let shift = ev.mods.shift;
+        match ev.key {
+            Key::F1 => return vec![Effect::OpenGuide],
+            Key::Char('q') if primary => return vec![Effect::Quit],
+            Key::Char(',') if primary => return vec![Effect::OpenSettings],
+            Key::Char('k') if primary => {
+                self.mode = Mode::Results;
+                self.nav = false;
+                self.input.select_all();
+                return vec![];
+            }
+            _ => {}
+        }
         // Mode-specific handling first.
         match &mut self.mode {
             Mode::Rename { row, input } => {

@@ -598,6 +598,9 @@ impl Service {
     }
 
     fn toast(&self, text: impl Into<String>, kind: ToastKind) {
+        if crate::notifications::should_notify(self.settings().notifications, self.hub.visible.load(Ordering::Relaxed), kind == ToastKind::Error) {
+            crate::notifications::attention();
+        }
         self.send(UiMsg::Toast(text.into(), kind));
     }
 
@@ -728,6 +731,16 @@ impl Service {
             Effect::OpenSettings => {
                 out.hide = true;
                 self.open_settings();
+            }
+            Effect::OpenGuide => {
+                self.worker("find-guide", move |_| {
+                    let _ = open::that(crate::settings_ui::GUIDE_URL);
+                });
+            }
+            Effect::Quit => {
+                out.hide = true;
+                out.quit = true;
+                self.send(UiMsg::Quit);
             }
             Effect::WantActions(rows) => {
                 let items = self.actions_for(&rows);

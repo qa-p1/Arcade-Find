@@ -7,6 +7,8 @@
 - Composed input is supported through winit IME and Wayland text-input-v3.
 - Standard application identifiers and verified migration of existing folders, desktop and login entries. Existing shortcuts and preferences stay.
 - Monochrome tray glyph, left-click search, standard menu wording and shared Copied feedback.
+- Welcome and notification preferences, standard keyboard commands, per-monitor window geometry and pair-specific Connected apps copy.
+- Fixed Settings file-watch feedback, concurrent saves and the Wayland fallback's actual Show/Hide lifecycle without leaking drag workers.
 - Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
 
 ## 0.4.3 — 2026-10-19

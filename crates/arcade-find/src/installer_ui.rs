@@ -152,6 +152,7 @@ struct Dialog {
     legacy: Vec<PathBuf>,
     toast: Option<Toast>,
     theme: arcade_link::design::Theme,
+    window_state: crate::window_state::WindowState,
 }
 
 fn format(s: &str, version: &str, from: &str) -> String {
@@ -205,14 +206,20 @@ fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
     let legacy = Vec::new();
     let title = if matches!(mode, Mode::Uninstall { .. }) { "Uninstall — Arcade Find" } else { "Install — Arcade Find" };
     crate::theme::refresh_system_theme();
+    let window_state = crate::window_state::WindowState::new(
+        &paths,
+        if matches!(mode, Mode::Uninstall { .. }) { "uninstall" } else { "install" },
+        [size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT],
+    );
     let options = eframe::NativeOptions {
-        centered: true,
-        viewport: egui::ViewportBuilder::default()
-            .with_title(title)
-            .with_app_id(crate::os::APP_ID)
-            .with_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
-            .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
-            .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
+        viewport: window_state.viewport(
+            egui::ViewportBuilder::default()
+                .with_title(title)
+                .with_app_id(crate::os::APP_ID)
+                .with_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
+                .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
+                .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
+        ),
         ..Default::default()
     };
     eframe::run_native(
@@ -233,7 +240,7 @@ fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
             let ctx = cc.egui_ctx.clone();
             crate::theme::watch_system_theme(move || ctx.request_repaint());
             let (tx, rx) = mpsc::channel();
-            Ok(Box::new(Dialog { paths, mode, result, tx, rx, busy: false, error: None, completed: None, legacy, toast: None, theme }))
+            Ok(Box::new(Dialog { paths, mode, result, tx, rx, busy: false, error: None, completed: None, legacy, toast: None, theme, window_state }))
         }),
     )
     .map_err(|e| e.to_string())?;
@@ -290,6 +297,7 @@ impl Dialog {
 
 impl eframe::App for Dialog {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.window_state.observe(ctx);
         if let Ok(result) = self.rx.try_recv() {
             self.busy = false;
             match result {

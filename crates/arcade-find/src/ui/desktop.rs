@@ -159,7 +159,11 @@ impl App {
         let Some(w) = self.window().cloned() else { return };
         self.overlay.visible = true;
         self.svc.set_visible(true);
-        let monitor = w.current_monitor().or_else(|| w.primary_monitor());
+        let name = crate::window_state::cursor_monitor_name();
+        let monitor = name
+            .and_then(|name| w.available_monitors().find(|monitor| monitor.name().as_deref() == Some(name.as_str())))
+            .or_else(|| w.current_monitor())
+            .or_else(|| w.primary_monitor());
         if let Some(m) = monitor {
             let (pos, size) = (m.position(), m.size());
             self.center = Some(PhysicalPosition::new(pos.x + size.width as i32 / 2, pos.y + size.height as i32 / 2));

@@ -23,6 +23,7 @@ def main():
     if not args.native_only:
         run(sys.executable, 'scripts/check-docs.py')
         run(sys.executable, 'scripts/check-vendored.py')
+        run(sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py')
         run(sys.executable, 'scripts/check-design.py', '--source-only')
         run('cargo', 'fmt', '--all', '--', '--check')
         run('cargo', 'clippy', '--workspace', '--all-targets', '--locked', '--', '-D', 'warnings')
@@ -40,6 +41,7 @@ def main():
     cli = Path(os.environ['ARCADE_LINK_CLI']).resolve()
     env = dict(os.environ, ARCADE_LINK_CLI=str(cli))
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-native.py', str(binary), env=env)
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-install-ui.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/tray-registration.py', str(binary), str(cli), 'find', env=env)
     if not os.environ.get('ARCADE_SHELF_BIN'):
         raise SystemExit('ARCADE_SHELF_BIN must name the real Shelf binary; peer/drag checks have not passed.')

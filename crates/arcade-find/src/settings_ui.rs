@@ -102,6 +102,8 @@ struct SettingsApp {
     pending_saves: usize,
     save_error: Option<String>,
     closing: bool,
+    welcome: bool,
+    window_state: Option<crate::window_state::WindowState>,
     _window_lock: Option<instance::InstanceLock>,
 }
 
@@ -150,13 +152,16 @@ pub fn run(paths: AppPaths) -> ExitCode {
     crate::debug!("settings: reading system theme");
     theme::refresh_system_theme();
     crate::debug!("settings: starting eframe");
+    let window_state = crate::window_state::WindowState::new(&paths, "settings", [size::SETTINGS_WIDTH, size::SETTINGS_HEIGHT]);
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Settings — Arcade Find")
-            .with_app_id(crate::os::APP_ID)
-            .with_inner_size([size::SETTINGS_WIDTH, size::SETTINGS_HEIGHT])
-            .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
-            .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
+        viewport: window_state.viewport(
+            egui::ViewportBuilder::default()
+                .with_title("Settings — Arcade Find")
+                .with_app_id(crate::os::APP_ID)
+                .with_inner_size([size::SETTINGS_WIDTH, size::SETTINGS_HEIGHT])
+                .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
+                .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
+        ),
         ..Default::default()
     };
     let r = eframe::run_native(
@@ -177,6 +182,7 @@ pub fn run(paths: AppPaths) -> ExitCode {
             }
             let mut app = SettingsApp::new(paths, settings, cc.egui_ctx.clone());
             app._window_lock = Some(window_lock);
+            app.window_state = Some(window_state);
             crate::debug!("settings: UI created");
             Ok(Box::new(app))
         }),
@@ -242,6 +248,7 @@ impl SettingsApp {
         for id in link::apps::known() {
             glyphs.push((id.to_string(), texture(&ctx, id, crate::ui::icons::glyph_mask_rgba(id, 64), 64)));
         }
+        let welcome = !settings.welcome_complete;
         let app = SettingsApp {
             login_state: None,
             login_pending: false,
@@ -272,6 +279,8 @@ impl SettingsApp {
             pending_saves: 0,
             save_error: None,
             closing: false,
+            welcome,
+            window_state: None,
             _window_lock: None,
         };
         app.refresh_status(&ctx);
@@ -568,6 +577,9 @@ fn note(ui: &mut egui::Ui, kit: &Kit, text: &str) {
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         theme::follow_native_theme(ctx);
+        if let Some(state) = &mut self.window_state {
+            state.observe(ctx);
+        }
         let save_failed = self.drain(ctx);
         let close_requested = ctx.input(|i| i.viewport().close_requested());
         // Follow a System appearance live.
@@ -605,12 +617,17 @@ impl eframe::App for SettingsApp {
         let busy = self.rescanning || self.status.as_ref().and_then(|s| s.as_ref()).is_some_and(|s| s["engine"]["phase"] == "crawling");
         let can_rescan = page == Page::Index && self.status.as_ref().is_some_and(|s| s.is_some());
         let mut rescan = false;
+        let mut skip = false;
+        let welcome = self.welcome;
         kit.page_with_head_actions(
             ctx,
-            title,
-            description,
+            if welcome { "Welcome" } else { title },
+            if welcome { "Set your shortcut and choose how Find connects." } else { description },
             |ui| {
-                if can_rescan {
+                if welcome {
+                    skip = kit.button(ui, "Skip", ButtonKind::Ghost).clicked();
+                }
+                if can_rescan && !welcome {
                     rescan = kit.button_state(ui, if busy { "Rescanning" } else { "Rescan now" }, ButtonKind::Primary, true, busy, false).clicked();
                 }
             },
@@ -625,6 +642,10 @@ impl eframe::App for SettingsApp {
                         self.save(ctx);
                     }
                 }
+                if welcome {
+                    self.welcome_page(ui, &kit, ctx);
+                    return;
+                }
                 match page {
                     Page::General => self.general(ui, &kit, ctx),
                     Page::Shortcuts => self.shortcuts(ui, &kit, ctx),
@@ -635,6 +656,9 @@ impl eframe::App for SettingsApp {
                 }
             },
         );
+        if skip {
+            self.finish_welcome(ctx);
+        }
         if rescan {
             self.rescanning = true;
             self.command(ctx, Command::Rescan, None);
@@ -649,17 +673,82 @@ impl eframe::App for SettingsApp {
 }
 
 impl SettingsApp {
-    /// Esc closes the window (unless a control uses it), F1 opens the guide,
-    /// Ctrl+W closes.
     fn keys(&mut self, ctx: &egui::Context) {
         let editing = ctx.wants_keyboard_input();
-        let (esc, f1, close) =
-            ctx.input(|i| (i.key_pressed(egui::Key::Escape), i.key_pressed(egui::Key::F1), i.modifiers.command && i.key_pressed(egui::Key::W)));
-        if (esc && !editing && !self.recorder.recording) || close {
+        if self.recorder.recording {
+            return;
+        }
+        let (esc, f1, close, search, settings, quit) = ctx.input(|i| {
+            (
+                i.key_pressed(egui::Key::Escape),
+                i.key_pressed(egui::Key::F1),
+                i.modifiers.command && i.key_pressed(egui::Key::W),
+                i.modifiers.command && i.key_pressed(egui::Key::K),
+                i.modifiers.command && i.key_pressed(egui::Key::Comma),
+                i.modifiers.command && i.key_pressed(egui::Key::Q),
+            )
+        });
+        if (esc && !editing) || close {
             self.closing = true;
         }
         if f1 {
             self.open_url(GUIDE_URL);
+        }
+        if settings {
+            self.page = 0;
+            self.welcome = false;
+        }
+        if search {
+            self.command(ctx, Command::Show { query: None, reveal: None }, None);
+            self.closing = true;
+        }
+        if quit {
+            self.command(ctx, Command::Quit, None);
+            self.closing = true;
+        }
+    }
+
+    fn finish_welcome(&mut self, ctx: &egui::Context) {
+        self.welcome = false;
+        self.settings.welcome_complete = true;
+        self.save(ctx);
+    }
+
+    fn welcome_page(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        kit.welcome_head(ui, self.glyph("brand"), "search", "Arcade Find", TAGLINE);
+        kit.section_head(ui, "1. Choose your shortcut");
+        let mut changed = false;
+        kit.list(ui, |ui| {
+            let spec = ShortcutSpec {
+                title: "Open Arcade Find",
+                description: "Press it from any app to search your files.",
+                default: find_core::settings::DEFAULT_SHORTCUT,
+                allow_clear: false,
+            };
+            changed |= self.recorder.row(ui, kit, &spec, &mut self.settings.shortcut, |accelerator| {
+                self.registry
+                    .as_ref()
+                    .and_then(|registry| registry.shortcut_owner(link::ME, accelerator))
+                    .or_else(|| hotkey::known_conflict(accelerator).map(str::to_string))
+            });
+        });
+        kit.section_head(ui, "2. Connect your apps");
+        kit.list(ui, |ui| {
+            changed |= kit
+                .switch_row(ui, &mut self.settings.link.enabled, "Connect with other Arcade apps", "Preview results, run tools and keep files on a shelf.")
+                .changed();
+        });
+        kit.section_head(ui, "3. Start searching");
+        kit.list(ui, |ui| {
+            kit.row(ui, "Type a file or folder name", "Use arrows to select, Enter to preview, and Tab for actions.", |_| ());
+        });
+        kit.dialog_actions(ui, |ui| {
+            if kit.button(ui, "Get started", ButtonKind::Primary).clicked() {
+                self.finish_welcome(ctx);
+            }
+        });
+        if changed {
+            self.save(ctx);
         }
     }
 
@@ -690,6 +779,8 @@ impl SettingsApp {
                     ctx.request_repaint();
                 });
             }
+            changed |=
+                kit.switch_row(ui, &mut self.settings.notifications, "Notifications", "Only when an action needs attention while Find is hidden.").changed();
             changed |= kit
                 .switch_row(ui, &mut self.settings.show_recent_on_open, "Show recent and pinned on open", "Lists them as soon as the search opens.")
                 .changed();
@@ -745,6 +836,14 @@ impl SettingsApp {
                 self.copy(ctx, c);
             }
         }
+        kit.section_head(ui, "Welcome");
+        kit.list(ui, |ui| {
+            kit.row(ui, "Welcome to Arcade Find", "Choose a shortcut and learn the search controls.", |ui| {
+                if kit.button_state(ui, "Open welcome", ButtonKind::Default, true, false, true).clicked() {
+                    self.welcome = true;
+                }
+            });
+        });
         if changed {
             self.save(ctx);
         }
@@ -970,8 +1069,8 @@ impl SettingsApp {
             let mut retry = false;
             kit.empty_state(ui, "search", "Arcade Find isn't running", "Start it to build and update the index.", |ui| {
                 ui.horizontal(|ui| {
-                    start = kit.button(ui, "Start Arcade Find", ButtonKind::Primary).clicked();
                     retry = kit.button(ui, "Retry", ButtonKind::Default).clicked();
+                    start = kit.button(ui, "Start Arcade Find", ButtonKind::Primary).clicked();
                 });
             });
             if start {
@@ -1130,7 +1229,7 @@ impl SettingsApp {
                         _ => ("Not running", Tone::Neutral),
                     };
                     let glyph = self.glyph(id);
-                    kit.row_with_glyph(ui, glyph, "apps", &name, link::apps::pitch(id), |ui| {
+                    kit.row_with_glyph(ui, glyph, "apps", &name, arcade_link::manifest::peer_description(link::ME, id), |ui| {
                         kit.badge(ui, badge, tone);
                         if installed {
                             let r = ui.add_enabled_ui(link_on, |ui| kit.switch(ui, &mut use_it, &format!("Use {name} with Arcade Find"))).inner;
@@ -1160,7 +1259,6 @@ impl SettingsApp {
             self.open_app(&id);
         }
         ui.add_space(16.0);
-        let heading = |t: &str| egui::RichText::new(t).font(arcade_link::design::egui::font(arcade_link::design::text::HEADING));
         let activity: Vec<(i64, String)> = self
             .status
             .clone()
@@ -1170,7 +1268,7 @@ impl SettingsApp {
             .iter()
             .filter_map(|a| Some((a["at"].as_i64()?, a["text"].as_str()?.to_string())))
             .collect();
-        egui::CollapsingHeader::new(heading("Recent activity")).id_salt("activity").show(ui, |ui| {
+        kit.disclosure(ui, "activity", "Recent activity", |ui| {
             if activity.is_empty() {
                 kit.empty_state(ui, "clock", "No activity yet", "Use another app's action on a result to see it here.", |_| ());
             } else {
@@ -1189,7 +1287,7 @@ impl SettingsApp {
             Some(l) => (if l["listening"] == true { "Listening" } else { "Not listening" }.to_string(), l["lastError"].as_str().unwrap_or("None").to_string()),
             None => ("Arcade Find isn't running".to_string(), "None".to_string()),
         };
-        egui::CollapsingHeader::new(heading("Diagnostics")).id_salt("diagnostics").show(ui, |ui| {
+        kit.disclosure(ui, "diagnostics", "Diagnostics", |ui| {
             kit.list(ui, |ui| {
                 for (k, v) in &diagnostics {
                     kit.row(ui, k, v, |_| ());
@@ -1364,6 +1462,19 @@ pub fn diagnostics(locations: &Locations, channel: Option<&str>, status: Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn invalid_peer_data_is_reported_and_retry_recovers() {
+        let root = std::env::temp_dir().join(format!("find-registry-error-{}", arcade_link::endpoint::new_token().unwrap()));
+        std::fs::create_dir_all(&root).unwrap();
+        assert!(registry_read_error(&root).is_none());
+        let file = root.join("arcade.look.json");
+        std::fs::write(&file, b"{ broken data").unwrap();
+        assert!(registry_read_error(&root).is_some());
+        std::fs::remove_file(file).unwrap();
+        assert!(registry_read_error(&root).is_none(), "Retry must read repaired data");
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn settings_watcher_does_not_feed_its_own_reads_back_into_the_ui() {

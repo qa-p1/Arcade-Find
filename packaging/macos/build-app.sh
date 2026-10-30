@@ -37,7 +37,7 @@ cat >"$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 DMG_STAGE=$(mktemp -d)
-trap 'rm -rf "$ICON_ROOT" "$DMG_STAGE"' EXIT
+trap 'rm -rf "$DMG_STAGE"' EXIT
 cp -R "$APP" "$DMG_STAGE/"
 ln -s /Applications "$DMG_STAGE/Applications"
 hdiutil create -volname "Arcade Find" -srcfolder "$DMG_STAGE" -ov -format UDZO "$DIST/Arcade-Find-$VERSION-$ARCH.dmg"
