@@ -38,7 +38,7 @@ jobs:
       - name: Build Find and the pinned isolation runner
         run: |
           cargo build --locked -p arcade-find --bin arcade-find
-          git clone --depth 1 --branch v0.4.9 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git clone --depth 1 --branch v0.4.10 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
       - name: Capture settings matrix
         run: python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-settings-ui.py target/debug/arcade-find
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -85,7 +85,7 @@ jobs:
         with:
           cache-on-failure: true
       - name: Session tools
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool xclip x11-utils imagemagick dbus python3-dbus python3-gi ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 libxcb-xinerama0 libxcb-xkb1
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool xclip x11-utils imagemagick dbus python3-dbus python3-gi ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 libxcb-xinerama0 libxcb-xkb1 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3
       - name: Build the old backend for the lifecycle regression
         run: |
           git fetch --depth 1 origin 041ccef4794ac3c5c9f54b8e901239df6fd4e786
@@ -96,7 +96,7 @@ jobs:
       - name: Build Find and the pinned Link CLI
         run: |
           cargo build --locked -p arcade-find --bin arcade-find --example e2e-pointer
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.4.9 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.4.10 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           cargo build --locked --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
           echo "ARCADE_LINK_DIR=$RUNNER_TEMP/link" >> "$GITHUB_ENV"
           echo "ARCADE_LINK_CLI=$RUNNER_TEMP/link/target/debug/arcade-link" >> "$GITHUB_ENV"
@@ -106,6 +106,14 @@ jobs:
         run: |
           python3 scripts/fetch-peer.py qa-p1/Arcade-Shelf "$RUNNER_TEMP/real-shelf"
           echo "ARCADE_SHELF_BIN=$RUNNER_TEMP/real-shelf/squashfs-root/AppRun" >> "$GITHUB_ENV"
+      - name: Download and verify the real released Look and Box
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/fetch-peer.py qa-p1/Arcade-look "$RUNNER_TEMP/real-look" v0.4.0
+          python3 scripts/fetch-peer.py qa-p1/Arcade-box "$RUNNER_TEMP/real-box" v0.4.0
+          echo "ARCADE_LOOK_BIN=$RUNNER_TEMP/real-look/squashfs-root/AppRun" >> "$GITHUB_ENV"
+          echo "ARCADE_BOX_BIN=$RUNNER_TEMP/real-box/squashfs-root/AppRun" >> "$GITHUB_ENV"
       - name: Native lifecycle, real tray, layer-shell, fallback and real Shelf drag checks
         timeout-minutes: 20
         run: python3 scripts/check.py --native-only --binary target/debug/arcade-find
@@ -148,8 +156,22 @@ jobs:
       - name: AppImage install, repair and uninstall (isolated)
         if: runner.os == 'Linux'
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.4.9 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v0.4.10 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/verify-appimage.py dist/Arcade-Find-x86_64.AppImage
+      - name: Upgrade the real previous AppImage without losing user state
+        if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 scripts/fetch-peer.py qa-p1/Arcade-Find "$RUNNER_TEMP/previous-find" v0.4.3
+          previous=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["file"])' "$RUNNER_TEMP/previous-find/source.json")
+          python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-upgrade.py "$RUNNER_TEMP/previous-find/$previous" dist/Arcade-Find-x86_64.AppImage
+      - name: Preserve upgrade verification evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: previous-release-upgrade
+          path: target/e2e/upgrade
       - name: Windows silent install/uninstall (CI account only)
         if: runner.os == 'Windows'
         shell: pwsh

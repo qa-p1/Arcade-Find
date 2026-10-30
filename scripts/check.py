@@ -53,6 +53,10 @@ def main():
         print('Old clipboard regression reproduced: copied file references were not pasted.')
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/clipboard-paste.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/file-actions.py', str(binary), env=env)
+    for peer in ('LOOK', 'BOX'):
+        if not os.environ.get('ARCADE_' + peer + '_BIN'):
+            raise SystemExit('The real released ' + peer.title() + ' is required for peer verification.')
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/real-peers.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-native.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'scripts/check-install-ui.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/tray-registration.py', str(binary), str(cli), 'find', env=env)

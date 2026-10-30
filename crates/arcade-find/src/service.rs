@@ -310,9 +310,13 @@ impl Service {
             Mode::Details { .. } => "details",
         };
         let selected_path = o.rows.get(o.sel).map(|r| r.path.to_string_lossy().into_owned());
+        let actions = match &o.mode {
+            Mode::Actions { items, .. } => items.iter().map(|item| json!({"title": item.title, "disabled": item.disabled})).collect::<Vec<_>>(),
+            _ => Vec::new(),
+        };
         let v = json!({ "visible": o.visible, "mode": mode, "query": o.input.text, "rows": o.rows.len(),
                         "selected": o.sel, "selectedPath": selected_path, "selectedCount": o.targets().len(),
-                        "toast": o.toast.as_ref().map(|toast| &toast.text), "height": o.height() });
+                        "toast": o.toast.as_ref().map(|toast| &toast.text), "actions": actions, "height": o.height() });
         *self.ui_state.lock().unwrap_or_else(|e| e.into_inner()) = v;
     }
 

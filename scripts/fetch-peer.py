@@ -9,7 +9,8 @@ import sys
 
 repo, destination = sys.argv[1], Path(sys.argv[2]).resolve()
 destination.mkdir(parents=True, exist_ok=False)
-release = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/releases/latest'], text=True))
+endpoint = 'tags/' + sys.argv[3] if len(sys.argv) == 4 else 'latest'
+release = json.loads(subprocess.check_output(['gh', 'api', f'repos/{repo}/releases/{endpoint}'], text=True))
 assets = {a['name']: a for a in release['assets']}
 
 def download(name):
@@ -35,5 +36,5 @@ assert digest == selected['sha256'] == checksums[image.name], image.name
 assert image.stat().st_size == selected['size'], image.name
 image.chmod(0o700)
 subprocess.run([str(image), '--appimage-extract'], cwd=destination, check=True, stdout=subprocess.DEVNULL)
-(destination / 'source.json').write_text(json.dumps({'repo': repo, 'tag': release['tag_name'], 'asset': assets[image.name]['id'], 'sha256': digest}))
+(destination / 'source.json').write_text(json.dumps({'repo': repo, 'tag': release['tag_name'], 'file': image.name, 'asset': assets[image.name]['id'], 'sha256': digest}))
 print(f'Using verified real {repo} {release["tag_name"]} for peer checks')
