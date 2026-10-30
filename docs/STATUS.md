@@ -15,6 +15,9 @@ Continuing draft PR #11 on `claude/arcade-overhaul-q3xegk`. Not released.
 - Recovered fixed page headings, folder titles, Settings singleton/ordered
   saves, kit install prompt, tray wording/clicks, copy feedback, identifiers,
   migration and project scaffolding. These are implementation, not verification.
+- A new watcher regression exposed read-event feedback on Linux. Filtering
+  write events fixes the loop; the old handler fails the regression, and all
+  seven focused Settings tests pass locally with the fix. Full CI is pending.
 - The local sandbox rejects private Unix sockets with EPERM. The full native
   and IPC checks must pass in CI; no blocked check is counted as passed.
 - Known remaining native issue: winit cannot hide a Wayland window with

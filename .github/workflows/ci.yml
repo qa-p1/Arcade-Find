@@ -76,6 +76,7 @@ jobs:
           python3 scripts/check-docs.py
           python3 scripts/check-vendored.py
       - name: Tests (isolated profile)
+        timeout-minutes: 10
         shell: bash
         run: python3 scripts/isolate.py cargo test --workspace --locked
 

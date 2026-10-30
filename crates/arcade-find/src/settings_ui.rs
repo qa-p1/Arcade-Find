@@ -109,6 +109,22 @@ pub fn focus_request(paths: &AppPaths) -> PathBuf {
     paths.runtime.join("settings.focus")
 }
 
+fn forward_watch_event(event: &notify::Event, settings: &Path, focus: &Path, tx: &Sender<Bg>, ctx: &egui::Context) {
+    // inotify emits Access events for our own reads. Feeding those back into
+    // SettingsChanged creates an endless read -> notification -> read loop.
+    if !matches!(event.kind, notify::EventKind::Any | notify::EventKind::Create(_) | notify::EventKind::Modify(_) | notify::EventKind::Remove(_)) {
+        return;
+    }
+    if event.paths.iter().any(|path| path == settings) {
+        let _ = tx.send(Bg::SettingsChanged);
+        ctx.request_repaint();
+    }
+    if event.paths.iter().any(|path| path == focus) {
+        let _ = tx.send(Bg::Focus);
+        ctx.request_repaint();
+    }
+}
+
 pub fn run(paths: AppPaths) -> ExitCode {
     let mut window_paths = paths.clone();
     window_paths.runtime = paths.runtime.join("settings-window");
@@ -208,14 +224,7 @@ impl SettingsApp {
         let (watch_tx, settings_path, focus_path, watch_ctx) = (tx.clone(), paths.settings_file(), focus_request(&paths), ctx.clone());
         let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
             let Ok(event) = event else { return };
-            if event.paths.contains(&settings_path) {
-                let _ = watch_tx.send(Bg::SettingsChanged);
-                watch_ctx.request_repaint();
-            }
-            if event.paths.contains(&focus_path) {
-                let _ = watch_tx.send(Bg::Focus);
-                watch_ctx.request_repaint();
-            }
+            forward_watch_event(&event, &settings_path, &focus_path, &watch_tx, &watch_ctx);
         })
         .ok();
         for dir in [&paths.config, &paths.runtime] {
@@ -383,7 +392,13 @@ impl SettingsApp {
 
     fn drain(&mut self, ctx: &egui::Context) -> bool {
         let mut save_failed = false;
-        while let Ok(m) = self.rx.try_recv() {
+        // Bound one frame's work even if another process writes continuously.
+        // Messages stay queued, and the next frame resumes processing them.
+        for index in 0..256 {
+            let Ok(m) = self.rx.try_recv() else { break };
+            if index == 255 {
+                ctx.request_repaint();
+            }
             match m {
                 Bg::LoginState(state) => self.login_state = state,
                 Bg::LoginSaved(result) => {
@@ -1286,6 +1301,32 @@ pub fn diagnostics(locations: &Locations, channel: Option<&str>, status: Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn settings_watcher_does_not_feed_its_own_reads_back_into_the_ui() {
+        let settings = Path::new("settings.json");
+        let focus = Path::new("settings.focus");
+        let (tx, rx) = channel();
+        let ctx = egui::Context::default();
+        for kind in [
+            notify::EventKind::Access(notify::event::AccessKind::Read),
+            notify::EventKind::Access(notify::event::AccessKind::Open(notify::event::AccessMode::Read)),
+            notify::EventKind::Access(notify::event::AccessKind::Close(notify::event::AccessMode::Read)),
+        ] {
+            forward_watch_event(&notify::Event::new(kind).add_path(settings.into()), settings, focus, &tx, &ctx);
+            assert!(rx.try_recv().is_err(), "reading the settings file must not enqueue another read");
+        }
+        forward_watch_event(
+            &notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content))).add_path(settings.into()),
+            settings,
+            focus,
+            &tx,
+            &ctx,
+        );
+        assert!(matches!(rx.try_recv(), Ok(Bg::SettingsChanged)), "real edits still reload");
+        forward_watch_event(&notify::Event::new(notify::EventKind::Create(notify::event::CreateKind::File)).add_path(focus.into()), settings, focus, &tx, &ctx);
+        assert!(matches!(rx.try_recv(), Ok(Bg::Focus)), "second launches still focus Settings");
+    }
 
     #[test]
     fn rapid_changes_save_the_last_choice_and_close_waits_for_it() {
