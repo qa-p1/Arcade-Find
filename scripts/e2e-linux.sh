@@ -68,7 +68,7 @@ is_visible() { [[ "$(status_field ui.visible)" == True ]]; }
 
 wait_ready() {
   for _ in $(seq 1 100); do
-    if af --status 2>/dev/null | python3 -c 'import json,sys; sys.exit(json.load(sys.stdin)["engine"]["phase"] != "ready")'; then return 0; fi
+    if af --status 2>/dev/null | python3 -c 'import json,sys; sys.exit(json.load(sys.stdin).get("engine", {}).get("phase") != "ready")'; then return 0; fi
     sleep 0.1
   done
   return 1
@@ -270,8 +270,10 @@ real_shelf_drag_checks() {
   local rect=""
   for _ in $(seq 1 150); do rect=$($win_rect 2>/dev/null) && [[ -n "$rect" ]] && break; sleep 0.1; done
   if [[ -z "$rect" ]]; then
-    echo "  skip  $name: drag to Shelf (no visible Shelf window on $platform)"
+    bad "$name: real Shelf did not create a visible window on $platform"
+    cat "$OUT/$name-shelf-drag.log" >&2
     kill "$sp" 2>/dev/null || true
+    wait "$sp" 2>/dev/null || true
     return
   fi
   read -r sx sy sw sh <<<"$rect"

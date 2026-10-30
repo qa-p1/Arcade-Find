@@ -337,6 +337,18 @@ impl App {
 }
 
 impl ApplicationHandler<UiMsg> for App {
+    fn exiting(&mut self, _el: &ActiveEventLoop) {
+        // run_app consumes the event loop. Its Wayland display can disappear
+        // before App is dropped, so stop the borrowed-display worker here,
+        // while that connection is still alive, then release native surfaces.
+        #[cfg(target_os = "linux")]
+        {
+            self.wl_drag = None;
+        }
+        self.surface = None;
+        self.window = None;
+    }
+
     fn new_events(&mut self, _el: &ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
             let now = Instant::now();

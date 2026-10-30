@@ -30,7 +30,7 @@ def main():
     home = root / 'find'
     (home / 'config').mkdir(parents=True)
     (home / 'config/settings.json').write_text(json.dumps({'schema': 1, 'roots': [str(files)]}))
-    env = dict(os.environ, ARCADE_FIND_HOME=str(home), ARCADE_HOME=str(root / 'arcade'), ARCADE_FIND_BACKEND='winit', ARCADE_NO_INSTALL_PROMPT='1')
+    env = dict(os.environ, ARCADE_FIND_HOME=str(home), ARCADE_HOME=str(root / 'arcade'), ARCADE_FIND_BACKEND='winit', ARCADE_NO_INSTALL_PROMPT='1', ARCADE_FIND_DEBUG='1')
 
     def command(*args):
         return subprocess.run([str(binary), *args], env=env, capture_output=True, text=True, timeout=15)
@@ -73,11 +73,18 @@ def main():
                 until(lambda: not mapped(), f'Hide did not unmap cycle {cycle}')
                 assert not status()['ui']['visible'], 'unmapped window still reports visible'
             assert command('--quit').returncode == 0
-            assert process.wait(timeout=10) == 0
+            exit_code = process.wait(timeout=10)
+            assert exit_code == 0, ('Wayland shutdown', exit_code, (root / 'resident.log').read_text())
         finally:
             if process.poll() is None:
                 process.terminate()
                 process.wait(timeout=10)
+            evidence = Path(__file__).resolve().parents[1] / 'target/e2e/wayland-lifecycle'
+            evidence.mkdir(parents=True, exist_ok=True)
+            (evidence / (binary.name + '.log')).write_bytes((root / 'resident.log').read_bytes())
+            for path in (home / 'data/logs').glob('*'):
+                if path.is_file():
+                    (evidence / (binary.name + '-' + path.name)).write_bytes(path.read_bytes())
     print('Wayland: background stays unmapped; 8 Show/Hide/Esc cycles; singleton; one drag worker; clean shutdown.')
 
 
