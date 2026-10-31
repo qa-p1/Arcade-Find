@@ -1497,8 +1497,15 @@ fn overlay_keys() -> Vec<(String, Vec<String>)> {
         for s in group["shortcuts"].as_array().into_iter().flatten() {
             let keys = &s["keys"];
             let platform = if cfg!(target_os = "macos") { "macos" } else { "default" };
-            let mut combos: Vec<String> = keys[platform].as_str().or(keys["default"].as_str()).map(str::to_string).into_iter().collect();
-            combos.extend(keys["alternatives"].as_array().into_iter().flatten().filter_map(|a| a.as_str().map(str::to_string)));
+            // As tools/validate_shortcuts.py: the platform's binding if the key is
+            // present (null: none on this platform), else the default. A binding
+            // is one key or a list of equivalent keys.
+            let binding = keys.get(platform).unwrap_or(&keys["default"]);
+            let combos: Vec<String> = match binding {
+                Value::String(key) => vec![key.clone()],
+                Value::Array(list) => list.iter().filter_map(|k| k.as_str().map(str::to_string)).collect(),
+                _ => Vec::new(),
+            };
             if let (Some(title), false) = (s["title"].as_str(), combos.is_empty()) {
                 out.push((title.to_string(), combos));
             }
@@ -1686,6 +1693,9 @@ mod tests {
         let keys = overlay_keys();
         assert!(keys.iter().any(|(t, k)| t == "Select the next result" && k[0] == "Down"));
         assert!(!keys.iter().any(|(t, _)| t == "Show or hide Find"), "the global shortcut has its own row");
+        let trash: Vec<_> = keys.iter().filter(|(t, _)| t == "Confirm moving items to Trash").collect();
+        assert_eq!(trash.len(), 1, "equivalent keys share one row");
+        assert_eq!(trash[0].1, ["Enter", "Delete"]);
     }
 
     #[test]

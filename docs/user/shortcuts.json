@@ -400,17 +400,10 @@
       "context": "confirm-trash",
       "shortcuts": [
         {
-          "id": "confirm-trash-enter",
+          "id": "confirm-trash",
           "title": "Confirm moving items to Trash",
           "keys": {
-            "default": "Enter"
-          }
-        },
-        {
-          "id": "confirm-trash-delete",
-          "title": "Confirm moving items to Trash",
-          "keys": {
-            "default": "Delete"
+            "default": ["Enter", "Delete"]
           }
         }
       ]

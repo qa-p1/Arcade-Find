@@ -33,8 +33,8 @@ fe152028ff674fdacdef4aed8970bb0a7afeb2dd67d2a3af075d7d95683bf96b  packaging/wind
 
 ## Arcade design kit
 
-Copied unchanged from [Arcade Link](https://github.com/qa-p1/Arcade-Link/tree/v0.4.11) tag `v0.4.11` (commit
-`047b686d9b02de6dcf7bdfa77c85bf7eefbf7264`) by `scripts/sync-design`; never edit these files here.
+Copied unchanged from [Arcade Link](https://github.com/qa-p1/Arcade-Link/tree/v0.4.12) tag `v0.4.12` (commit
+`aab656965489d7cdf0fa0b2670c55a20ac88e38a`) by `scripts/sync-design`; never edit these files here.
 License: MIT OR Apache-2.0.
 
 ```text

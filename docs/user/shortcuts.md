@@ -76,8 +76,7 @@
 
 | Action | Linux | Windows | macOS |
 | --- | --- | --- | --- |
-| Confirm moving items to Trash | Enter | Enter | ↩ |
-| Confirm moving items to Trash | Delete | Delete | ⌦ |
+| Confirm moving items to Trash | Enter<br>Delete | Enter<br>Delete | ↩<br>⌦ |
 
 ## Item details
 

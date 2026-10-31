@@ -703,8 +703,11 @@ impl Renderer {
         } else {
             r.size.map(|b| format!("{} ({} bytes)", format_size(b), format_count(b.min(i64::MAX as u64) as i64))).unwrap_or_default()
         };
-        let modified =
-            if r.mtime > 0 { format!("{} · {}", find_core::fmt::datetime(r.mtime, self.utc_offset), self.relative(r.mtime, now)) } else { String::new() };
+        let modified = if r.mtime > 0 {
+            format!("{} · {}", arcade_link::design::format::format_datetime(r.mtime, self.utc_offset), self.relative(r.mtime, now))
+        } else {
+            String::new()
+        };
         let lines = [("Kind", kind), ("Size", size), ("Modified", modified), ("Where", r.parent.clone())];
         let mut y = top + 46.0 * s;
         for (l, v) in lines {

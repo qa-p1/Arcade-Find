@@ -12,6 +12,7 @@
 - File-list paste restores copied file references and preserves multi-selection; shortcut recording checks the running Hyprland bindings as well as Arcade's registry.
 - Native screen-reader search and result announcements, full-name tooltips, Quit in About and a one-time background reminder. Settings waits for resident commands before it exits.
 - Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
+- Updating from 0.4.x replaces the old `arcade-find` launcher and login entry instead of leaving a second menu entry and a second login item (Arcade Link 0.4.12). File details use the kit's exact timestamp format. Equivalent keys share one row in Settings' key list.
 
 ## 0.4.3 — 2026-10-19
 

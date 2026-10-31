@@ -88,11 +88,19 @@ def main():
         try:
             until(lambda: status().get('engine', {}).get('phase') == 'ready', 'OS handoff index did not finish')
             select()
-            subprocess.run(['xdotool', 'key', 'ctrl+c'], env=env, check=True)
+            # --show QUERY opens with the query selected, and Ctrl+C on selected
+            # search text copies that text (docs/user/shortcuts.md). End moves
+            # the caret like a user who typed the query, so Ctrl+C copies the path.
+            subprocess.run(['xdotool', 'key', 'End', 'ctrl+c'], env=env, check=True)
+            last = {}
             def copied():
                 result = subprocess.run(['xclip', '-selection', 'clipboard', '-target', 'UTF8_STRING', '-o'], env=env, capture_output=True, text=True)
+                last['clipboard'] = result.stdout
                 return result.stdout == str(path)
-            until(copied, 'Copy path did not copy the selected Unicode path')
+            try:
+                until(copied, 'Copy path did not copy the selected Unicode path')
+            except AssertionError as error:
+                raise AssertionError(f'{error}: clipboard held {last.get("clipboard")!r}') from None
             assert status()['ui']['toast'] == 'Copied'
             subprocess.run(['xdotool', 'key', 'ctrl+Return'], env=env, check=True)
             until(lambda: manager.items == [[path.as_uri()]], 'Show in folder did not select the exact file through FileManager1')

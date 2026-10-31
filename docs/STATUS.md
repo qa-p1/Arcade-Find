@@ -1,5 +1,32 @@
 # Status
 
+## 2026-10-31 (evening): both run-106 failures diagnosed and fixed; awaiting CI
+
+Resumed PR #11 from GPT's checkpoint (`5103750`). Not merged or released.
+
+- **Upgrade check (`check-upgrade.py:112`)** — real bug, in Link. `cleanup_duplicates` keeps
+  owned launchers that run the *same* executable, and 0.4.3 and 0.5.0 both install to
+  `~/Applications/Arcade/Arcade-Find.AppImage`, so `arcade-find.desktop` stayed next to
+  `dev.arcade.Find.desktop`; the old login entry was never looked at either (Find would have
+  started twice at login). Fixed in Link PR #27 / **v0.4.12** (merge `aab6569`): install replaces
+  the launcher and login entry the old receipt recorded under another desktop id, carries Start
+  at login and the desktop's switched-off flag over, and leaves an entry another app now owns.
+  New Link regression test fails on the old code and passes now. Find pins v0.4.12.
+- **Copy path (`os-handoffs.py:95`)** — test bug, not an app bug. `--show 'handoff ext:txt'`
+  opens with the query selected, and Ctrl+C on selected search text copies that text, as
+  documented in `docs/user/shortcuts.md` and covered by the `copy_prefers_text_selection` unit
+  test. The test now presses End first (like a user who typed the query) and its failure message
+  includes what the clipboard actually held.
+- Exact detail timestamps use Link's new `format_datetime`; `find_core::fmt` stays public for
+  compatibility.
+- Settings key list: the reader now follows the shortcut schema (a binding can be a list; an
+  explicit `null` means none on that platform, previously it fell back to the default keys on
+  macOS). "Confirm moving items to Trash" is one row with Enter or Delete.
+- Reviewed the run-106 Settings captures (all six pages; light 760×560 and dark 720×520 at
+  125 %): no layout defects beyond the duplicate Trash row above.
+- Local: docs, vendored (v0.4.12), fmt, clippy `-D warnings`, all workspace tests, 190 contrast
+  pairs pass. Native and upgrade checks need CI.
+
 ## 2026-10-31: paused by owner; not release-ready
 
 Implementation is preserved in PR #11 at `843a8cd2ee2bbbbb5554506d7fe64a1ec67d27d1`.
