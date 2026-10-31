@@ -107,9 +107,20 @@ def main():
                 query = next(node for node in descendants(window()) if node.name == 'Search your files')
                 assert query.getState().contains(pyatspi.STATE_EDITABLE), 'query is exposed as read-only'
                 assert query.queryComponent().grabFocus(), 'reader could not focus search'
+                # The keyboard types into the focused window. Xvfb has no window
+                # manager and X focus follows the pointer, so give Find's window
+                # the keyboard as a desktop would (as os-handoffs.py does).
+                found = subprocess.check_output(['xdotool', 'search', '--onlyvisible', '--class', '^dev.arcade.Find$'], env=env, text=True)
+                subprocess.run(['xdotool', 'windowfocus', '--sync', found.splitlines()[-1]], env=env, check=True)
                 subprocess.run(['xdotool', 'key', 'ctrl+a', 'type', '--clearmodifiers', value], env=env, check=True)
-                until(lambda: next(node for node in descendants(window()) if node.name == 'Search your files').queryText().getText(0, -1) == value,
-                      'reader could not read the entered query')
+                read = {}
+                def entered():
+                    read['text'] = next(node for node in descendants(window()) if node.name == 'Search your files').queryText().getText(0, -1)
+                    return read['text'] == value
+                try:
+                    until(entered, 'reader could not read the entered query')
+                except AssertionError as error:
+                    raise AssertionError(f'{error}: read {read.get("text")!r}, status {status().get("ui")}') from None
             enter_query('reader-file-beta ext:txt')
             until(lambda: status().get('ui', {}).get('rows') == 1, 'accessible query did not search')
             until(lambda: '1 result' in announcements, 'singular result count was not announced')

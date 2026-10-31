@@ -42,6 +42,15 @@ Resumed PR #11 from GPT's checkpoint (`5103750`). Not merged or released.
     asserts each entry's own lines: launcher icon, window class and owner; login entry owner and
     `Exec` of the installed copy with `--background`. Real 0.4.3 → this branch upgrade passes
     locally under Link's e2e isolation.
+- **Run 110**: upgrade, packages and manifest green. `accessibility.py` ran for the first time in
+  these runs (it comes after `os-handoffs.py`; the `accessibility/` files in run 109's artifact
+  were stale, restored with the cached `target/`). It typed with xdotool without giving Find's
+  window the keyboard; Xvfb has no window manager and X focus follows the pointer, so keys
+  reached Find only when its window happened to be under the pointer. The test now focuses the
+  window first, as `os-handoffs.py` does. Reproduced locally (old test fails the same way; fixed
+  test passes with the 2, 1 and 0 result announcements). Also ran locally, all passing:
+  background-notice, check-native (53 screenshots), check-install-ui, tray-registration (9 checks),
+  real-peers with the released Look 0.4.0 and Box 0.4.0.
 
 ## 2026-10-31: paused by owner; not release-ready
 
