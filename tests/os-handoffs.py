@@ -61,9 +61,14 @@ def main():
     recorded = root / 'opened.json'
     helper = root / 'record-open.py'
     helper.write_text('import json,sys\nfrom pathlib import Path\nPath(' + repr(str(recorded)) + ').write_text(json.dumps(sys.argv[1:]))\n')
+    # xdg-utils 1.1.3 (Ubuntu 24.04) word-splits Exec without honouring
+    # quotes, so a quoted program argument reaches python3 with its quote
+    # characters. Keep the handler's own path plain; the opened file keeps
+    # its spaces and Unicode, which is what this test is about.
+    assert not any(c in str(helper) for c in ' \t"\'\\$`'), helper
     apps = Path(os.environ['XDG_DATA_HOME']) / 'applications'
     apps.mkdir(parents=True, exist_ok=True)
-    (apps / 'find-test-open.desktop').write_text('[Desktop Entry]\nType=Application\nName=Find test default handler\nExec=/usr/bin/python3 "' + str(helper) + '" %f\nTerminal=false\nMimeType=text/plain;\n')
+    (apps / 'find-test-open.desktop').write_text('[Desktop Entry]\nType=Application\nName=Find test default handler\nExec=/usr/bin/python3 ' + str(helper) + ' %f\nTerminal=false\nMimeType=text/plain;\n')
     mime = Path(os.environ['XDG_CONFIG_HOME']) / 'mimeapps.list'
     mime.parent.mkdir(parents=True, exist_ok=True)
     mime.write_text('[Default Applications]\ntext/plain=find-test-open.desktop\n')

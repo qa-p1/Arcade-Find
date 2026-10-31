@@ -103,10 +103,21 @@ def main():
         for name in ('pins.json', 'frecency.json'):
             assert (new_data / name).read_bytes() == kept[name], name + ' was not preserved'
         assert not legacy_config.exists() and not legacy_data.exists(), 'verified migration left the legacy folders'
+        # The launcher carries Find's identity (icon, window class); the login
+        # entry is Link's: it starts this copy in the background and is ours.
+        expected = {
+            'desktopEntry': ['Icon=dev.arcade.Find', 'StartupWMClass=dev.arcade.Find', 'X-Arcade-Id=arcade.find'],
+            'autostart': ['X-Arcade-Id=arcade.find'],
+        }
         for key in ('desktopEntry', 'autostart'):
             entry = Path(new_receipt['integration'][key])
             assert entry.is_relative_to(root) and entry.name == 'dev.arcade.Find.desktop', (key, entry)
-            assert entry.exists() and 'dev.arcade.Find' in entry.read_text(), entry
+            assert entry.exists(), (key, entry, 'missing')
+            lines = entry.read_text().splitlines()
+            for line in expected[key]:
+                assert line in lines, (key, entry, line, lines)
+            if key == 'autostart':
+                assert any(l.startswith('Exec=') and str(installed) in l and l.endswith('--background"') for l in lines), (key, lines)
             old_entry = Path(old_receipt['integration'][key])
             if old_entry != entry:
                 assert not old_entry.exists(), old_entry

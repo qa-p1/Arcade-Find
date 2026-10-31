@@ -31,6 +31,17 @@ Resumed PR #11 from GPT's checkpoint (`5103750`). Not merged or released.
   retires macOS 14 on 2026-11-02 (actions/runner-images#13518). CI now uses `macos-15` for checks
   and the universal DMG, builds with `MACOSX_DEPLOYMENT_TARGET=11.0` (the app's
   `LSMinimumSystemVersion`), and the DMG step fails unless both slices require macOS 11.0.
+- **Run 109** (first run with macOS back): two test bugs, both reproduced locally and fixed.
+  - `os-handoffs.py:109` "Open with default app": Ubuntu 24.04's xdg-utils 1.1.3 word-splits the
+    handler's `Exec` without honouring quotes, so the test's quoted helper path reached python3
+    with its quote characters and the handler never ran. Find's open worked (no error logged;
+    `xdg-open` and `gio open` both launch the handler with the exact Unicode path once the helper's
+    `Exec` is unquoted). The test now writes a plain helper path and asserts it needs no quoting.
+  - `check-upgrade.py:109` login entry: the file existed; the check required the text
+    `dev.arcade.Find` in it, which only the launcher has (Icon, StartupWMClass). The check now
+    asserts each entry's own lines: launcher icon, window class and owner; login entry owner and
+    `Exec` of the installed copy with `--background`. Real 0.4.3 → this branch upgrade passes
+    locally under Link's e2e isolation.
 
 ## 2026-10-31: paused by owner; not release-ready
 
