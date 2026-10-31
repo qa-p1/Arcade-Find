@@ -1,5 +1,17 @@
 # Status
 
+## 2026-10-31: paused by owner; not release-ready
+
+Implementation is preserved in PR #11 at `843a8cd2ee2bbbbb5554506d7fe64a1ec67d27d1`.
+Latest release is still v0.4.3; proposed 0.5.0 is neither merged nor released.
+Run 41169413705 passed three-OS source checks, Settings captures and Windows/macOS
+installers, but failed native Unicode Copy path and old desktop-entry removal
+in the previous-release upgrade. Root causes remain undiagnosed. No final
+acceptance or Tools update verification is claimed. See the complete
+[handoff](dev/handoff-2026-10-31.md) for implemented work, exact failures, evidence,
+release sequence and all remaining checks. Older entries below are historical.
+
+
 ## 2026-10-31: final acceptance gates
 
 PR #11 remains open; no new release has been published. Run 41053930348 passed
