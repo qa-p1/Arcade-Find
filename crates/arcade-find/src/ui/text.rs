@@ -44,8 +44,14 @@ fn color(c: Rgba) -> Color {
 }
 
 impl Text {
+    /// System fonts plus the kit's Inter as the sans-serif family; system
+    /// fonts stay as fallbacks for scripts and emoji Inter lacks.
     pub fn new() -> Text {
-        Text { fonts: FontSystem::new(), cache: SwashCache::new(), lines: HashMap::new() }
+        let mut fonts = FontSystem::new();
+        let db = fonts.db_mut();
+        db.load_font_data(arcade_link::design::inter_font_bytes().to_vec());
+        db.set_sans_serif_family("Inter");
+        Text { fonts, cache: SwashCache::new(), lines: HashMap::new() }
     }
 
     fn shape(&mut self, key: &Key, style: Style) -> Line {
@@ -110,6 +116,19 @@ impl Text {
 
     pub fn width(&mut self, text: &str, style: Style) -> f32 {
         self.line(text, style, &[]).width
+    }
+
+    /// Wrap a name at shaped glyph boundaries, retaining every character.
+    pub fn wrap_lines(&mut self, text: &str, style: Style, width: f32) -> Vec<String> {
+        let mut remaining = text;
+        let mut lines = Vec::new();
+        while !remaining.is_empty() {
+            let (_, cut) = self.fit_end(remaining, style, width);
+            let cut = if cut == 0 { remaining.chars().next().unwrap().len_utf8() } else { cut };
+            lines.push(remaining[..cut].to_string());
+            remaining = &remaining[cut..];
+        }
+        lines
     }
 
     /// `text` shortened with "…" at the end to fit `max` (returns the cut byte length).
@@ -182,30 +201,20 @@ impl Text {
     }
 
     /// Draws a shaped line with its top-left at (x, y), clipped to `clip`
-    /// (x0, y0, x1, y1). `spans` recolor byte ranges glyph by glyph (the
-    /// shaping is the plain line's, so widths never change).
-    pub fn draw(
-        &mut self,
-        pm: &mut Pixmap,
-        text: &str,
-        style: Style,
-        spans: &[(usize, usize, Rgba, u16)],
-        x: f32,
-        y: f32,
-        clip: (i32, i32, i32, i32),
-    ) -> f32 {
-        let key_line_width;
-        // Borrow dance: shape first, then draw with the font system.
-        {
-            let l = self.line(text, style, &[]);
-            key_line_width = l.width;
-        }
+    /// (x0, y0, x1, y1). `spans` recolour and reweight byte ranges (matched
+    /// characters at 600); callers fit the plain line and clip the rest.
+    pub fn draw(&mut self, pm: &mut Pixmap, text: &str, style: Style, spans: &[(usize, usize, Rgba, u16)], x: f32, y: f32, clip: (i32, i32, i32, i32)) -> f32 {
+        let key_line_width = self.line(text, style, spans).width;
         let key = Key {
             text: text.to_string(),
             size: (style.size * 10.0) as u32,
             weight: style.weight,
             color: [style.color.r, style.color.g, style.color.b, style.color.a],
-            spans: Vec::new(),
+            spans: spans
+                .iter()
+                .filter(|s| s.0 < s.1 && s.1 <= text.len() && text.is_char_boundary(s.0) && text.is_char_boundary(s.1))
+                .map(|&(s, e, c, w)| (s, e, [c.r, c.g, c.b, c.a], w))
+                .collect(),
         };
         let Some(line) = self.lines.get(&key) else { return key_line_width };
         let (w, h) = (pm.width() as i32, pm.height() as i32);
@@ -214,7 +223,7 @@ impl Text {
         for run in line.buffer.layout_runs() {
             for g in run.glyphs {
                 let pg = g.physical((x, y), 1.0);
-                let c = spans.iter().find(|s| g.start >= s.0 && g.start < s.1).map_or(color(style.color), |s| color(s.2));
+                let c = g.color_opt.unwrap_or(color(style.color));
                 let Some(img) = self.cache.get_image(&mut self.fonts, pg.cache_key) else { continue };
                 let gx = pg.x + img.placement.left;
                 let gy = run.line_y.round() as i32 + pg.y - img.placement.top;

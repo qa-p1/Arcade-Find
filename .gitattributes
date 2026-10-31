@@ -5,4 +5,5 @@ tools/*.py -text
 packaging/windows/arcade.iss -text
 packaging/windows/arcade-integration.ps1 -text
 assets/glyphs/*.svg -text
-assets/link-tokens.json -text
+assets/app-icon/** -text
+assets/design-licenses/** -text

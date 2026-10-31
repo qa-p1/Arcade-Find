@@ -32,4 +32,4 @@ Yes. It retains its own tray, Settings, global shortcut, installer and command l
 
 ## Will Find change my shell or compositor configuration?
 
-No. Installation owns generated launcher/login entries and a terminal symlink/shim, and shows a PATH hint. Hyprland bindings are runtime-only. See [the Hyprland guide](../HYPRLAND.md); user-written configuration stays under your control.
+No. Installation owns generated launcher/login entries and a terminal symlink/shim, and shows a PATH hint. Hyprland bindings are runtime-only. See [the Hyprland guide](https://github.com/qa-p1/Arcade-Find/blob/main/docs/dev/hyprland.md); user-written configuration stays under your control.

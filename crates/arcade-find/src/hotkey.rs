@@ -260,9 +260,7 @@ pub fn result(state: &State) -> Result<arcade_link::app::ShortcutSetResult, arca
     Ok(match state {
         State::Native(_) => ShortcutSetResult { applied: true, via: ShortcutVia::Native, hint: None },
         State::Hyprland(_) => ShortcutSetResult { applied: true, via: ShortcutVia::HyprlandRuntime, hint: None },
-        State::Manual { reason, command } => {
-            ShortcutSetResult { applied: false, via: ShortcutVia::Manual, hint: Some(format!("{reason}: {command}")) }
-        }
+        State::Manual { reason, command } => ShortcutSetResult { applied: false, via: ShortcutVia::Manual, hint: Some(format!("{reason}: {command}")) },
         State::Off => return Err(arcade_link::LinkError::unavailable("global shortcuts are disabled")),
         State::Failed(e) => return Err(arcade_link::LinkError::unavailable(e.clone())),
     })
@@ -329,6 +327,61 @@ pub mod hyprland {
 
     pub fn active() -> bool {
         cfg!(target_os = "linux") && std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
+    }
+
+    /// A snapshot read on the Settings worker, never while recording a key.
+    #[derive(Clone, Debug, Default)]
+    pub struct DesktopBindings(Vec<(u32, String, String)>);
+
+    impl DesktopBindings {
+        pub fn conflict(&self, shortcut: &str) -> Option<String> {
+            let (mods, key) = combo(shortcut).ok()?;
+            let mask: u32 = mods
+                .iter()
+                .map(|name| match *name {
+                    "SHIFT" => 1,
+                    "CTRL" => 4,
+                    "ALT" => 8,
+                    "SUPER" => 64,
+                    _ => 0,
+                })
+                .sum();
+            self.0.iter().find(|(modmask, bound, _)| *modmask == mask && bound.eq_ignore_ascii_case(&key)).map(|(_, _, action)| action.clone())
+        }
+    }
+
+    fn parse_bindings(bytes: &[u8], own_command: &str) -> Result<DesktopBindings, String> {
+        let bindings: Vec<serde_json::Value> = serde_json::from_slice(bytes).map_err(|_| "Hyprland returned an unreadable shortcut list".to_string())?;
+        let mut result = Vec::new();
+        for binding in bindings {
+            let (Some(mask), Some(key)) = (binding["modmask"].as_u64(), binding["key"].as_str()) else { continue };
+            let dispatcher = binding["dispatcher"].as_str().unwrap_or("action");
+            let argument = binding["arg"].as_str().unwrap_or_default();
+            if dispatcher == "exec" && (argument == own_command || argument == "arcade-find --toggle") {
+                continue;
+            }
+            let description = binding["description"]
+                .as_str()
+                .filter(|s| !s.is_empty())
+                .map(str::to_string)
+                .unwrap_or_else(|| format!("{dispatcher} {argument}").trim().to_string());
+            result.push((mask as u32, key.to_string(), format!("Hyprland: {description}")));
+        }
+        Ok(DesktopBindings(result))
+    }
+
+    pub fn desktop_bindings() -> Result<DesktopBindings, String> {
+        if !active() {
+            return Ok(DesktopBindings::default());
+        }
+        let out = Command::new("hyprctl")
+            .args(["-j", "binds"])
+            .output()
+            .map_err(|_| "Couldn't check Hyprland shortcuts. Check that hyprctl is installed, then try again.".to_string())?;
+        if !out.status.success() {
+            return Err("Couldn't check Hyprland shortcuts. Check that Hyprland is running, then try again.".into());
+        }
+        parse_bindings(&out.stdout, &super::toggle_command()).map_err(|_| "Couldn't read Hyprland shortcuts. Try again after reloading Hyprland.".into())
     }
 
     fn hyprctl(args: &[&str]) -> Result<(), String> {
@@ -427,11 +480,7 @@ pub mod hyprland {
         }
 
         pub fn remove(&self) {
-            let _ = if lua() {
-                hyprctl(&["eval", &format!("hl.unbind({})", self.lua_keys())])
-            } else {
-                hyprctl(&["keyword", "unbind", &self.legacy_keys()])
-            };
+            let _ = if lua() { hyprctl(&["eval", &format!("hl.unbind({})", self.lua_keys())]) } else { hyprctl(&["keyword", "unbind", &self.legacy_keys()]) };
         }
     }
 
@@ -453,6 +502,28 @@ pub mod hyprland {
     pub fn config_line(shortcut: &str, command: &str) -> Option<String> {
         let (mods, key) = combo(shortcut).ok()?;
         Some(format!("bind = {}, {key}, exec, {command}", mods.join(" ")))
+    }
+
+    #[cfg(test)]
+    mod binding_tests {
+        use super::*;
+
+        #[test]
+        fn real_bind_snapshot_reports_custom_chords_and_excludes_only_find() {
+            let snapshot = br#"[
+              {"modmask":12,"key":"J","dispatcher":"exec","arg":"terminal","description":"Open my terminal"},
+              {"modmask":13,"key":"J","dispatcher":"exec","arg":"editor"},
+              {"modmask":12,"key":"F","dispatcher":"exec","arg":"'/tmp/arcade-find' --toggle"},
+              {"modmask":0,"key":"F8","dispatcher":"exec","arg":"wheel"}
+            ]"#;
+            let bindings = parse_bindings(snapshot, "'/tmp/arcade-find' --toggle").unwrap();
+            assert_eq!(bindings.conflict("Alt+Ctrl+j").as_deref(), Some("Hyprland: Open my terminal"));
+            assert_eq!(bindings.conflict("Ctrl+Alt+Shift+J").as_deref(), Some("Hyprland: exec editor"));
+            assert!(bindings.conflict("Ctrl+Alt+F").is_none(), "Find's current binding is not another owner");
+            assert!(bindings.conflict("Ctrl+Alt+K").is_none());
+            assert!(bindings.conflict("F8").is_some());
+            assert!(parse_bindings(b"not JSON", "find").is_err(), "an unreadable list is not an empty list");
+        }
     }
 
     #[cfg(unix)]
@@ -494,10 +565,7 @@ pub mod hyprland {
             assert_eq!(f.lua_keys(), "\"CTRL + ALT + F\"");
             assert_eq!(f.legacy_keys(), "CTRL ALT, F");
             assert_eq!(b("Super+Space").unwrap().key, "space");
-            assert_eq!(
-                config_line("Ctrl+Alt+F", "'/x/arcade-find' --toggle").as_deref(),
-                Some("bind = CTRL ALT, F, exec, '/x/arcade-find' --toggle")
-            );
+            assert_eq!(config_line("Ctrl+Alt+F", "'/x/arcade-find' --toggle").as_deref(), Some("bind = CTRL ALT, F, exec, '/x/arcade-find' --toggle"));
         }
 
         #[test]
@@ -540,16 +608,8 @@ mod tests {
     /// The default must not clash with the Arcade family's defaults (SPEC §8.5).
     #[test]
     fn default_clashes_with_no_family_shortcut() {
-        let family = [
-            "Ctrl+Alt+Space",
-            "Super+Shift+Space",
-            "Ctrl+Alt+Shift+Space",
-            "Ctrl+Alt+Shift+L",
-            "Ctrl+Shift+Space",
-            "Ctrl+Alt+V",
-            "Super+Shift+V",
-            "F8",
-        ];
+        let family =
+            ["Ctrl+Alt+Space", "Super+Shift+Space", "Ctrl+Alt+Shift+Space", "Ctrl+Alt+Shift+L", "Ctrl+Shift+Space", "Ctrl+Alt+V", "Super+Shift+V", "F8"];
         let ours = arcade_link::registry::normalize_accelerator(find_core::settings::DEFAULT_SHORTCUT);
         for f in family {
             assert_ne!(arcade_link::registry::normalize_accelerator(f), ours, "{f}");

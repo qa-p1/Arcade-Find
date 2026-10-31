@@ -1,6 +1,6 @@
 //! Start at login, with the same per-user locations Arcade Tools uses:
 //! `~/.config/autostart/arcade-find.desktop` (Linux), a receipt-owned Startup
-//! shortcut (Windows), `~/Library/LaunchAgents/arcade.find.plist`
+//! shortcut (Windows), `~/Library/LaunchAgents/dev.arcade.Find.plist`
 //! (macOS). Development builds and isolated test profiles never register.
 
 #[cfg(any(windows, target_os = "macos"))]
@@ -13,9 +13,7 @@ pub const BACKGROUND_FLAG: &str = "--background";
 
 // Link v0.3.0's typed receipt omits extension fields on serialization. Retain
 // the original JSON when a login toggle updates an existing installation.
-fn read_receipt(
-    environment: &arcade_link::install::Environment,
-) -> Result<Option<(arcade_link::receipt::Receipt, serde_json::Value)>, String> {
+fn read_receipt(environment: &arcade_link::install::Environment) -> Result<Option<(arcade_link::receipt::Receipt, serde_json::Value)>, String> {
     let path = environment.receipts().path(crate::link::ME).map_err(|e| e.to_string())?;
     let text = match std::fs::read_to_string(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -127,6 +125,7 @@ fn enable_linux(environment: &arcade_link::install::Environment, runtime: &arcad
         },
     )
     .map_err(|e| e.to_string())?;
+    crate::installer::finish_desktop_metadata(&receipt).map_err(|e| e.to_string())?;
     write_receipt(environment, &receipt, document)
 }
 
@@ -148,13 +147,13 @@ pub fn enabled() -> bool {
 
 #[cfg(target_os = "macos")]
 fn plist_path() -> PathBuf {
-    find_core::paths::home_dir().join("Library/LaunchAgents/arcade.find.plist")
+    find_core::paths::home_dir().join("Library/LaunchAgents/dev.arcade.Find.plist")
 }
 
 pub fn plist(exe: &str) -> String {
     let esc = |s: &str| s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;");
     format!(
-        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>Label</key><string>arcade.find</string>\n  <key>ProgramArguments</key>\n  <array><string>{}</string><string>{BACKGROUND_FLAG}</string></array>\n  <key>RunAtLoad</key><true/>\n  <key>ProcessType</key><string>Interactive</string>\n</dict>\n</plist>\n",
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n<plist version=\"1.0\">\n<dict>\n  <key>Label</key><string>dev.arcade.Find</string>\n  <key>ProgramArguments</key>\n  <array><string>{}</string><string>{BACKGROUND_FLAG}</string></array>\n  <key>RunAtLoad</key><true/>\n  <key>ProcessType</key><string>Interactive</string>\n</dict>\n</plist>\n",
         esc(exe)
     )
 }
@@ -169,7 +168,12 @@ fn enable(exe: &str) -> Result<(), String> {
         arcade_link::paths::write_atomic(&p, want.as_bytes(), true).map_err(|e| e.to_string())?;
     }
     if receipt.integration.autostart.as_ref() != Some(&p) {
-        receipt.integration.autostart = Some(p);
+        let previous = receipt.integration.autostart.replace(p.clone());
+        if let Some(old) = previous.filter(|old| old != &p && old.file_name().is_some_and(|name| name == "arcade.find.plist")) {
+            if std::fs::read_to_string(&p).ok().as_deref() == Some(want.as_str()) {
+                let _ = std::fs::remove_file(old);
+            }
+        }
         receipt.updated_at = arcade_link::manifest::now_rfc3339();
         write_receipt(&environment, &receipt, document)?;
     }
@@ -219,8 +223,7 @@ mod win {
         let mut size = 0u32;
         // SAFETY: size query with a null buffer.
         unsafe {
-            RegGetValueW(HKEY_CURRENT_USER, k.as_ptr(), n.as_ptr(), RRF_RT_REG_SZ, std::ptr::null_mut(), std::ptr::null_mut(), &mut size)
-                == ERROR_SUCCESS
+            RegGetValueW(HKEY_CURRENT_USER, k.as_ptr(), n.as_ptr(), RRF_RT_REG_SZ, std::ptr::null_mut(), std::ptr::null_mut(), &mut size) == ERROR_SUCCESS
         }
     }
 }
@@ -229,10 +232,8 @@ mod win {
 fn enable(exe: &str) -> Result<(), String> {
     let environment = arcade_link::install::Environment::discover().map_err(|e| e.to_string())?;
     let (mut receipt, document) = read_receipt(&environment)?.ok_or("No install receipt")?;
-    let startup = std::env::var_os("APPDATA")
-        .map(PathBuf::from)
-        .ok_or("APPDATA isn't available")?
-        .join("Microsoft/Windows/Start Menu/Programs/Startup/Arcade Find.lnk");
+    let startup =
+        std::env::var_os("APPDATA").map(PathBuf::from).ok_or("APPDATA isn't available")?.join("Microsoft/Windows/Start Menu/Programs/Startup/Arcade Find.lnk");
     crate::installer::write_windows_shortcut(&startup, std::path::Path::new(exe), BACKGROUND_FLAG).map_err(|e| e.to_string())?;
     receipt.integration.autostart = Some(startup);
     receipt.updated_at = arcade_link::manifest::now_rfc3339();
@@ -263,7 +264,7 @@ mod tests {
 
     #[test]
     fn macos_login_item_quotes_xml() {
-        assert!(plist("/Applications/Arcade Find.app/Contents/MacOS/arcade-find").contains("<string>arcade.find</string>"));
+        assert!(plist("/Applications/Arcade Find.app/Contents/MacOS/arcade-find").contains("<string>dev.arcade.Find</string>"));
         assert!(plist("/a&b").contains("/a&amp;b"));
     }
 
@@ -318,12 +319,17 @@ mod tests {
             let runtime = arcade_link::install::Runtime { executable: executable.clone(), appimage: None, appdir: None, dev_build: false };
             enable_linux(&environment, &runtime).unwrap();
             let (receipt, changed) = read_receipt(&environment).unwrap().unwrap();
-            assert_eq!(receipt.integration.autostart.as_ref(), Some(&startup));
-            assert!(startup.is_file());
+            let new_startup = environment.config.join("autostart/dev.arcade.Find.desktop");
+            assert_eq!(receipt.integration.autostart.as_ref(), Some(&new_startup));
+            assert!(new_startup.is_file());
+            assert!(!startup.exists());
+            let launcher = std::fs::read_to_string(receipt.integration.desktop_entry.as_ref().unwrap()).unwrap();
+            assert!(launcher.contains("StartupWMClass=dev.arcade.Find"));
+            assert!(launcher.contains("[Desktop Action Settings]\nName=Settings"));
             assert_eq!(changed["toolsExtension"], document["toolsExtension"]);
             assert_eq!(changed["integration"]["futureIntegration"], document["integration"]["futureIntegration"]);
             disable_in(&environment).unwrap();
-            assert!(!startup.exists());
+            assert!(!new_startup.exists());
         }
         std::fs::remove_dir_all(root).unwrap();
     }

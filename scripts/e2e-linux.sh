@@ -8,14 +8,20 @@
 #
 # Needs: sway, grim, wtype (Wayland); Xvfb, xdotool, import (X11).
 set -euo pipefail
+[[ "${ARCADE_E2E_INNER:-}" == 1 ]] || { echo "Run GUI checks through Arcade Link tools/e2e.py run" >&2; exit 1; }
+for tool in sway swaymsg grim wtype Xvfb xdotool import dbus-run-session; do
+  command -v "$tool" >/dev/null || { echo "Missing required native tool: $tool" >&2; exit 1; }
+done
+[[ -x "${ARCADE_LINK_CLI:-}" && -x "${ARCADE_SHELF_BIN:-}" ]] || { echo "Real Shelf and the pinned Link CLI are required" >&2; exit 1; }
 
 BIN=$(realpath "${1:-target/release/arcade-find}")
 OUT=$(realpath -m "${2:-target/e2e}")
 mkdir -p "$OUT"
-T=$(mktemp -d /tmp/af-e2e.XXXXXX)
+T=$(mktemp -d "${TMPDIR:-/tmp}/af-e2e.XXXXXX")
 PIDS=()
 cleanup() {
   for p in "${PIDS[@]}"; do kill "$p" 2>/dev/null || true; done
+  for p in "${PIDS[@]}"; do wait "$p" 2>/dev/null || true; done
   sleep 0.3
   rm -rf "$T"
 }
@@ -57,10 +63,12 @@ cat >"$ARCADE_FIND_HOME/config/settings.json" <<EOF
 EOF
 
 af() { "$BIN" "$@"; }
+status_field() { af --status | python3 -c 'import json,sys; from functools import reduce; print(reduce(lambda obj,key: obj[key],sys.argv[1].split("."),json.load(sys.stdin)))' "$1"; }
+is_visible() { [[ "$(status_field ui.visible)" == True ]]; }
 
 wait_ready() {
   for _ in $(seq 1 100); do
-    if af --status 2>/dev/null | grep -q '"phase": "ready"'; then return 0; fi
+    if af --status 2>/dev/null | python3 -c 'import json,sys; sys.exit(json.load(sys.stdin).get("engine", {}).get("phase") != "ready")'; then return 0; fi
     sleep 0.1
   done
   return 1
@@ -83,7 +91,7 @@ run_session() {
   ARCADE_FIND_DEBUG=1 "$BIN" --background >"$OUT/$name.log" 2>&1 &
   PIDS+=($!)
   check "$name: index ready" wait_ready
-  local pid; pid=$(af --status | sed -n 's/^  "pid": \([0-9]*\),/\1/p')
+  local pid; pid=$(af --status | python3 -c 'import json,sys; print(json.load(sys.stdin)["pid"])')
   check "$name: second --background exits at once" 'timeout 5 "$BIN" --background'
   check "$name: --search finds by name" 'af --search report | grep -q "report-2024-q3.pdf"'
   check "$name: excluded node_modules stays out" '! af --search report | grep -q node_modules'
@@ -148,7 +156,7 @@ J
   $typer Return
   sleep 1
   check "$name: Enter sends look.preview" 'grep -q "\"look.preview\"" "$T/look.log" && grep -q "\"folder/reference\"" "$T/look.log"'
-  check "$name: Find hides for the preview" '! "$BIN" --status | grep -q "\"visible\": true"'
+  check "$name: Find hides for the preview" '! is_visible'
   # A mixed multi-selection goes to shelf.add by reference; Find stays open.
   af --show report
   sleep 0.6
@@ -171,7 +179,7 @@ J
     $typer Return
     sleep 1
     check "$name: shelf.add received a folder and a file by reference" 'grep -q "\"shelf.add\"" "$T/shelf.log" && grep -q "\"type\":\"file/any\[\]\"" "$T/shelf.log" && grep -q "\"type\":\"folder/reference\"" "$T/shelf.log" && grep -q "\"source\":\"arcade.find\"" "$T/shelf.log"'
-    check "$name: Find stays open after a non-interactive peer action" '"$BIN" --status | grep -q "\"visible\": true"'
+    check "$name: Find stays open after a non-interactive peer action" 'is_visible'
     $shot "$OUT/$name-shelf-done.png" || true
   fi
   $typer Escape
@@ -214,7 +222,7 @@ real_shelf_checks() {
   sleep 1.5
   shelf_rows >"$T/rows" 2>/dev/null || true
   check "$name: real Shelf stored the folder and files as references" 'grep -q "^folder/reference|$TREE/" "$T/rows" && grep -q "^file/[a-z]*|$TREE/" "$T/rows" && ! grep -q "|1$" "$T/rows"'
-  check "$name: Find stays open after shelf.add" '"$BIN" --status | grep -q "\"visible\": true"'
+  check "$name: Find stays open after shelf.add" 'is_visible'
   $shot "$OUT/$name-real-shelf-done.png" || true
   # Stopped Shelf: Find starts it with --background and the add still lands.
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
@@ -240,7 +248,7 @@ real_shelf_checks() {
   local target="$TREE/Documents/Reports/report-2024-q3.pdf"
   "$ARCADE_LINK_CLI" invoke arcade.find find.show --input-json "{\"type\":\"file/document\",\"path\":\"$target\"}" >/dev/null 2>&1 || true
   sleep 1
-  check "$name: Shelf's find.show opens Find on that file" '"$BIN" --status | grep -q "\"visible\": true" && "$BIN" --status | grep -q "\"selectedPath\": \"$target\""'
+  check "$name: Shelf's find.show opens Find on that file" 'is_visible && [[ "$(status_field ui.selectedPath)" == "$target" ]]'
   $shot "$OUT/$name-find-show-from-shelf.png" || true
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
   # The next Shelf must not find this one still holding its instance lock.
@@ -262,8 +270,10 @@ real_shelf_drag_checks() {
   local rect=""
   for _ in $(seq 1 150); do rect=$($win_rect 2>/dev/null) && [[ -n "$rect" ]] && break; sleep 0.1; done
   if [[ -z "$rect" ]]; then
-    echo "  skip  $name: drag to Shelf (no visible Shelf window on $platform)"
+    bad "$name: real Shelf did not create a visible window on $platform"
+    cat "$OUT/$name-shelf-drag.log" >&2
     kill "$sp" 2>/dev/null || true
+    wait "$sp" 2>/dev/null || true
     return
   fi
   read -r sx sy sw sh <<<"$rect"
@@ -276,8 +286,18 @@ real_shelf_drag_checks() {
   [[ -n "$single" ]] || $typer shift+Down
   sleep 0.3
   local fx top; read -r fx top <<<"$($find_top)"
+  local tx=$((sx + sw / 2)) ty=$((sy + sh - 30)) height
+  height=$(status_field ui.height)
+  # The default Shelf capsule is centred underneath Find. A drop onto the
+  # covered capsule returns to Find and is correctly cancelled; the target
+  # must actually be exposed before testing the outbound drag protocol.
+  if ((tx >= fx - 340 && tx < fx + 340 && ty >= top && ty < top + ${height%.*})); then
+    bad "$name: Shelf drop target is covered by the Find overlay"
+    return
+  fi
+  $shot "$OUT/$name-drag-before.png"
   # Press inside the two-row selection (the first row), drag onto Shelf.
-  $dragger "$fx" $((top + 58 + 6 + 26)) $((sx + sw / 2)) $((sy + sh - 30))
+  $dragger "$fx" $((top + 56 + 6 + 26)) "$tx" "$ty"
   sleep 1.5
   shelf_rows >"$T/rows" 2>/dev/null || true
   if [[ -n "$single" ]]; then
@@ -285,7 +305,7 @@ real_shelf_drag_checks() {
   else
     check "$name: dragging two results onto Shelf adds both by reference" 'grep -q "|$TREE/Documents/drag-$name-a.txt|0$" "$T/rows" && grep -q "|$TREE/Documents/drag-$name-b.txt|0$" "$T/rows"'
   fi
-  check "$name: Find stays open after the drop" '"$BIN" --status | grep -q "\"visible\": true"'
+  check "$name: Find stays open after the drop" 'is_visible'
   $shot "$OUT/$name-drag-done.png" || true
   $typer Escape
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || kill "$sp" 2>/dev/null || true
@@ -304,29 +324,31 @@ overlay_checks() {
   $typer Tab
   sleep 0.4
   check "$name: action list (screenshot)" "$shot '$OUT/$name-actions.png'"
-  check "$name: overlay visible with the action list" '"$BIN" --status | grep -q "\"mode\": \"actions\""'
+  check "$name: overlay visible with the action list" '[[ "$(status_field ui.mode)" == actions ]]'
   $typer Escape
   sleep 0.3
   $typer Escape
   sleep 0.4
   $shot "$OUT/$name-hidden.png" || true
-  check "$name: Esc hides the overlay" '! "$BIN" --status | grep -q "\"visible\": true"'
+  check "$name: Esc hides the overlay" '! is_visible'
   af --quit
   for _ in $(seq 1 30); do "$BIN" --status >/dev/null 2>&1 || break; sleep 0.1; done
   check "$name: --quit stops the instance" '! "$BIN" --status >/dev/null 2>&1'
 }
 
 # ---- Wayland (headless sway, layer shell) ----
-if [[ "${ARCADE_E2E_SKIP_WAYLAND:-}" != 1 ]] && command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
+if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype >/dev/null; then
   cat >"$T/sway.conf" <<'EOF'
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
-for_window [title="^Arcade Find$"] floating enable
+for_window [app_id="dev.arcade.Find"] floating enable
+for_window [app_id="arcade.shelf"] floating enable, move position 40 40
 EOF
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman dbus-run-session -- sway -c "$T/sway.conf" >"$OUT/sway.log" 2>&1 &
   PIDS+=($!)
   for _ in $(seq 1 50); do ls "$XDG_RUNTIME_DIR"/wayland-* >/dev/null 2>&1 && break; sleep 0.1; done
   export WAYLAND_DISPLAY=$(basename "$(ls "$XDG_RUNTIME_DIR"/wayland-? | head -1)")
+  export SWAYSOCK=$(ls "$XDG_RUNTIME_DIR"/sway-ipc.*.sock | head -1)
   unset DISPLAY
   # Headless sway has no keyboard: keep one virtual keyboard for the whole
   # run, so the seat doesn't lose (and the overlay doesn't see focus leave)
@@ -367,14 +389,14 @@ walk(json.load(sys.stdin)); sys.exit(1)'
     wl_winit_find_top() {
       swaymsg -t get_tree | python3 -I -c 'import json,sys
 def walk(n):
-    if n.get("name") == "Arcade Find" and n.get("visible"):
+    if n.get("app_id") == "dev.arcade.Find" and n.get("visible"):
         r = n["rect"]; print(r["x"] + r["width"] // 2, r["y"]); sys.exit(0)
     for c in n.get("nodes", []) + n.get("floating_nodes", []): walk(c)
 walk(json.load(sys.stdin)); sys.exit(1)'
     }
     DRAG_ARGS="wayland wl_shelf_rect wl_drag wl_find_top"
   else
-    echo "  skip  Wayland drag checks (no $POINTER; cargo build --example e2e-pointer)"
+    echo "Missing required pointer helper: $POINTER" >&2; exit 1
   fi
   link_checks wayland "timeout 5 grim" wl_key wl_text
   overlay_checks wayland "timeout 5 grim" wl_key
@@ -382,6 +404,14 @@ walk(json.load(sys.stdin)); sys.exit(1)'
   # Same compositor, winit backend forced: the drag source shares winit's
   # Wayland connection.
   export ARCADE_FIND_BACKEND=winit
+  if [[ -n "${ARCADE_FIND_OLD_WAYLAND_BIN:-}" ]]; then
+    if python3 tests/wayland-lifecycle.py "$ARCADE_FIND_OLD_WAYLAND_BIN" >"$OUT/wayland-old-regression.log" 2>&1; then
+      echo "Old backend unexpectedly passed the lifecycle regression" >&2; exit 1
+    fi
+    grep -Eq 'background mapped|Hide did not unmap' "$OUT/wayland-old-regression.log" || { cat "$OUT/wayland-old-regression.log"; exit 1; }
+    ok "Wayland lifecycle regression fails on the old backend"
+  fi
+  python3 tests/wayland-lifecycle.py "$BIN" | tee "$OUT/wayland-lifecycle.log"
   run_session wayland-winit
   if [[ -n "$DRAG_ARGS" && -n "${ARCADE_SHELF_BIN:-}" && -x "${ARCADE_LINK_CLI:-}" ]]; then
     # One result: modifiers from wtype's short-lived virtual keyboards don't
@@ -389,13 +419,13 @@ walk(json.load(sys.stdin)); sys.exit(1)'
     # selection here (the selection itself is covered by the other sessions).
     real_shelf_drag_checks wayland-winit "timeout 5 grim" wl_key wayland wl_shelf_rect wl_drag wl_winit_find_top single
   else
-    echo "  skip  wayland-winit: drag to Shelf (needs the pointer helper, ARCADE_SHELF_BIN and ARCADE_LINK_CLI)"
+    echo "Missing required real Shelf drag prerequisites" >&2; exit 1
   fi
   overlay_checks wayland-winit "timeout 5 grim" wl_key
   unset ARCADE_FIND_BACKEND
   unset WAYLAND_DISPLAY
 else
-  echo "  skip  Wayland (sway, grim or wtype missing)"
+  echo "Missing required Wayland prerequisites" >&2; exit 1
 fi
 
 # ---- X11 (Xvfb, winit backend) ----
@@ -408,12 +438,13 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   x_shot() { import -window root "$1"; }
   # No window manager: give the overlay input focus directly.
   x_key() {
-    if [[ "$1" == FOCUS ]]; then xdotool search --name '^Arcade Find$' windowfocus --sync 2>/dev/null || true; else xdotool key "$1"; fi
+    if [[ "$1" == FOCUS ]]; then xdotool search --class '^dev.arcade.Find$' windowfocus --sync 2>/dev/null || true; else xdotool key "$1"; fi
   }
   x_text() { xdotool type "$1"; }
   x_shelf_rect() {
     local w; w=$(xdotool search --onlyvisible --name '^Arcade Shelf$' 2>/dev/null | head -1)
     [[ -n "$w" ]] || return 1
+    xdotool windowmove --sync "$w" 40 40
     eval "$(xdotool getwindowgeometry --shell "$w")"
     echo "$X $Y $WIDTH $HEIGHT"
   }
@@ -423,7 +454,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
     sleep 0.3; xdotool mouseup 1
   }
   x_find_top() {
-    local w; w=$(xdotool search --name '^Arcade Find$' | head -1)
+    local w; w=$(xdotool search --class '^dev.arcade.Find$' | head -1)
     eval "$(xdotool getwindowgeometry --shell "$w")"
     echo "$((X + WIDTH / 2)) $Y"
   }
@@ -431,7 +462,7 @@ if command -v Xvfb >/dev/null && command -v xdotool >/dev/null; then
   link_checks x11 x_shot x_key x_text
   overlay_checks x11 x_shot x_key
 else
-  echo "  skip  X11 (Xvfb or xdotool missing)"
+  echo "Missing required X11 prerequisites" >&2; exit 1
 fi
 
 echo "== $pass passed, $fail failed (screenshots and logs in $OUT)"

@@ -9,6 +9,8 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use winit::raw_window_handle::{HasDisplayHandle, HasWindowHandle, RawDisplayHandle, RawWindowHandle};
+use winit::window::Window;
 
 use smithay_client_toolkit::data_device_manager::{
     data_device::{DataDevice, DataDeviceHandler},
@@ -40,30 +42,39 @@ pub struct Image {
 }
 
 struct Start {
+    /// Keep the native origin alive until this queued or active drag ends.
+    window: Arc<Window>,
     /// winit's `wl_surface`, the drag's origin.
     surface: usize,
     paths: Vec<PathBuf>,
     image: Option<Image>,
 }
 
+enum Message {
+    Start(Start),
+    Stop,
+}
+
 /// The drag source for one winit window, bound to winit's connection.
 pub struct Dragger {
-    tx: Sender<Start>,
-    surface: usize,
+    tx: Sender<Message>,
+    window: Option<Arc<Window>>,
+    display: usize,
     dragging: Arc<AtomicBool>,
+    worker: Option<std::thread::JoinHandle<()>>,
 }
 
 impl Dragger {
-    /// Starts the helper thread on winit's `display` for the window whose
-    /// `wl_surface` is `surface`.
-    ///
-    /// # Safety
-    /// `display` and `surface` must be winit's live `wl_display` and the
-    /// window's `wl_surface`, and stay alive for as long as the process runs
-    /// (the overlay window is created once and never destroyed).
-    pub unsafe fn new(display: *mut std::ffi::c_void, surface: *mut std::ffi::c_void) -> Result<Self, String> {
-        // SAFETY: the caller guarantees a live wl_display.
-        let backend = unsafe { Backend::from_foreign_display(display.cast()) };
+    /// One worker per event loop; each drag owns its native origin. Hide can
+    /// release a Wayland role and Show can reuse this worker with a new one.
+    pub fn new(window: Arc<Window>) -> Result<Self, String> {
+        let RawDisplayHandle::Wayland(display) = window.display_handle().map_err(|e| e.to_string())?.as_raw() else {
+            return Err("Not a Wayland window".into());
+        };
+        let display = display.display;
+        // SAFETY: the event loop owns the live display. Drop stops and joins
+        // this worker before the parent event loop releases that connection.
+        let backend = unsafe { Backend::from_foreign_display(display.as_ptr().cast()) };
         let conn = Connection::from_backend(backend);
         let (globals, queue) = registry_queue_init::<State>(&conn).map_err(|e| e.to_string())?;
         let qh = queue.handle();
@@ -73,10 +84,10 @@ impl Dragger {
         let pool = SlotPool::new(64 * 1024, &shm).map_err(|e| e.to_string())?;
         // The first seat: winit uses the same one for its pointer.
         globals.bind::<wl_seat::WlSeat, _, _>(&qh, 1..=7, ()).map_err(|e| format!("wl_seat: {e}"))?;
-        let (tx, rx) = channel::<Start>();
+        let (tx, rx) = channel::<Message>();
         let dragging = Arc::new(AtomicBool::new(false));
         let flag = dragging.clone();
-        std::thread::Builder::new()
+        let worker = std::thread::Builder::new()
             .name("wl-drag".into())
             .spawn(move || {
                 let Ok(mut event_loop) = EventLoop::<State>::try_new() else { return };
@@ -84,38 +95,45 @@ impl Dragger {
                 if WaylandSource::new(conn.clone(), queue).insert(handle.clone()).is_err() {
                     return;
                 }
-                let inserted = handle.insert_source(rx, |ev, _, st: &mut State| {
-                    if let ChannelEvent::Msg(start) = ev {
-                        st.start(start);
-                    }
+                let inserted = handle.insert_source(rx, |ev, _, st: &mut State| match ev {
+                    ChannelEvent::Msg(Message::Start(start)) => st.start(start),
+                    ChannelEvent::Msg(Message::Stop) | ChannelEvent::Closed => st.exit = true,
                 });
                 if inserted.is_err() {
                     return;
                 }
-                let mut st = State {
-                    conn,
-                    qh,
-                    compositor,
-                    data_manager,
-                    shm,
-                    pool,
-                    pointer: None,
-                    device: None,
-                    press: None,
-                    drag: None,
-                    dragging: flag,
-                };
-                while event_loop.dispatch(None, &mut st).is_ok() {}
+                let mut st =
+                    State { conn, qh, compositor, data_manager, shm, pool, pointer: None, device: None, press: None, drag: None, dragging: flag, exit: false };
+                while !st.exit && event_loop.dispatch(None, &mut st).is_ok() {}
                 crate::debug!("wl-drag: connection closed");
             })
             .map_err(|e| e.to_string())?;
-        Ok(Dragger { tx, surface: surface as usize, dragging })
+        Ok(Dragger { tx, window: Some(window), display: display.as_ptr() as usize, dragging, worker: Some(worker) })
+    }
+
+    pub fn use_window(&mut self, window: Arc<Window>) -> Result<(), String> {
+        let RawDisplayHandle::Wayland(display) = window.display_handle().map_err(|e| e.to_string())?.as_raw() else {
+            return Err("Not a Wayland window".into());
+        };
+        if display.display.as_ptr() as usize != self.display {
+            return Err("The Wayland display changed".into());
+        }
+        self.window = Some(window);
+        Ok(())
+    }
+
+    pub fn forget_window(&mut self) {
+        self.window = None;
     }
 
     /// Drags `paths` from the window. The button must still be down: the
     /// compositor only starts a drag for the press it is grabbing.
     pub fn drag(&self, paths: Vec<PathBuf>, image: Option<Image>) -> Result<(), String> {
-        self.tx.send(Start { surface: self.surface, paths, image }).map_err(|_| "drag thread stopped".to_string())
+        let window = self.window.as_ref().ok_or("The search window is closed")?.clone();
+        let RawWindowHandle::Wayland(surface) = window.window_handle().map_err(|e| e.to_string())?.as_raw() else {
+            return Err("Not a Wayland window".into());
+        };
+        self.tx.send(Message::Start(Start { window, surface: surface.surface.as_ptr() as usize, paths, image })).map_err(|_| "drag thread stopped".to_string())
     }
 
     /// Whether a drag is in flight (the window keeps showing while it is).
@@ -124,8 +142,18 @@ impl Dragger {
     }
 }
 
+impl Drop for Dragger {
+    fn drop(&mut self) {
+        let _ = self.tx.send(Message::Stop);
+        if let Some(worker) = self.worker.take() {
+            let _ = worker.join();
+        }
+    }
+}
+
 /// A drag in flight: the compositor asks the source for data.
 struct Drag {
+    _origin: Arc<Window>,
     source: DragSource,
     paths: Vec<PathBuf>,
     icon: Option<wl_surface::WlSurface>,
@@ -152,6 +180,7 @@ struct State {
     press: Option<u32>,
     drag: Option<Drag>,
     dragging: Arc<AtomicBool>,
+    exit: bool,
 }
 
 impl State {
@@ -160,25 +189,21 @@ impl State {
             crate::debug!("wl-drag: no button held, drag not started");
             return;
         };
-        // SAFETY: winit's live wl_surface (see Dragger::new).
+        // SAFETY: Start owns the live origin until the active drag takes it.
         let id = unsafe { ObjectId::from_ptr(wl_surface::WlSurface::interface(), start.surface as *mut _) };
         let Ok(origin) = id.and_then(|id| wl_surface::WlSurface::from_id(&self.conn, id)) else {
             crate::debug!("wl-drag: window surface unavailable");
             return;
         };
         crate::debug!("wl-drag: drag of {} item(s)", start.paths.len());
-        let source = self.data_manager.create_drag_and_drop_source(
-            &self.qh,
-            [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"],
-            DndAction::Copy,
-        );
+        let source = self.data_manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
         let icon = self.compositor.create_surface(&self.qh, ());
         source.start_drag(device, &origin, Some(&icon), serial);
         if let Some(image) = start.image {
             self.paint(&icon, &image);
         }
         self.dragging.store(true, Ordering::Release);
-        self.drag = Some(Drag { source, paths: start.paths, icon: Some(icon) });
+        self.drag = Some(Drag { _origin: start.window, source, paths: start.paths, icon: Some(icon) });
     }
 
     fn paint(&mut self, icon: &wl_surface::WlSurface, image: &Image) {
@@ -209,15 +234,7 @@ impl State {
 }
 
 impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
-    fn event(
-        _: &mut Self,
-        _: &wl_registry::WlRegistry,
-        _: wl_registry::Event,
-        _: &GlobalListContents,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-    ) {
-    }
+    fn event(_: &mut Self, _: &wl_registry::WlRegistry, _: wl_registry::Event, _: &GlobalListContents, _: &Connection, _: &QueueHandle<Self>) {}
 }
 
 impl Dispatch<wl_compositor::WlCompositor, ()> for State {
@@ -269,14 +286,7 @@ impl ShmHandler for State {
 impl DataSourceHandler for State {
     fn accept_mime(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource, _: Option<String>) {}
 
-    fn send_request(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        source: &wl_data_source::WlDataSource,
-        mime: String,
-        mut fd: WritePipe,
-    ) {
+    fn send_request(&mut self, _: &Connection, _: &QueueHandle<Self>, source: &wl_data_source::WlDataSource, mime: String, mut fd: WritePipe) {
         let Some(drag) = self.drag.as_ref().filter(|d| d.source.inner() == source) else { return };
         if let Some(bytes) = dnd::payload(&drag.paths, &mime) {
             if let Err(e) = fd.write_all(&bytes) {
@@ -302,16 +312,7 @@ impl DataSourceHandler for State {
 
 // Find is never a drop target; offers from other clients are ignored.
 impl DataDeviceHandler for State {
-    fn enter(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &wl_data_device::WlDataDevice,
-        _: f64,
-        _: f64,
-        _: &wl_surface::WlSurface,
-    ) {
-    }
+    fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64, _: &wl_surface::WlSurface) {}
     fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
     fn motion(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64) {}
     fn selection(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}

@@ -34,6 +34,8 @@ pub enum Command {
     Toggle,
     Hide,
     Settings,
+    /// The Settings helper closed; the resident can explain its tray lifetime.
+    WindowClosed,
     Quit,
     Restart,
     Status,

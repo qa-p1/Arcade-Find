@@ -21,7 +21,7 @@ use find_core::{matcher, Engine, Hit, Phase, Query, SearchOptions, Settings};
 
 use crate::instance::Command;
 use crate::link::{self, Item, PeerOffer, Pipeline, Selection};
-use crate::ui::model::{ActionId, ActionItem, AppGlyph, Context, Effect, Glyph, Overlay, PeerAction, ResultsInfo, Row, ToastKind};
+use crate::ui::model::{ActionId, ActionItem, AppGlyph, Context, Effect, Glyph, IndexState, Overlay, PeerAction, ResultsInfo, Row, ToastKind};
 
 /// Results the overlay keeps per query (it scrolls beyond the visible rows).
 pub const RESULT_LIMIT: usize = 200;
@@ -43,11 +43,13 @@ pub enum UiMsg {
         rows: Vec<Row>,
         info: ResultsInfo,
     },
-    Status(Option<String>),
+    Status(IndexState),
     Toast(String, ToastKind),
     /// The index changed: re-run the query.
     Refresh,
     Paste(String),
+    PasteFiles(Vec<PathBuf>),
+    Accessibility(accesskit::ActionRequest),
     /// Settings were reloaded: re-read display settings.
     Settings,
     /// The system theme changed.
@@ -103,9 +105,9 @@ impl Hub {
     fn on_engine(&self, ev: EngineEvent) {
         let Some(engine) = self.engine.get().and_then(Weak::upgrade) else { return };
         match ev {
-            EngineEvent::Progress | EngineEvent::Status => self.send(UiMsg::Status(status_line(&engine))),
+            EngineEvent::Progress | EngineEvent::Status => self.send(UiMsg::Status(index_state(&engine))),
             EngineEvent::ScanDone => {
-                self.send(UiMsg::Status(status_line(&engine)));
+                self.send(UiMsg::Status(index_state(&engine)));
                 if self.visible.load(Ordering::Relaxed) {
                     self.send(UiMsg::Refresh);
                 }
@@ -130,15 +132,11 @@ impl Hub {
 }
 
 /// The bar's index status: only while the index is not yet usable or complete.
-pub fn status_line(engine: &Engine) -> Option<String> {
-    match engine.phase() {
-        Phase::Loading => Some("Loading index".into()),
-        Phase::Crawling => {
-            let st = engine.status();
-            Some(format!("Indexing · {}", find_core::fmt::count(st.entries.max(st.progress.entries))))
-        }
-        Phase::Reconciling | Phase::Ready => None,
-    }
+/// The index as the overlay shows it: loading, the first scan, the last error.
+pub fn index_state(engine: &Engine) -> IndexState {
+    let st = engine.status();
+    let indexing = (engine.phase() == Phase::Crawling).then(|| st.entries.max(st.progress.entries));
+    IndexState { loading: engine.phase() == Phase::Loading, indexing, error: st.last_error.clone() }
 }
 
 struct SearchReq {
@@ -158,6 +156,8 @@ struct SearchSlot {
 }
 
 pub struct Service {
+    /// What Find did with other apps lately (Settings › Connected apps).
+    activity: Mutex<std::collections::VecDeque<(i64, String)>>,
     pub paths: AppPaths,
     pub locations: Locations,
     pub background: bool,
@@ -202,6 +202,7 @@ impl Service {
         let engine = Engine::start(paths.index_file(), settings.clone(), Arc::new(move |ev| listener_hub.on_engine(ev)));
         let _ = hub.engine.set(Arc::downgrade(&engine));
         let svc = Arc::new(Service {
+            activity: Mutex::new(std::collections::VecDeque::new()),
             locations,
             background,
             frecency: Mutex::new(Frecency::load(&paths.frecency_file())),
@@ -233,6 +234,10 @@ impl Service {
         let _ = std::thread::Builder::new().name("find-login".into()).spawn(move || {
             if let Some(svc) = worker.upgrade() {
                 let _change = svc.settings_changes.lock().unwrap_or_else(|e| e.into_inner());
+                #[cfg(target_os = "linux")]
+                if let Err(error) = crate::installer::migrate_integration(&svc.paths) {
+                    eprintln!("arcade-find: Couldn't update desktop integration. {error}");
+                }
                 let mut settings = svc.settings();
                 let before = settings.start_at_login;
                 if let Err(e) = crate::autostart::sync(&svc.paths, &mut settings) {
@@ -249,7 +254,7 @@ impl Service {
     /// Connects the UI. Starts Link off the first-frame path.
     pub fn attach_ui(self: &Arc<Self>, ui: UiSender) {
         let _ = self.hub.ui.set(ui);
-        self.hub.send(UiMsg::Status(status_line(&self.engine)));
+        self.hub.send(UiMsg::Status(index_state(&self.engine)));
         let me = self.clone();
         let _ = std::thread::Builder::new().name("find-link".into()).spawn(move || me.start_link());
     }
@@ -306,8 +311,14 @@ impl Service {
             Mode::Details { .. } => "details",
         };
         let selected_path = o.rows.get(o.sel).map(|r| r.path.to_string_lossy().into_owned());
+        let actions = match &o.mode {
+            Mode::Actions { items, .. } => items.iter().map(|item| json!({"title": item.title, "disabled": item.disabled})).collect::<Vec<_>>(),
+            _ => Vec::new(),
+        };
         let v = json!({ "visible": o.visible, "mode": mode, "query": o.input.text, "rows": o.rows.len(),
-                        "selected": o.sel, "selectedPath": selected_path, "height": o.height() });
+                        "selected": o.sel, "selectedPath": selected_path, "selectedCount": o.targets().len(),
+                        "toast": o.toast.as_ref().map(|toast| &toast.text), "actions": actions,
+                        "tooltip": o.tooltip_row().map(|row| &row.name), "height": o.height() });
         *self.ui_state.lock().unwrap_or_else(|e| e.into_inner()) = v;
     }
 
@@ -408,8 +419,7 @@ impl Service {
         }
         let pins = self.pins.lock().map(|p| p.clone()).unwrap_or_default();
         let rows = hits.iter().map(|h| row_from_hit(h, &q, &pins)).collect();
-        let note =
-            note.or_else(|| (self.engine.phase() == Phase::Crawling).then(|| "Still indexing: more results will appear".to_string()));
+        let note = note.or_else(|| (self.engine.phase() == Phase::Crawling).then(|| "Still indexing: more results will appear".to_string()));
         let info = ResultsInfo { matched: r.matched, elapsed_ms: r.elapsed.as_secs_f32() * 1000.0, note, ..Default::default() };
         self.send(UiMsg::Results { seq: req.seq, rows, info });
     }
@@ -527,27 +537,19 @@ impl Service {
         let mut items = Vec::new();
         let preview = self.can_preview(rows);
         if preview {
-            items.push(ActionItem::new(ActionId::Preview, "Quick Look", Glyph::Preview).hint("⏎"));
+            items.push(ActionItem::new(ActionId::Preview, "Quick Look", Glyph::Preview).hint("Enter"));
         }
-        items.push(ActionItem::new(ActionId::Open, if one { "Open" } else { "Open all" }, Glyph::Open).hint(if preview {
-            "⇧⏎"
+        items.push(ActionItem::new(ActionId::Open, if one { "Open with default app" } else { "Open all with default app" }, Glyph::Open).hint(if preview {
+            "Shift+Enter"
         } else {
-            "⏎"
+            "Enter"
         }));
-        items.push(ActionItem::new(ActionId::Reveal, "Show in folder", Glyph::Reveal).hint(if cfg!(target_os = "macos") {
-            "⌘⏎"
-        } else {
-            "Ctrl ⏎"
-        }));
-        let primary = if cfg!(target_os = "macos") { "⌘" } else { "Ctrl " };
-        items.push(
-            ActionItem::new(ActionId::CopyPath, if one { "Copy path".to_string() } else { format!("Copy {n} paths") }, Glyph::Copy)
-                .hint(&format!("{primary}C")),
-        );
+        items.push(ActionItem::new(ActionId::Reveal, "Show in folder", Glyph::Reveal).hint("Ctrl+Enter"));
+        items.push(ActionItem::new(ActionId::CopyPath, if one { "Copy path".to_string() } else { format!("Copy {n} paths") }, Glyph::Copy).hint("Ctrl+C"));
         if rows.iter().all(|r| !r.is_dir) || !cfg!(windows) {
             items.push(
                 ActionItem::new(ActionId::CopyFile, if one { "Copy file".to_string() } else { format!("Copy {n} files") }, Glyph::CopyFile)
-                    .hint(&format!("{primary}⇧C")),
+                    .hint("Ctrl+Shift+C"),
             );
         }
         let sel = selection_of(rows);
@@ -582,10 +584,9 @@ impl Service {
             items.push(ActionItem::new(ActionId::Rename, "Rename", Glyph::Rename).hint("F2"));
             let pinned = rows[0].pinned;
             items.push(
-                ActionItem::new(if pinned { ActionId::Unpin } else { ActionId::Pin }, if pinned { "Unpin" } else { "Pin" }, Glyph::Pin)
-                    .hint(&format!("{primary}⇧P")),
+                ActionItem::new(if pinned { ActionId::Unpin } else { ActionId::Pin }, if pinned { "Unpin" } else { "Pin" }, Glyph::Pin).hint("Ctrl+Shift+P"),
             );
-            items.push(ActionItem::new(ActionId::Details, "Details", Glyph::Info).hint(&format!("{primary}I")));
+            items.push(ActionItem::new(ActionId::Details, "Details", Glyph::Info).hint("Ctrl+I"));
         }
         items.push(ActionItem { danger: true, ..ActionItem::new(ActionId::Trash, "Move to Trash", Glyph::Trash).hint("Del") });
         items
@@ -609,6 +610,9 @@ impl Service {
     }
 
     fn toast(&self, text: impl Into<String>, kind: ToastKind) {
+        if crate::notifications::should_notify(self.settings().notifications, self.hub.visible.load(Ordering::Relaxed), kind == ToastKind::Error) {
+            crate::notifications::attention();
+        }
         self.send(UiMsg::Toast(text.into(), kind));
     }
 
@@ -647,7 +651,10 @@ impl Service {
                 let text = rows.iter().map(|r| r.path.to_string_lossy()).collect::<Vec<_>>().join("\n");
                 let n = rows.len();
                 self.worker("find-copy", move |s| match crate::os::copy_text(text) {
-                    Ok(()) => s.toast(if n == 1 { "Copied path".to_string() } else { format!("Copied {n} paths") }, ToastKind::Info),
+                    Ok(()) => s.toast(
+                        if n == 1 { "Copied".to_string() } else { format!("Copied {} paths", arcade_link::design::format::format_count(n as i64)) },
+                        ToastKind::Copied,
+                    ),
                     Err(e) => s.toast(e, ToastKind::Error),
                 });
             }
@@ -655,34 +662,34 @@ impl Service {
                 let paths: Vec<PathBuf> = rows.iter().map(|r| r.path.clone()).collect();
                 let n = paths.len();
                 self.worker("find-copy", move |s| match crate::os::copy_files(paths) {
-                    Ok(()) => s.toast(if n == 1 { "Copied file".to_string() } else { format!("Copied {n} files") }, ToastKind::Info),
+                    Ok(()) => s.toast(
+                        if n == 1 { "Copied".to_string() } else { format!("Copied {} paths", arcade_link::design::format::format_count(n as i64)) },
+                        ToastKind::Copied,
+                    ),
                     Err(e) => s.toast(e, ToastKind::Error),
                 });
             }
-            Effect::CopyText(t) => self.worker("find-copy", move |s| {
-                if let Err(e) = crate::os::copy_text(t) {
-                    s.toast(e, ToastKind::Error);
-                }
+            Effect::CopyText(t) => self.worker("find-copy", move |s| match crate::os::copy_text(t) {
+                Ok(()) => s.toast("Copied", ToastKind::Copied),
+                Err(e) => s.toast(e, ToastKind::Error),
             }),
-            Effect::Rename { row, new_name } => {
-                self.worker("find-rename", move |s| match crate::os::rename_noreplace(&row.path, &new_name) {
-                    Ok(to) => {
-                        s.engine.touched(&row.path);
-                        s.engine.touched(&to);
-                        if let Ok(mut f) = s.frecency.lock() {
-                            f.rename(&row.path, &to);
-                            let _ = f.save(&s.paths.frecency_file());
-                        }
-                        if let Ok(mut p) = s.pins.lock() {
-                            p.rename(&row.path, &to);
-                            let _ = p.save(&s.paths.pins_file());
-                        }
-                        s.toast(format!("Renamed to {}", crate::os::display_name(&to)), ToastKind::Info);
-                        s.send(UiMsg::Refresh);
+            Effect::Rename { row, new_name } => self.worker("find-rename", move |s| match crate::os::rename_noreplace(&row.path, &new_name) {
+                Ok(to) => {
+                    s.engine.touched(&row.path);
+                    s.engine.touched(&to);
+                    if let Ok(mut f) = s.frecency.lock() {
+                        f.rename(&row.path, &to);
+                        let _ = f.save(&s.paths.frecency_file());
                     }
-                    Err(e) => s.toast(e, ToastKind::Error),
-                })
-            }
+                    if let Ok(mut p) = s.pins.lock() {
+                        p.rename(&row.path, &to);
+                        let _ = p.save(&s.paths.pins_file());
+                    }
+                    s.toast(format!("Renamed to {}", crate::os::display_name(&to)), ToastKind::Info);
+                    s.send(UiMsg::Refresh);
+                }
+                Err(e) => s.toast(e, ToastKind::Error),
+            }),
             Effect::Trash(rows) => self.worker("find-trash", move |s| {
                 let paths: Vec<PathBuf> = rows.iter().map(|r| r.path.clone()).collect();
                 match crate::os::trash(&paths) {
@@ -728,14 +735,24 @@ impl Service {
                 }
                 self.worker("find-peer", move |s| s.run_peer(action, title, targets));
             }
-            Effect::Paste => self.worker("find-paste", move |s| {
-                if let Some(t) = crate::os::paste_text() {
-                    s.send(UiMsg::Paste(t));
-                }
+            Effect::Paste => self.worker("find-paste", move |s| match crate::os::paste_value() {
+                Some(crate::os::ClipboardValue::Text(t)) => s.send(UiMsg::Paste(t)),
+                Some(crate::os::ClipboardValue::Files(paths)) => s.send(UiMsg::PasteFiles(paths)),
+                None => s.send(UiMsg::Toast("Couldn't read the clipboard. Copy text or files, then try again.".into(), ToastKind::Error)),
             }),
             Effect::OpenSettings => {
                 out.hide = true;
                 self.open_settings();
+            }
+            Effect::OpenGuide => {
+                self.worker("find-guide", move |_| {
+                    let _ = open::that(crate::settings_ui::GUIDE_URL);
+                });
+            }
+            Effect::Quit => {
+                out.hide = true;
+                out.quit = true;
+                self.send(UiMsg::Quit);
             }
             Effect::WantActions(rows) => {
                 let items = self.actions_for(&rows);
@@ -790,6 +807,7 @@ impl Service {
         let req = link::request(&action, sel.inputs.clone(), pa.options.clone());
         let ui = self.clone();
         let name = m.name.clone();
+        let name_for_log = m.name.clone();
         let mut launching = move || ui.toast(format!("Starting {name}…"), ToastKind::Info);
         let result = link::invoke(&self.locations, &m, &req, None, Some(&mut launching));
         self.peer_busy.store(false, Ordering::SeqCst);
@@ -802,6 +820,8 @@ impl Service {
                 if !pa.interactive {
                     self.toast(msg, ToastKind::Info);
                 }
+                let what = if rows.len() == 1 { rows[0].name.clone() } else { format!("{} items", rows.len()) };
+                self.note_activity(format!("{title} with {name_for_log}: {what}"));
                 self.record(&rows);
             }
             Err(e) => self.peer_failed(&pa, e.user_message(&m.name), &rows),
@@ -861,7 +881,7 @@ impl Service {
             }
             UiMsg::Hide => out.hide = true,
             UiMsg::Results { seq, rows, info } => out.redraw = o.set_results(seq, rows, info),
-            UiMsg::Status(s) => o.status = s,
+            UiMsg::Status(s) => o.index = s,
             UiMsg::Toast(t, k) => o.toast(t, k),
             UiMsg::Refresh => {
                 for e in o.refresh() {
@@ -873,11 +893,29 @@ impl Service {
                     out.merge(self.effect(o, e));
                 }
             }
+            UiMsg::PasteFiles(paths) => {
+                let pins = self.pins.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                let rows: Vec<_> = paths.iter().map(|path| row_from_path(path, None, pins.contains(path))).collect();
+                if rows.iter().any(|row| row.missing) {
+                    o.toast("Couldn't read a pasted file. Check that it still exists, then try again.", ToastKind::Error);
+                } else {
+                    self.search.cancel.lock().unwrap_or_else(|e| e.into_inner()).store(true, Ordering::SeqCst);
+                    o.paste_files(rows);
+                    self.search.latest.store(o.seq, Ordering::SeqCst);
+                    out.show = true;
+                }
+            }
+            UiMsg::Accessibility(request) => {
+                for effect in crate::ui::accessibility::apply(o, request, &**self) {
+                    out.merge(self.effect(o, effect));
+                }
+            }
             UiMsg::Settings => {
                 let s = self.settings();
                 o.rows_cfg = s.rows.clone();
                 o.recent_on_open = s.show_recent_on_open;
                 o.show_hidden = s.show_hidden;
+                o.content_search = s.content_search;
                 // On the UI (main) thread, as global shortcuts require.
                 crate::hotkey::apply(self);
             }
@@ -900,7 +938,8 @@ impl Service {
         o.rows_cfg = s.rows.clone();
         o.recent_on_open = s.show_recent_on_open;
         o.show_hidden = s.show_hidden;
-        o.status = status_line(&self.engine);
+        o.index = index_state(&self.engine);
+        o.content_search = s.content_search;
     }
 
     // -----------------------------------------------------------------------
@@ -925,6 +964,10 @@ impl Service {
                 self.open_settings();
                 json!({ "ok": true })
             }
+            Command::WindowClosed => {
+                crate::notifications::background_once(self.paths.clone(), self.settings().notifications);
+                json!({ "ok": true })
+            }
             Command::Quit => {
                 self.send(UiMsg::Quit);
                 json!({ "ok": true })
@@ -937,9 +980,10 @@ impl Service {
             },
             Command::Status => {
                 let st = self.engine.status();
-                json!({ "ok": true, "version": crate::VERSION, "pid": std::process::id(), "background": self.background,
+                json!({ "ok": true, "running": true, "version": crate::VERSION, "pid": std::process::id(), "background": self.background,
                         "engine": st, "shortcut": self.shortcut_state(), "tray": self.tray_state().as_str(),
                         "ui": self.ui_state.lock().map(|v| v.clone()).unwrap_or(Value::Null),
+                        "activity": self.activity.lock().map(|a| a.iter().map(|(at, text)| json!({ "at": at, "text": text })).collect::<Vec<_>>()).unwrap_or_default(),
                         "link": { "listening": self.presence().map(|p| p.listening()).unwrap_or(false),
                                   "lastError": self.presence().and_then(|p| p.last_error()) } })
             }
@@ -995,6 +1039,13 @@ impl Service {
             p.stop();
         }
         self.engine.shutdown();
+    }
+
+    /// Keeps the last 50 things Find did with other apps.
+    pub fn note_activity(&self, text: String) {
+        let mut a = self.activity.lock().unwrap_or_else(|e| e.into_inner());
+        a.push_front((find_core::now_secs(), text));
+        a.truncate(50);
     }
 
     pub fn tray_state(&self) -> arcade_link::trayhost::TrayState {
@@ -1076,12 +1127,7 @@ fn search_loop(svc: Weak<Service>, search: Arc<SearchSlot>) {
 
 /// Encodes overlay rows for Link.
 pub fn selection_of(rows: &[Row]) -> Selection {
-    link::selection(rows.iter().filter(|r| !r.missing).map(|r| Item {
-        path: &r.path,
-        is_dir: r.is_dir,
-        link_type: r.link_type(),
-        size: r.size,
-    }))
+    link::selection(rows.iter().filter(|r| !r.missing).map(|r| Item { path: &r.path, is_dir: r.is_dir, link_type: r.link_type(), size: r.size }))
 }
 
 fn highlights(name: &str, q: &Query) -> Vec<(usize, usize)> {
@@ -1129,11 +1175,7 @@ pub fn row_from_path(p: &Path, section: Option<&'static str>, pinned: bool) -> R
     let target = if is_symlink { std::fs::metadata(p).ok() } else { meta.clone() };
     let is_dir = target.as_ref().is_some_and(|m| m.is_dir());
     let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.display().to_string());
-    let mtime = meta
-        .as_ref()
-        .and_then(|m| m.modified().ok())
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map_or(0, |d| d.as_secs() as i64);
+    let mtime = meta.as_ref().and_then(|m| m.modified().ok()).and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map_or(0, |d| d.as_secs() as i64);
     Row {
         path: p.to_path_buf(),
         parent: p.parent().map(tilde).unwrap_or_default(),
@@ -1209,12 +1251,7 @@ impl link::Host for LinkHost {
         // No frecency boosts: ranking must not reveal what the user opened.
         let opts = SearchOptions { limit, show_hidden: hidden, now: find_core::now_secs(), ..Default::default() };
         let (hits, r) = s.engine.search_hits(query, &opts);
-        Ok(link::SearchOut {
-            hits,
-            matched: r.matched,
-            elapsed_ms: r.elapsed.as_secs_f64() * 1000.0,
-            indexing: s.engine.phase() == Phase::Crawling,
-        })
+        Ok(link::SearchOut { hits, matched: r.matched, elapsed_ms: r.elapsed.as_secs_f64() * 1000.0, indexing: s.engine.phase() == Phase::Crawling })
     }
 
     fn show(&self, query: Option<String>, reveal: Option<PathBuf>) -> Result<(), arcade_link::LinkError> {

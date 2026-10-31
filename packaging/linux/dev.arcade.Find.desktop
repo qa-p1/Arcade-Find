@@ -2,15 +2,16 @@
 Type=Application
 Name=Arcade Find
 GenericName=File Search
-Comment=Find any file or folder instantly
+Comment=Press a shortcut, type, and any file or folder shows up.
 Exec=arcade-find
-Icon=arcade-find
+Icon=dev.arcade.Find
 Terminal=false
 Categories=Utility;FileTools;
 Keywords=search;find;files;folders;locate;
 StartupNotify=false
+StartupWMClass=dev.arcade.Find
 Actions=Settings;
 
 [Desktop Action Settings]
-Name=Arcade Find Settings
+Name=Settings
 Exec=arcade-find --settings

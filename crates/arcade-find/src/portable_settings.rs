@@ -91,6 +91,8 @@ pub struct PortableSettings {
     pub exclude_paths: Vec<PortablePath>,
     pub pins: Vec<PortablePath>,
     pub theme: Theme,
+    #[serde(default = "notifications_default")]
+    pub notifications: bool,
     pub shortcut: String,
     pub show_hidden: bool,
     pub show_recent_on_open: bool,
@@ -98,6 +100,10 @@ pub struct PortableSettings {
     pub content_search: bool,
     pub rescan_hours: u32,
     pub rows: Rows,
+}
+
+fn notifications_default() -> bool {
+    true
 }
 
 fn safe_text(s: &str) -> bool {
@@ -115,6 +121,7 @@ impl PortableSettings {
             exclude_paths: settings.exclude_paths.iter().map(|p| PortablePath::from_setting(p, home)).collect(),
             pins: pins.items.iter().map(|p| PortablePath::export(p, home)).collect(),
             theme: settings.theme,
+            notifications: settings.notifications,
             shortcut: settings.shortcut.clone(),
             show_hidden: settings.show_hidden,
             show_recent_on_open: settings.show_recent_on_open,
@@ -157,6 +164,7 @@ impl PortableSettings {
         s.exclude_names = self.exclude_names.clone();
         s.exclude_paths = self.exclude_paths.iter().filter(|p| p.usable()).map(|p| p.path.clone()).collect();
         s.theme = self.theme;
+        s.notifications = self.notifications;
         s.shortcut = arcade_link::accelerator::normalize(&self.shortcut).expect("validated shortcut");
         s.show_hidden = self.show_hidden;
         s.show_recent_on_open = self.show_recent_on_open;
@@ -193,12 +201,7 @@ pub fn read_import(inputs: &[Content]) -> Result<PortableSettings, LinkError> {
     if input.kind != "file/any" || !input.paths.is_empty() {
         return Err(LinkError::denied("import requires a file/any path"));
     }
-    let path = input
-        .path
-        .as_deref()
-        .map(Path::new)
-        .filter(|p| p.is_absolute())
-        .ok_or_else(|| LinkError::denied("import requires an absolute path"))?;
+    let path = input.path.as_deref().map(Path::new).filter(|p| p.is_absolute()).ok_or_else(|| LinkError::denied("import requires an absolute path"))?;
     let file = fs::File::open(path).map_err(io_error)?;
     if !file.metadata().map_err(io_error)?.is_file() {
         return Err(LinkError::denied("import requires a regular file"));

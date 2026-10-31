@@ -69,7 +69,7 @@ fn results(o: &mut Overlay, rows: Vec<Row>) {
 
 fn save(r: &mut Renderer, o: &Overlay, theme: Theme, scale: f32, dir: &Path, name: &str) -> Result<(), String> {
     let p = Palette::for_theme(theme);
-    let pm = r.render(o, &p, scale, find_core::now_secs()).ok_or("render failed")?;
+    let pm = r.render(o, &p, scale, find_core::now_secs(), true).ok_or("render failed")?;
     pm.save_png(dir.join(format!("{name}.png"))).map_err(|e| e.to_string())
 }
 
@@ -110,9 +110,9 @@ pub fn render_all(dir: &Path) -> Result<usize, String> {
         o.key(&KeyEvent::new(Key::Down).with(shift), &NoLook);
         let targets = o.targets();
         let items = vec![
-            ActionItem::new(ActionId::Preview, "Quick Look", Glyph::Preview).hint("⏎"),
-            ActionItem::new(ActionId::Open, "Open all", Glyph::Open).hint("⇧⏎"),
-            ActionItem::new(ActionId::CopyPath, "Copy 3 paths", Glyph::Copy).hint("Ctrl C"),
+            ActionItem::new(ActionId::Preview, "Quick Look", Glyph::Preview).hint("Enter"),
+            ActionItem::new(ActionId::Open, "Open all", Glyph::Open).hint("Shift+Enter"),
+            ActionItem::new(ActionId::CopyPath, "Copy 3 paths", Glyph::Copy).hint("Ctrl+C"),
             ActionItem {
                 detail: Some("report-2024-q3.pdf, report.rs +1".into()),
                 outbound: true,
@@ -151,7 +151,41 @@ pub fn render_all(dir: &Path) -> Result<usize, String> {
         save(&mut r, &empty, theme, 1.0, dir, &format!("08-no-matches-{suffix}"))?;
 
         save(&mut r, &o, theme, 1.5, dir, &format!("09-results-1.5x-{suffix}"))?;
-        n += 9;
+
+        // The empty query: pinned and recent items under section labels.
+        let mut recent = Overlay::default();
+        recent.show(None, None);
+        let mut rows = sample_rows();
+        for (i, r) in rows.iter_mut().enumerate() {
+            r.highlights.clear();
+            r.pinned = i < 2;
+            r.section = Some(if i < 2 { "Pinned" } else { "Recent" });
+        }
+        recent.empty_open = true;
+        recent.set_results(recent.seq, rows[..6].to_vec(), ResultsInfo { matched: 6, empty_state: true, ..Default::default() });
+        save(&mut r, &recent, theme, 1.0, dir, &format!("10-recent-{suffix}"))?;
+
+        let mut indexing = Overlay::default();
+        indexing.show(Some("report"), None);
+        indexing.set_results(indexing.seq, vec![], ResultsInfo::default());
+        indexing.index.indexing = Some(12_345);
+        save(&mut r, &indexing, theme, 1.0, dir, &format!("11-indexing-{suffix}"))?;
+        indexing.index = crate::ui::model::IndexState { error: Some("Couldn't save the index. The disk is full.".into()), ..Default::default() };
+        save(&mut r, &indexing, theme, 1.0, dir, &format!("12-index-error-{suffix}"))?;
+
+        o.toast("Copied 3 paths", ToastKind::Copied);
+        save(&mut r, &o, theme, 1.0, dir, &format!("13-copied-{suffix}"))?;
+        o.toast = None;
+
+        // Composed (IME) text at the caret, on a transparent window with the shadow.
+        let mut ime = Overlay::default();
+        ime.show(Some("日本"), None);
+        ime.ime_preedit("にほんご");
+        let mut shadowed = Renderer::new();
+        shadowed.shadow = crate::ui::model::metrics::SHADOW;
+        save(&mut shadowed, &ime, theme, 1.0, dir, &format!("14-ime-shadow-{suffix}"))?;
+        save(&mut shadowed, &o, theme, 1.0, dir, &format!("15-results-shadow-{suffix}"))?;
+        n += 15;
     }
     Ok(n)
 }
@@ -161,7 +195,7 @@ mod tests {
     #[test]
     fn renders_every_state() {
         let dir = std::env::temp_dir().join(format!("af-snap-{}", std::process::id()));
-        assert_eq!(super::render_all(&dir).unwrap(), 18);
+        assert_eq!(super::render_all(&dir).unwrap(), 30);
         assert!(dir.join("04-actions-dark.png").is_file());
         std::fs::remove_dir_all(dir).ok();
     }

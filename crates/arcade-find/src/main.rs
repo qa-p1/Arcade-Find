@@ -74,9 +74,7 @@ fn parse_args() -> Result<Args, String> {
             "--no-launch" => a.no_launch = true,
             "--keep-download" => a.keep_download = true,
             "--remove-data" => a.remove_data = true,
-            "--channel" => {
-                a.channel = Some(it.next().filter(|c| !c.is_empty() && !c.starts_with('-')).ok_or("--channel needs a channel name")?)
-            }
+            "--channel" => a.channel = Some(it.next().filter(|c| !c.is_empty() && !c.starts_with('-')).ok_or("--channel needs a channel name")?),
             "--size" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--size needs a number")?),
             "--limit" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--limit needs a number")?),
             "--hidden" => a.hidden = true,
@@ -168,7 +166,8 @@ fn export_icon(path: &std::path::Path, size: u32) -> ExitCode {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("png").to_ascii_lowercase();
     let bytes = match ext.as_str() {
         "svg" => icons::app_icon_svg().into_bytes(),
-        "ico" => icons::app_icon_ico(&[16, 24, 32, 48, 64, 128, 256]),
+        "ico" => icons::app_icon_ico().to_vec(),
+        "icns" => include_bytes!("../../../assets/app-icon/arcade-find.icns").to_vec(),
         _ => icons::app_icon_png(size),
     };
     match std::fs::write(path, bytes) {
@@ -192,6 +191,7 @@ fn attach_console() {
 
 fn main() -> ExitCode {
     arcade_link::childenv::on_startup();
+    arcade_find::os::init_app_identity();
     attach_console();
     let args = match parse_args() {
         Ok(a) => a,
@@ -203,6 +203,27 @@ fn main() -> ExitCode {
     let paths = AppPaths::discover();
     let action = args.action.clone().unwrap_or_default();
     let original_args: Vec<String> = std::env::args().skip(1).collect();
+    if !matches!(
+        action.as_str(),
+        "--help"
+            | "-h"
+            | "--version"
+            | "--arcade-manifest"
+            | "--status"
+            | "--search"
+            | "--integration-status"
+            | "--snapshot"
+            | "--export-icon"
+            | "--install-dialog"
+    ) {
+        if let Err(error) = paths.migrate() {
+            eprintln!("arcade-find: {error}");
+            return ExitCode::FAILURE;
+        }
+        if let Err(error) = arcade_link::logs::capture_stderr(&paths.log_dir(), "arcade-find") {
+            eprintln!("arcade-find: Couldn't open the log. {error}");
+        }
+    }
     match action.as_str() {
         "--help" | "-h" => {
             out(HELP);
@@ -228,9 +249,7 @@ fn main() -> ExitCode {
             }
         }
         "--snapshot" => return arcade_find::snapshot::run(args.dir.unwrap_or_else(|| PathBuf::from("snapshots"))),
-        "--export-icon" => {
-            return export_icon(&args.dir.unwrap_or_else(|| PathBuf::from("arcade-find.png")), args.limit.unwrap_or(256) as u32)
-        }
+        "--export-icon" => return export_icon(&args.dir.unwrap_or_else(|| PathBuf::from("arcade-find.png")), args.limit.unwrap_or(256) as u32),
         "--install" | "--uninstall" | "--repair" | "--integration-status" => return integration_command(&paths, &args, &original_args),
         _ => {}
     }
@@ -240,9 +259,7 @@ fn main() -> ExitCode {
             let options = installer::Options::defaults(&environment, &paths);
             match arcade_find::installer_ui::run_install(environment, runtime, paths.clone(), detection, state, options) {
                 Ok(arcade_find::installer_ui::Outcome::Launch(path)) => {
-                    if let Err(e) =
-                        arcade_link::install::reexec(&path, &original_args.iter().map(std::ffi::OsString::from).collect::<Vec<_>>())
-                    {
+                    if let Err(e) = arcade_link::install::reexec(&path, &original_args.iter().map(std::ffi::OsString::from).collect::<Vec<_>>()) {
                         eprintln!("arcade-find: relaunch: {e}");
                         return ExitCode::FAILURE;
                     }
@@ -285,7 +302,7 @@ fn main() -> ExitCode {
                 return match c {
                     Command::Search { .. } => print_search(&reply, args.json),
                     Command::Status => {
-                        out(serde_json::to_string_pretty(&reply).unwrap_or_default());
+                        out(serde_json::to_string(&reply).unwrap_or_default());
                         ExitCode::SUCCESS
                     }
                     _ if reply["ok"] == true => ExitCode::SUCCESS,
@@ -306,7 +323,7 @@ fn main() -> ExitCode {
             return print_search(&search_offline(&paths, query, limit.unwrap_or(20), hidden.unwrap_or(false)), args.json);
         }
         Some(Command::Status) => {
-            out(serde_json::json!({ "ok": false, "running": false }));
+            out(serde_json::json!({ "ok": false, "running": false, "version": VERSION, "link": {"listening": false} }));
             return ExitCode::from(3);
         }
         Some(Command::Quit | Command::Hide | Command::Rescan | Command::Reload) => {
@@ -328,8 +345,8 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
         let runtime = arcade_link::install::Runtime::discover().map_err(|e| e.to_string())?;
         match args.action.as_deref().unwrap_or_default() {
             "--integration-status" => {
-                let status = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
-                    .map_err(|e| e.to_string())?;
+                let status =
+                    arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default()).map_err(|e| e.to_string())?;
                 out(serde_json::to_string_pretty(&status).map_err(|e| e.to_string())?);
             }
             "--repair" => {
@@ -354,9 +371,8 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
                 }
                 let launch = if args.silent {
                     let receipt = installer::install_copy(&environment, &runtime, paths, &options).map_err(|e| e.to_string())?;
-                    let status =
-                        arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
-                            .map_err(|e| e.to_string())?;
+                    let status = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
+                        .map_err(|e| e.to_string())?;
                     if let Some(hint) = status.path_hint {
                         eprintln!("arcade-find: {hint}");
                     }

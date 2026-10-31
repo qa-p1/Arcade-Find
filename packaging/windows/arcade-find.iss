@@ -1,7 +1,7 @@
 ; Per-user Inno Setup 6. Shared tasks, PATH shim, receipts and silent parity.
-; iscc /DVersion=0.4.3 /DSource=..\..\target\release packaging\windows\arcade-find.iss
+; iscc /DVersion=<workspace-version> /DSource=..\..\target\release packaging\windows\arcade-find.iss
 #ifndef Version
-  #define Version "0.4.3"
+  #error Version must be supplied from Cargo.toml
 #endif
 #ifndef Source
   #define Source "..\..\target\release"
@@ -42,7 +42,7 @@ Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\docs\user\*"; DestDir: "{app}\docs\user"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{userprograms}\Arcade Find\Arcade Find Settings"; Filename: "{app}\arcade-find.exe"; Parameters: "--settings"; IconFilename: "{app}\arcade-find.ico"; Flags: uninsneveruninstall
+Name: "{userprograms}\Arcade Find\Arcade Find Settings"; Filename: "{app}\arcade-find.exe"; Parameters: "--settings"; AppUserModelID: "dev.arcade.Find"; IconFilename: "{app}\arcade-find.ico"; Flags: uninsneveruninstall
 
 [Run]
 Filename: "{app}\arcade-find.exe"; Parameters: "--background"; Flags: nowait postinstall skipifsilent; Description: "Start Arcade Find"

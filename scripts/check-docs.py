@@ -31,6 +31,8 @@ def main():
             if url.scheme or url.netloc:
                 continue  # External URLs are not fetched by this offline check.
             path = (file.parent / unquote(url.path)).resolve() if url.path else file
+            if file.is_relative_to(ROOT / "docs/user") and not path.is_relative_to(ROOT / "docs/user"):
+                errors.append(f"{file.relative_to(ROOT)}: offline guide link leaves docs/user: {target}")
             checked += 1
             if not path.exists():
                 errors.append(f"{file.relative_to(ROOT)}: missing {target}")

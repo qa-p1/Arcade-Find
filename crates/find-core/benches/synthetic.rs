@@ -53,8 +53,7 @@ const WORDS: &[&str] = &[
     "todo",
     "journal",
 ];
-const EXTS: &[&str] =
-    &["pdf", "jpg", "png", "txt", "md", "rs", "py", "js", "json", "docx", "xlsx", "mp4", "mp3", "zip", "html", "css", "ts", "go", "c", "h"];
+const EXTS: &[&str] = &["pdf", "jpg", "png", "txt", "md", "rs", "py", "js", "json", "docx", "xlsx", "mp4", "mp3", "zip", "html", "css", "ts", "go", "c", "h"];
 
 struct Rng(u64);
 impl Rng {
@@ -107,12 +106,7 @@ fn main() {
                 2 => format!("IMG_{:08}.{}", rng.next() % 100_000_000, rng.pick(EXTS)),
                 _ => format!("{}{}.{}", rng.pick(WORDS), rng.pick(WORDS), rng.pick(EXTS)),
             };
-            ix.push(
-                parent,
-                name.as_bytes(),
-                Meta { flags: 0, mtime: 1_600_000_000 + (rng.next() % 200_000_000) as i64, size: rng.next() % (512 << 20) },
-                0,
-            );
+            ix.push(parent, name.as_bytes(), Meta { flags: 0, mtime: 1_600_000_000 + (rng.next() % 200_000_000) as i64, size: rng.next() % (512 << 20) }, 0);
         }
         count += 1;
     }

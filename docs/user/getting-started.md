@@ -12,7 +12,7 @@ Install Find from **Arcade Tools → Apps**, where Tools can install, update, an
 
 ### Linux
 
-Download the AppImage and run it. On first launch, choose **Install** to add Find to your app launcher, place it in **~/Applications/Arcade/**, add **arcade-find** in **~/.local/bin**, and choose whether it starts at login. Choose **Just run it once** to use Find without installing it, or **Don’t ask again for this file** to remember that choice. Start at login defaults on; removing the downloaded file also defaults on. The installed copy launches after setup. Background launches and Link/diagnostic commands never show this dialog.
+Download the AppImage and run it. On first launch, choose **Install** to add Find to your app launcher, place it in **~/Applications/Arcade/**, add **arcade-find** in **~/.local/bin**, and choose whether it starts at login. Choose **Just run it** to use Find without installing it, or **Don’t ask again for this file** to remember that choice. Start at login defaults on; removing the downloaded file also defaults on. The installed copy launches after setup. Background launches and Link/diagnostic commands never show this dialog.
 
 To uninstall, run **arcade-find --uninstall**, use the launcher’s **Uninstall** action, or remove Find in Arcade Tools. Settings stay unless you choose to remove them. If **~/.local/bin** is not on PATH, Find shows the exact line to add for your shell.
 
@@ -42,6 +42,6 @@ Install ripgrep with your package manager, then start a query with **/**, for ex
 
 ## Set up the shortcut
 
-Find uses **Ctrl+Alt+F** by default. Change it in **Settings → Shortcut** if another app owns it. On Linux Wayland desktops where Find cannot register a shortcut, bind **arcade-find --toggle** in the desktop keyboard settings.
+Find uses **Ctrl+Alt+F** by default. Change it in **Settings → Shortcuts** if another app owns it. The recorder checks Arcade's registry and the running Hyprland bindings, and asks before using a conflicting chord. On Linux Wayland desktops where Find cannot register a shortcut, bind **arcade-find --toggle** in the desktop keyboard settings.
 
-On Hyprland, see the [Hyprland guide](../HYPRLAND.md) for runtime bindings and login behavior. Find never edits your Hyprland configuration.
+On Hyprland, see the [Hyprland guide](https://github.com/qa-p1/Arcade-Find/blob/main/docs/dev/hyprland.md) for runtime bindings and login behavior. Find never edits your Hyprland configuration.

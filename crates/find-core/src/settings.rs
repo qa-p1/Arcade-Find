@@ -102,6 +102,10 @@ pub struct Settings {
     /// Show hidden files without pressing the toggle.
     pub show_hidden: bool,
     pub theme: Theme,
+    /// Notify only when an action needs attention while Find is hidden.
+    pub notifications: bool,
+    /// The welcome flow can be opened again from Settings > General.
+    pub welcome_complete: bool,
     pub shortcut: String,
     /// `None` until decided (first run); then the user's choice.
     pub start_at_login: Option<bool>,
@@ -127,6 +131,8 @@ impl Default for Settings {
             skip_network_mounts: true,
             show_hidden: false,
             theme: Theme::System,
+            notifications: true,
+            welcome_complete: false,
             shortcut: DEFAULT_SHORTCUT.into(),
             start_at_login: None,
             rescan_hours: 6,

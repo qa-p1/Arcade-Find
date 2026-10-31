@@ -1,0 +1,75 @@
+# The beta rehearsal is draft-only. Stable publication requires a matching tag.
+name: Release
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: Release channel
+        type: choice
+        options: [beta, stable]
+        default: beta
+      draft:
+        description: Keep the release as a private draft
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: release
+  cancel-in-progress: false
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.plan.outputs.tag }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Validate channel, version and publication intent
+        id: plan
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          DRAFT: ${{ inputs.draft }}
+        run: |
+          version=$(python3 scripts/check-version.py)
+          if [ "$CHANNEL" = stable ]; then
+            [ "$GITHUB_REF" = "refs/tags/v$version" ] || { echo "Stable releases must run on v$version"; exit 1; }
+            tag="v$version"
+          else
+            [ "$DRAFT" = true ] || { echo "Beta verification is draft-only"; exit 1; }
+            tag="v$version-beta.${GITHUB_RUN_NUMBER}"
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+  ci:
+    needs: prepare
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: [prepare, ci]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ needs.prepare.outputs.tag }}
+      CHANNEL: ${{ inputs.channel }}
+      DRAFT: ${{ inputs.draft }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: package-*
+          merge-multiple: true
+          path: ${{ runner.temp }}/built
+      - name: Verify all installers and prepare metadata
+        run: python3 scripts/prepare-release.py "$RUNNER_TEMP/built" "$RUNNER_TEMP/release" --channel "$CHANNEL" --notes "https://github.com/$GH_REPO/releases/tag/$TAG"
+      - name: Publish the requested release
+        run: |
+          version=$(python3 scripts/check-version.py)
+          python3 tools/release-notes.py CHANGELOG.md "$version" > "$RUNNER_TEMP/notes.md"
+          if [ "$DRAFT" = true ]; then
+            flags=()
+            [ "$CHANNEL" = stable ] || flags+=(--prerelease)
+            gh release create "$TAG" "$RUNNER_TEMP"/release/* --draft "${flags[@]}" --target "$GITHUB_SHA" --title "Arcade Find $TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP"/release/* --verify-tag --latest --title "Arcade Find $TAG" --notes-file "$RUNNER_TEMP/notes.md"
+          fi

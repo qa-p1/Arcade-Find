@@ -29,11 +29,11 @@ trap 'rm -rf "$STAGE"' EXIT
 APPDIR="$STAGE/Arcade-Find.AppDir"
 mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/scalable/apps" "$APPDIR/usr/share/icons/hicolor/256x256/apps" "$APPDIR/usr/share/doc/arcade-find"
 install -m755 "$BIN" "$APPDIR/usr/bin/arcade-find"
-install -m644 packaging/linux/arcade-find.desktop "$APPDIR/usr/share/applications/arcade-find.desktop"
-cp packaging/linux/arcade-find.desktop "$APPDIR/arcade-find.desktop"
-"$BIN" --export-icon "$APPDIR/usr/share/icons/hicolor/scalable/apps/arcade-find.svg"
-"$BIN" --export-icon "$APPDIR/usr/share/icons/hicolor/256x256/apps/arcade-find.png" --size 256
-cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/arcade-find.png" "$APPDIR/arcade-find.png"
+install -m644 packaging/linux/dev.arcade.Find.desktop "$APPDIR/usr/share/applications/dev.arcade.Find.desktop"
+cp packaging/linux/dev.arcade.Find.desktop "$APPDIR/dev.arcade.Find.desktop"
+"$BIN" --export-icon "$APPDIR/usr/share/icons/hicolor/scalable/apps/dev.arcade.Find.svg"
+"$BIN" --export-icon "$APPDIR/usr/share/icons/hicolor/256x256/apps/dev.arcade.Find.png" --size 256
+cp "$APPDIR/usr/share/icons/hicolor/256x256/apps/dev.arcade.Find.png" "$APPDIR/dev.arcade.Find.png"
 cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md "$APPDIR/usr/share/doc/arcade-find/"
 cp -R docs/user "$APPDIR/usr/share/doc/arcade-find/user"
 cat >"$APPDIR/AppRun" <<'RUN'

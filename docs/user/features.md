@@ -51,7 +51,7 @@ On macOS, Cmd replaces Ctrl for primary shortcuts.
 
 ## Change how Find looks and starts
 
-Settings include theme, start-at-login, result rows, whether recent items appear on open, hidden-file defaults, content search, the global shortcut, indexed locations, exclusions, and connected apps.
+Settings include Appearance (System / Light / Dark), Start at login, notifications, result rows, whether recent items appear on open, hidden-file defaults, content search, the terminal command, global shortcut, indexed locations, exclusions, and Connected apps. Reopen the three-step welcome from General at any time. Changes apply immediately. Settings runs separately and closes without quitting the background search.
 
 ## Use the command line
 
@@ -59,10 +59,17 @@ The **arcade-find** command can show or hide the overlay, run a name search, rep
 
 ## Use Find from the Arcade tray
 
-While Tools hosts Find, its submenu offers Open Find, Open Settings, Rescan index, Restart and Quit. Find keeps working independently. When Tools quits or crashes its own tray icon returns; an announced Tools restart waits up to five seconds to avoid a flash. Turning off **Connect with other Arcade apps** always restores Find’s icon.
+While Tools hosts Find, its submenu offers **Open Arcade Find**, **Settings**, **Rescan index**, **Restart Arcade Find** and **Quit Arcade Find**. Find keeps working independently. When Tools quits or crashes its own tray icon returns; an announced Tools restart waits up to five seconds to avoid a flash. Turning off **Connect with other Arcade apps** always restores Find’s icon.
 
 ## Back up and restore preferences
 
 Tools can export Find’s locations, exclusions, pins, theme, shortcut and display/search preferences to a settings file, then import it into another profile. Imports validate first, keep a private backup in Find’s config folder under **backups/**, and apply live without a restart. The index and recent/history data are excluded, as are start-at-login, Hyprland policy and connected-app preferences. Files under your home use **~/** and pins rebase to the receiving home. Other absolute paths are marked **machineSpecific** with their platform; paths from another OS are skipped. Check those locations on another machine before using them.
 
 `--restart` waits for the old instance to release its lock. An API restart reports busy while indexing, content search or a peer action runs; Tools may explicitly force it. `--uninstall` confirms removal, and `--silent` skips the dialog. Add `--remove-data` only when you also want settings, pins, history and the index removed. See [installation and integration commands](getting-started.md).
+
+### Closing and quitting
+
+Closing Settings keeps Find running. A one-time desktop notice explains how to
+quit from the tray; turning off notifications also turns off that notice.
+Use **Quit Arcade Find** in About or the tray, or Ctrl+Q (Cmd+Q on macOS), to stop
+Find and its global shortcut.

@@ -28,15 +28,7 @@ mod linux {
     struct State;
 
     impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for State {
-        fn event(
-            _: &mut Self,
-            _: &wl_registry::WlRegistry,
-            _: wl_registry::Event,
-            _: &GlobalListContents,
-            _: &Connection,
-            _: &QueueHandle<Self>,
-        ) {
-        }
+        fn event(_: &mut Self, _: &wl_registry::WlRegistry, _: wl_registry::Event, _: &GlobalListContents, _: &Connection, _: &QueueHandle<Self>) {}
     }
     impl Dispatch<wl_seat::WlSeat, ()> for State {
         fn event(_: &mut Self, _: &wl_seat::WlSeat, _: wl_seat::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}

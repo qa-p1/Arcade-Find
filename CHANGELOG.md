@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.5.0 — 2026-10-31
+
+- New lime accent, Inter and the shared Arcade kit across search, Settings and the install prompt.
+- Settings uses the standard page order, fixed headings, readable folder rows, a single helper window and ordered saves that finish before close.
+- Composed input is supported through winit IME and Wayland text-input-v3.
+- Standard application identifiers and verified migration of existing folders, desktop and login entries. Existing shortcuts and preferences stay.
+- Monochrome tray glyph, left-click search, standard menu wording and shared Copied feedback.
+- Welcome and notification preferences, standard keyboard commands, per-monitor window geometry and pair-specific Connected apps copy.
+- Fixed Settings file-watch feedback, concurrent saves and the Wayland fallback's actual Show/Hide lifecycle without leaking drag workers.
+- File-list paste restores copied file references and preserves multi-selection; shortcut recording checks the running Hyprland bindings as well as Arcade's registry.
+- Native screen-reader search and result announcements, full-name tooltips, Quit in About and a one-time background reminder. Settings waits for resident commands before it exits.
+- Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
+- Updating from 0.4.x replaces the old `arcade-find` launcher and login entry instead of leaving a second menu entry and a second login item (Arcade Link 0.4.12). File details use the kit's exact timestamp format. Equivalent keys share one row in Settings' key list.
+
 ## 0.4.3 — 2026-10-19
 
 - A helper an app starts from its own image (such as a settings window) keeps

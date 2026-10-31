@@ -34,6 +34,9 @@
 | Select the next result with Ctrl+N | Ctrl+N | Ctrl+N | ⌃N |
 | Select the previous result with Ctrl+P | Ctrl+P | Ctrl+P | ⌃P |
 | Clear selection or close Find | Escape | Escape | ⎋ |
+| Focus the search field | Ctrl+K | Ctrl+K | ⌘K |
+| Open the user guide | F1 | F1 | F1 |
+| Quit Arcade Find | Ctrl+Q | Ctrl+Q | ⌘Q |
 
 ## Action list
 
@@ -73,8 +76,7 @@
 
 | Action | Linux | Windows | macOS |
 | --- | --- | --- | --- |
-| Confirm moving items to Trash | Enter | Enter | ↩ |
-| Confirm moving items to Trash | Delete | Delete | ⌦ |
+| Confirm moving items to Trash | Enter<br>Delete | Enter<br>Delete | ↩<br>⌦ |
 
 ## Item details
 

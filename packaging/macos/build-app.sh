@@ -13,15 +13,7 @@ APP="$DIST/Arcade Find.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 install -m755 "$BIN" "$APP/Contents/MacOS/arcade-find"
-ICON_ROOT=$(mktemp -d)
-trap 'rm -rf "$ICON_ROOT"' EXIT
-ICONSET="$ICON_ROOT/arcade-find.iconset"
-mkdir -p "$ICONSET"
-for s in 16 32 128 256 512; do
-  "$BIN" --export-icon "$ICONSET/icon_${s}x${s}.png" --size $s
-  "$BIN" --export-icon "$ICONSET/icon_${s}x${s}@2x.png" --size $((s * 2))
-done
-iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/arcade-find.icns"
+cp assets/app-icon/arcade-find.icns "$APP/Contents/Resources/arcade-find.icns"
 cp LICENSE-MIT LICENSE-APACHE THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/"
 mkdir -p "$APP/Contents/Resources/docs"
 cp -R docs/user "$APP/Contents/Resources/docs/user"
@@ -32,7 +24,7 @@ cat >"$APP/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleName</key><string>Arcade Find</string>
   <key>CFBundleDisplayName</key><string>Arcade Find</string>
-  <key>CFBundleIdentifier</key><string>io.github.qa-p1.arcade-find</string>
+  <key>CFBundleIdentifier</key><string>dev.arcade.Find</string>
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>CFBundleShortVersionString</key><string>$VERSION</string>
   <key>CFBundleExecutable</key><string>arcade-find</string>
@@ -45,7 +37,7 @@ cat >"$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 DMG_STAGE=$(mktemp -d)
-trap 'rm -rf "$ICON_ROOT" "$DMG_STAGE"' EXIT
+trap 'rm -rf "$DMG_STAGE"' EXIT
 cp -R "$APP" "$DMG_STAGE/"
 ln -s /Applications "$DMG_STAGE/Applications"
 hdiutil create -volname "Arcade Find" -srcfolder "$DMG_STAGE" -ov -format UDZO "$DIST/Arcade-Find-$VERSION-$ARCH.dmg"

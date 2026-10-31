@@ -10,8 +10,8 @@ use objc2::rc::Retained;
 use objc2::runtime::ProtocolObject;
 use objc2::{define_class, msg_send, AllocAnyThread, MainThreadMarker, MainThreadOnly};
 use objc2_app_kit::{
-    NSApplication, NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession, NSDraggingSource, NSPasteboardItem,
-    NSPasteboardTypeFileURL, NSView, NSWorkspace,
+    NSApplication, NSDragOperation, NSDraggingContext, NSDraggingItem, NSDraggingSession, NSDraggingSource, NSPasteboardItem, NSPasteboardTypeFileURL, NSView,
+    NSWorkspace,
 };
 use objc2_foundation::{NSArray, NSObject, NSObjectProtocol, NSPoint, NSRect, NSSize, NSString, NSURL};
 
@@ -76,8 +76,7 @@ pub fn drag(ns_view: *mut c_void, paths: &[PathBuf]) -> Result<(), String> {
         return Err("none of the files could be dragged".into());
     }
     let source = DragSource::new(mtm);
-    let _session =
-        view.beginDraggingSessionWithItems_event_source(&NSArray::from_retained_slice(&items), &event, ProtocolObject::from_ref(&*source));
+    let _session = view.beginDraggingSessionWithItems_event_source(&NSArray::from_retained_slice(&items), &event, ProtocolObject::from_ref(&*source));
     SOURCE.with(|s| *s.borrow_mut() = Some(source));
     Ok(())
 }

@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 LICENSE_NAMES = ("license", "licence", "copying", "notice", "copyright")
 
@@ -54,11 +55,12 @@ def main():
     out.write("# Third-party notices\n\n")
     out.write("Arcade Find is licensed MIT OR Apache-2.0. It is built from the Rust crates below ")
     out.write("(all platforms; each build includes only its platform's subset). License texts follow the table.\n\n")
-    out.write("Also included: Arcade Link v0.2.0 glyphs and integration tokens (`assets/`, MIT OR Apache-2.0) ")
+    out.write("Also included: Arcade Link v0.4.12 design kit, glyphs and integration tokens (MIT OR Apache-2.0), Inter fonts (SIL Open Font License 1.1), ")
     out.write("Arcade Link hub scripts and Windows integration (`tools/`, `packaging/windows/`, MIT OR Apache-2.0), and Hyprland binding code adapted from Arcade Lens (MIT OR Apache-2.0); see `VENDORED.md`.\n\n")
     out.write("| Crate | Version | License | Source |\n|---|---|---|---|\n")
     for name, ver, lic, repo, _ in rows:
         out.write(f"| {name} | {ver} | {lic} | {repo} |\n")
+    out.write("\n## Inter font licence\n\n```text\n" + (Path(__file__).resolve().parents[1] / "assets/design-licenses/Inter-OFL.txt").read_text().strip() + "\n```\n")
     out.write("\n## License texts\n")
     for h, (t, users) in sorted(texts.items(), key=lambda kv: kv[1][1][0].lower()):
         shown = ", ".join(users[:12]) + (f" and {len(users) - 12} more" if len(users) > 12 else "")

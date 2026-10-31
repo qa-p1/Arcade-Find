@@ -4,6 +4,9 @@
 //! surface on hide hands focus back to the previous window. Software
 //! rendering into shared memory; fractional scaling through
 //! `wp_fractional_scale_v1` + `wp_viewporter` when the compositor has them.
+//! The surface is transparent, so the panel keeps its rounded corners and the
+//! kit's `shadow-pop` in a margin that takes no input. Input methods compose
+//! into the field through `zwp_text_input_v3`.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -20,20 +23,19 @@ use smithay_client_toolkit::reexports::calloop::channel::{channel, Event as Chan
 use smithay_client_toolkit::reexports::calloop::timer::{TimeoutAction, Timer};
 use smithay_client_toolkit::reexports::calloop::{EventLoop, LoopHandle, RegistrationToken};
 use smithay_client_toolkit::reexports::calloop_wayland_source::WaylandSource;
-use smithay_client_toolkit::reexports::protocols::wp::fractional_scale::v1::client::{
-    wp_fractional_scale_manager_v1, wp_fractional_scale_v1,
-};
+use smithay_client_toolkit::reexports::protocols::wp::fractional_scale::v1::client::{wp_fractional_scale_manager_v1, wp_fractional_scale_v1};
+use smithay_client_toolkit::reexports::protocols::wp::text_input::zv3::client::{zwp_text_input_manager_v3, zwp_text_input_v3};
 use smithay_client_toolkit::reexports::protocols::wp::viewporter::client::{wp_viewport, wp_viewporter};
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState},
-    delegate_compositor, delegate_data_device, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
-    delegate_seat, delegate_shm,
+    compositor::{CompositorHandler, CompositorState, Region},
+    delegate_compositor, delegate_data_device, delegate_keyboard, delegate_layer, delegate_output, delegate_pointer, delegate_registry, delegate_seat,
+    delegate_shm,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
     seat::{
         keyboard::{KeyEvent as WlKeyEvent, KeyboardHandler, Keysym, Modifiers},
-        pointer::{PointerEvent, PointerEventKind, PointerHandler},
+        pointer::{CursorIcon, PointerEvent, PointerEventKind, PointerHandler, ThemeSpec, ThemedPointer},
         Capability, SeatHandler, SeatState,
     },
     shell::{
@@ -44,13 +46,11 @@ use smithay_client_toolkit::{
 };
 use wayland_client::globals::{registry_queue_init, GlobalListContents};
 use wayland_client::protocol::wl_data_device_manager::DndAction;
-use wayland_client::protocol::{
-    wl_data_device, wl_data_source, wl_keyboard, wl_output, wl_pointer, wl_registry, wl_seat, wl_shm, wl_surface,
-};
+use wayland_client::protocol::{wl_data_device, wl_data_source, wl_keyboard, wl_output, wl_pointer, wl_registry, wl_seat, wl_shm, wl_surface};
 use wayland_client::{Connection, Dispatch, Proxy, QueueHandle};
 
 use super::dnd;
-use super::model::{metrics, Mode, Mods, Overlay};
+use super::model::{metrics, Mods, Overlay};
 use super::render::Renderer;
 use crate::service::{Outcome, Service, UiMsg};
 use crate::theme::Palette;
@@ -70,15 +70,7 @@ pub fn available() -> bool {
 
 struct Probe;
 impl Dispatch<wl_registry::WlRegistry, GlobalListContents> for Probe {
-    fn event(
-        _: &mut Self,
-        _: &wl_registry::WlRegistry,
-        _: wl_registry::Event,
-        _: &GlobalListContents,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-    ) {
-    }
+    fn event(_: &mut Self, _: &wl_registry::WlRegistry, _: wl_registry::Event, _: &GlobalListContents, _: &Connection, _: &QueueHandle<Self>) {}
 }
 
 struct Shown {
@@ -86,6 +78,7 @@ struct Shown {
     viewport: Option<wp_viewport::WpViewport>,
     fractional: Option<wp_fractional_scale_v1::WpFractionalScaleV1>,
     configured: bool,
+    shown_at: Option<Instant>,
     /// The logical size last requested.
     size: (u32, u32),
 }
@@ -109,6 +102,8 @@ struct Wl {
     svc: Arc<Service>,
     overlay: Overlay,
     renderer: Renderer,
+    accessible: super::accessibility::Shared,
+    accessibility: accesskit_unix::Adapter,
     registry_state: RegistryState,
     seat_state: SeatState,
     output_state: OutputState,
@@ -118,13 +113,18 @@ struct Wl {
     pool: SlotPool,
     fractional_mgr: Option<wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1>,
     viewporter: Option<wp_viewporter::WpViewporter>,
+    text_input_mgr: Option<zwp_text_input_manager_v3::ZwpTextInputManagerV3>,
+    text_input: Option<zwp_text_input_v3::ZwpTextInputV3>,
+    /// Input method state since the last `done`: (preedit, committed text).
+    ime_pending: (Option<String>, Option<String>),
     shown: Option<Shown>,
     /// Integer buffer scale (without fractional scaling).
     int_scale: i32,
     /// Fractional scale (120ths), when the compositor sends one.
     frac_scale: Option<u32>,
     keyboard: Option<wl_keyboard::WlKeyboard>,
-    pointer: Option<wl_pointer::WlPointer>,
+    pointer: Option<ThemedPointer>,
+    cursor_icon: Option<CursorIcon>,
     mods: Mods,
     has_focus: bool,
     pointer_pos: (f64, f64),
@@ -157,6 +157,7 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
     let pool = SlotPool::new((metrics::WIDTH as usize) * 600 * 4, &shm).map_err(|e| e.to_string())?;
     let fractional_mgr = globals.bind::<wp_fractional_scale_manager_v1::WpFractionalScaleManagerV1, _, _>(&qh, 1..=1, ()).ok();
     let viewporter = globals.bind::<wp_viewporter::WpViewporter, _, _>(&qh, 1..=1, ()).ok();
+    let text_input_mgr = globals.bind::<zwp_text_input_manager_v3::ZwpTextInputManagerV3, _, _>(&qh, 1..=1, ()).ok();
     let data_manager = DataDeviceManagerState::bind(&globals, &qh).ok();
 
     let (tx, rx) = channel::<UiMsg>();
@@ -176,10 +177,16 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
 
     let mut overlay = Overlay::default();
     svc.configure(&mut overlay);
+    let mut renderer = Renderer::new();
+    renderer.shadow = metrics::SHADOW;
+    let accessible = super::accessibility::Shared::new(&overlay);
+    let accessibility = accesskit_unix::Adapter::new(accessible.clone(), super::accessibility::Actions(svc.clone()), super::accessibility::Deactivated);
     let mut st = Wl {
+        accessible,
+        accessibility,
         svc: svc.clone(),
         overlay,
-        renderer: Renderer::new(),
+        renderer,
         registry_state: RegistryState::new(&globals),
         seat_state: SeatState::new(&globals, &qh),
         output_state: OutputState::new(&globals, &qh),
@@ -189,11 +196,15 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
         pool,
         fractional_mgr,
         viewporter,
+        text_input_mgr,
+        text_input: None,
+        ime_pending: (None, None),
         shown: None,
         int_scale: 1,
         frac_scale: None,
         keyboard: None,
         pointer: None,
+        cursor_icon: None,
         mods: Mods::default(),
         has_focus: false,
         pointer_pos: (0.0, 0.0),
@@ -251,8 +262,26 @@ impl Wl {
         }
     }
 
+    /// The surface's logical size: the panel plus the shadow margin.
     fn logical_size(&self) -> (u32, u32) {
-        (metrics::WIDTH as u32, self.overlay.height().round() as u32)
+        let margin = 2.0 * metrics::SHADOW;
+        ((metrics::WIDTH + margin) as u32, (self.overlay.height() + margin).round() as u32)
+    }
+
+    /// Only the panel takes pointer input; the shadow margin passes through.
+    fn set_input_region(&self, surface: &wl_surface::WlSurface) {
+        let Ok(region) = Region::new(&self.compositor) else { return };
+        let m = metrics::SHADOW as i32;
+        region.add(m, m, metrics::WIDTH as i32, self.overlay.height().round() as i32);
+        surface.set_input_region(Some(region.wl_region()));
+    }
+
+    /// Where the field is, for the input method's candidate window.
+    fn ime_area(&self) {
+        let Some(ti) = &self.text_input else { return };
+        let m = metrics::SHADOW as i32;
+        ti.set_cursor_rectangle(m + 52, m + 16, metrics::WIDTH as i32 - 68, 24);
+        ti.commit();
     }
 
     fn show(&mut self) {
@@ -264,13 +293,13 @@ impl Wl {
         let surface = self.compositor.create_surface(&self.qh);
         let fractional = self.fractional_mgr.as_ref().map(|m| m.get_fractional_scale(&surface, &self.qh, ()));
         let viewport = self.viewporter.as_ref().map(|v| v.get_viewport(&surface, &self.qh, ()));
-        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some("arcade-find"), None);
+        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some(crate::os::APP_ID), None);
         layer.set_keyboard_interactivity(KeyboardInteractivity::Exclusive);
         layer.set_exclusive_zone(-1);
         let size = self.logical_size();
         layer.set_size(size.0, size.1);
         layer.commit();
-        self.shown = Some(Shown { layer, viewport, fractional, configured: false, size });
+        self.shown = Some(Shown { layer, viewport, fractional, configured: false, shown_at: None, size });
     }
 
     fn hide(&mut self) {
@@ -291,6 +320,9 @@ impl Wl {
         }
         self.svc.set_visible(false);
         self.svc.note_ui(&self.overlay);
+        self.accessible.publish(&self.overlay, 1.0, metrics::SHADOW);
+        self.accessibility.update_if_active(|| self.accessible.snapshot());
+        self.accessibility.update_window_focus_state(false);
         self.has_focus = false;
         self.frac_scale = None;
     }
@@ -315,7 +347,7 @@ impl Wl {
         if let Some(t) = self.toast_timer.take() {
             self.handle.remove(t);
         }
-        let Some(until) = self.overlay.toast.as_ref().map(|t| t.until) else { return };
+        let Some(until) = self.overlay.feedback_deadline() else { return };
         let timer = Timer::from_deadline(until);
         self.toast_timer = self
             .handle
@@ -332,7 +364,8 @@ impl Wl {
         let scale = self.scale();
         let settings = self.svc.settings();
         let palette = Palette::for_theme(settings.theme);
-        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs()) else { return };
+        let previews = self.svc.can_preview(&self.overlay.targets());
+        let Some(pm) = self.renderer.render(&self.overlay, &palette, scale, find_core::now_secs(), previews) else { return };
         let (w, h) = (pm.width() as i32, pm.height() as i32);
         let Some(s) = self.shown.as_ref() else { return };
         let Ok((buffer, canvas)) = self.pool.create_buffer(w, h, w * 4, wl_shm::Format::Argb8888) else { return };
@@ -354,8 +387,14 @@ impl Wl {
             }
         }
         surface.damage_buffer(0, 0, w, h);
+        self.set_input_region(surface);
         if buffer.attach_to(surface).is_ok() {
             s.layer.commit();
+            self.accessible.publish(&self.overlay, scale, metrics::SHADOW);
+            self.accessibility.update_if_active(|| self.accessible.snapshot());
+            if let Some(s) = self.shown.as_mut() {
+                s.shown_at.get_or_insert(Instant::now());
+            }
         }
         self.svc.note_ui(&self.overlay);
     }
@@ -372,7 +411,7 @@ impl Wl {
     }
 
     fn key(&mut self, event: WlKeyEvent) {
-        crate::debug!("wayland key {:?} shown={}", event.keysym, self.shown.is_some());
+        crate::debug!("wayland key event (shown={})", self.shown.is_some());
         if self.shown.is_none() {
             return;
         }
@@ -382,21 +421,9 @@ impl Wl {
         self.effects(effects);
     }
 
-    /// The list row under logical y, as an absolute index.
+    /// The list row under the surface's logical y, as an absolute index.
     fn row_at(&self, y: f64) -> Option<usize> {
-        let top = (metrics::BAR + metrics::LIST_PAD) as f64;
-        if y < top || !self.overlay.shows_list() {
-            return None;
-        }
-        let vi = ((y - top) / metrics::ROW as f64) as usize;
-        if vi >= self.overlay.visible_rows() {
-            return None;
-        }
-        let scroll = match &self.overlay.mode {
-            Mode::Actions { scroll, .. } => *scroll,
-            _ => self.overlay.scroll,
-        };
-        Some(scroll + vi)
+        self.overlay.row_at(y - metrics::SHADOW as f64)
     }
 
     /// Turns the pending press into a drag of its rows (the selection when
@@ -409,8 +436,7 @@ impl Wl {
         }
         let (Some(manager), Some(device), Some(shown)) = (&self.data_manager, &self.data_device, &self.shown) else { return };
         crate::debug!("wayland drag of {} item(s)", rows.len());
-        let source =
-            manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
+        let source = manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
         let icon = self.compositor.create_surface(&self.qh);
         source.start_drag(device, shown.layer.wl_surface(), Some(&icon), serial);
         self.paint_drag_icon(&icon, &rows);
@@ -427,14 +453,7 @@ impl Wl {
         // Below and right of the hotspot, clear of the cursor.
         let gap = 14 * scale as u32;
         let Some(mut pm) = resvg::tiny_skia::Pixmap::new(image.width() + gap, image.height() + gap) else { return };
-        pm.draw_pixmap(
-            gap as i32,
-            gap as i32,
-            image.as_ref(),
-            &resvg::tiny_skia::PixmapPaint::default(),
-            resvg::tiny_skia::Transform::identity(),
-            None,
-        );
+        pm.draw_pixmap(gap as i32, gap as i32, image.as_ref(), &resvg::tiny_skia::PixmapPaint::default(), resvg::tiny_skia::Transform::identity(), None);
         let (w, h) = (pm.width() as i32, pm.height() as i32);
         let Ok((buffer, canvas)) = self.pool.create_buffer(w, h, w * 4, wl_shm::Format::Argb8888) else { return };
         for (dst, src) in canvas.as_chunks_mut::<4>().0.iter_mut().zip(pm.data().as_chunks::<4>().0) {
@@ -502,11 +521,15 @@ impl SeatHandler for Wl {
         crate::debug!("wayland seat capability + {capability:?}");
         if capability == Capability::Keyboard && self.keyboard.is_none() {
             let handle = self.handle.clone();
-            self.keyboard =
-                self.seat_state.get_keyboard_with_repeat(qh, &seat, None, handle, Box::new(|st: &mut Wl, _, ev| st.key(ev))).ok();
+            self.keyboard = self.seat_state.get_keyboard_with_repeat(qh, &seat, None, handle, Box::new(|st: &mut Wl, _, ev| st.key(ev))).ok();
+            if self.text_input.is_none() {
+                self.text_input = self.text_input_mgr.as_ref().map(|m| m.get_text_input(&seat, qh, ()));
+            }
         }
         if capability == Capability::Pointer && self.pointer.is_none() {
-            self.pointer = self.seat_state.get_pointer(qh, &seat).ok();
+            let cursor_surface = self.compositor.create_surface(qh);
+            self.pointer = self.seat_state.get_pointer_with_theme(qh, &seat, self.shm.wl_shm(), cursor_surface, ThemeSpec::default()).ok();
+            self.cursor_icon = None;
             if self.data_device.is_none() {
                 self.data_device = self.data_manager.as_ref().map(|m| m.get_data_device(qh, &seat));
             }
@@ -520,27 +543,18 @@ impl SeatHandler for Wl {
             }
         }
         if capability == Capability::Pointer {
-            if let Some(p) = self.pointer.take() {
-                p.release();
-            }
+            self.pointer = None;
+            self.cursor_icon = None;
         }
     }
     fn remove_seat(&mut self, _: &Connection, _: &QueueHandle<Self>, _: wl_seat::WlSeat) {}
 }
 
 impl KeyboardHandler for Wl {
-    fn enter(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &wl_keyboard::WlKeyboard,
-        surface: &wl_surface::WlSurface,
-        _: u32,
-        _: &[u32],
-        _: &[Keysym],
-    ) {
+    fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_keyboard::WlKeyboard, surface: &wl_surface::WlSurface, _: u32, _: &[u32], _: &[Keysym]) {
         if self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = true;
+            self.accessibility.update_window_focus_state(true);
             if let Some(t) = self.leave_timer.take() {
                 self.handle.remove(t);
             }
@@ -555,6 +569,7 @@ impl KeyboardHandler for Wl {
         // keyboard device changes).
         if self.has_focus && self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = false;
+            self.accessibility.update_window_focus_state(false);
             if self.drag.is_some() {
                 // Some compositors move keyboard focus while a drag is over
                 // another window; the overlay stays until the drag ends.
@@ -563,7 +578,8 @@ impl KeyboardHandler for Wl {
             if let Some(t) = self.leave_timer.take() {
                 self.handle.remove(t);
             }
-            let timer = Timer::from_duration(Duration::from_millis(150));
+            let Some(delay) = super::focus_loss_delay(self.shown.as_ref().and_then(|s| s.shown_at), Instant::now()) else { return };
+            let timer = Timer::from_duration(delay);
             self.leave_timer = self
                 .handle
                 .insert_source(timer, |_, _, st: &mut Wl| {
@@ -589,14 +605,31 @@ impl KeyboardHandler for Wl {
 }
 
 impl PointerHandler for Wl {
-    fn pointer_frame(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_pointer::WlPointer, events: &[PointerEvent]) {
+    fn pointer_frame(&mut self, conn: &Connection, _: &QueueHandle<Self>, _: &wl_pointer::WlPointer, events: &[PointerEvent]) {
         for ev in events {
             if !self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == &ev.surface) {
                 continue;
             }
             self.pointer_pos = ev.position;
+            if matches!(ev.kind, PointerEventKind::Enter { .. } | PointerEventKind::Motion { .. }) {
+                let icon = if self.row_at(ev.position.1).is_some() {
+                    CursorIcon::Pointer
+                } else if ev.position.1 >= metrics::SHADOW as f64 && ev.position.1 < (metrics::SHADOW + metrics::BAR) as f64 {
+                    CursorIcon::Text
+                } else {
+                    CursorIcon::Default
+                };
+                if matches!(ev.kind, PointerEventKind::Enter { .. }) || self.cursor_icon != Some(icon) {
+                    if let Some(pointer) = &self.pointer {
+                        if pointer.set_cursor(conn, icon).is_ok() {
+                            self.cursor_icon = Some(icon);
+                        }
+                    }
+                }
+            }
             match ev.kind {
                 PointerEventKind::Press { button: BTN_LEFT, serial, .. } => {
+                    self.overlay.hover(None);
                     let Some(i) = self.row_at(ev.position.1) else { continue };
                     let now = Instant::now();
                     let double = self.last_click.is_some_and(|(t, j)| j == i && now - t < DOUBLE_CLICK);
@@ -616,6 +649,10 @@ impl PointerHandler for Wl {
                     if self.drag.is_none() && self.press.as_ref().is_some_and(|(p, _)| p.moved_past(ev.position)) {
                         self.start_drag();
                     }
+                    let row = self.row_at(ev.position.1).filter(|_| self.press.is_none() && self.drag.is_none());
+                    if self.overlay.hover(row) {
+                        self.update();
+                    }
                 }
                 PointerEventKind::Release { button: BTN_LEFT, .. } => {
                     if let Some((p, _)) = self.press.take() {
@@ -627,13 +664,16 @@ impl PointerHandler for Wl {
                     }
                 }
                 PointerEventKind::Leave { .. } => {
+                    self.cursor_icon = None;
+                    if self.overlay.hover(None) {
+                        self.update();
+                    }
                     if self.drag.is_none() {
                         self.press = None;
                     }
                 }
                 PointerEventKind::Axis { vertical, .. } => {
-                    let lines =
-                        if vertical.discrete != 0 { vertical.discrete as isize } else { (vertical.absolute / 20.0).round() as isize };
+                    let lines = if vertical.discrete != 0 { vertical.discrete as isize } else { (vertical.absolute / 20.0).round() as isize };
                     if lines != 0 {
                         self.overlay.scroll_by(lines);
                         self.update();
@@ -699,17 +739,57 @@ impl Dispatch<wp_viewport::WpViewport, ()> for Wl {
     fn event(_: &mut Self, _: &wp_viewport::WpViewport, _: wp_viewport::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {}
 }
 
+impl Dispatch<zwp_text_input_manager_v3::ZwpTextInputManagerV3, ()> for Wl {
+    fn event(
+        _: &mut Self,
+        _: &zwp_text_input_manager_v3::ZwpTextInputManagerV3,
+        _: zwp_text_input_manager_v3::Event,
+        _: &(),
+        _: &Connection,
+        _: &QueueHandle<Self>,
+    ) {
+    }
+}
+
+/// text-input-v3: enabled while the overlay's surface has text focus;
+/// preedit and commits apply together on `done`.
+impl Dispatch<zwp_text_input_v3::ZwpTextInputV3, ()> for Wl {
+    fn event(st: &mut Self, ti: &zwp_text_input_v3::ZwpTextInputV3, ev: zwp_text_input_v3::Event, _: &(), _: &Connection, _: &QueueHandle<Self>) {
+        use zwp_text_input_v3::{ContentHint, ContentPurpose, Event};
+        match ev {
+            Event::Enter { surface } => {
+                if st.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == &surface) {
+                    ti.enable();
+                    ti.set_content_type(ContentHint::None, ContentPurpose::Normal);
+                    st.ime_area();
+                }
+            }
+            Event::Leave { .. } => {
+                ti.disable();
+                ti.commit();
+                st.ime_pending = (None, None);
+                st.overlay.ime_preedit("");
+            }
+            Event::PreeditString { text, .. } => st.ime_pending.0 = Some(text.unwrap_or_default()),
+            Event::CommitString { text } => st.ime_pending.1 = text,
+            Event::Done { .. } => {
+                let (preedit, commit) = std::mem::take(&mut st.ime_pending);
+                let mut effects = Vec::new();
+                if let Some(text) = commit {
+                    effects = st.overlay.ime_commit(&text);
+                }
+                st.overlay.ime_preedit(&preedit.unwrap_or_default());
+                st.effects(effects);
+            }
+            _ => {}
+        }
+    }
+}
+
 impl DataSourceHandler for Wl {
     fn accept_mime(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_source::WlDataSource, _: Option<String>) {}
 
-    fn send_request(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        source: &wl_data_source::WlDataSource,
-        mime: String,
-        mut fd: WritePipe,
-    ) {
+    fn send_request(&mut self, _: &Connection, _: &QueueHandle<Self>, source: &wl_data_source::WlDataSource, mime: String, mut fd: WritePipe) {
         let Some(drag) = self.drag.as_ref().filter(|d| d.source.inner() == source) else { return };
         if let Some(bytes) = dnd::payload(&drag.paths, &mime) {
             if let Err(e) = fd.write_all(&bytes) {
@@ -735,16 +815,7 @@ impl DataSourceHandler for Wl {
 
 // Find is never a drop target; offers from other clients are ignored.
 impl DataDeviceHandler for Wl {
-    fn enter(
-        &mut self,
-        _: &Connection,
-        _: &QueueHandle<Self>,
-        _: &wl_data_device::WlDataDevice,
-        _: f64,
-        _: f64,
-        _: &wl_surface::WlSurface,
-    ) {
-    }
+    fn enter(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64, _: &wl_surface::WlSurface) {}
     fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}
     fn motion(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice, _: f64, _: f64) {}
     fn selection(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_data_device::WlDataDevice) {}

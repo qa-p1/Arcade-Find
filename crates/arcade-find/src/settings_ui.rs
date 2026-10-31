@@ -1,13 +1,22 @@
 //! The Settings window: a separate egui process (`--settings-window`) that
 //! runs only while open, so the resident overlay never carries a GPU
-//! context. Changes are saved at once and the running instance reloads.
+//! context. Template A from the Arcade design kit (`design::egui`): sidebar,
+//! pages in the standard order, and the kit's rows and controls. Changes are
+//! saved at once and the running instance reloads.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::time::{Duration, Instant};
 
 use arcade_link::client::{app_state, AppState};
+use arcade_link::design::egui::components::{ButtonKind, Kit, NavItem, ShortcutRecorder, ShortcutSpec, Toast, Tone};
+use arcade_link::design::format::{format_count, format_relative, format_size};
+use arcade_link::design::size;
 use arcade_link::manifest::ids;
 use arcade_link::{Locations, Registry};
 use eframe::egui;
@@ -15,56 +24,78 @@ use notify::Watcher;
 use serde_json::Value;
 
 use find_core::paths::{expand_tilde, tilde, AppPaths};
-use find_core::settings::Theme;
 use find_core::Settings;
 
 use crate::instance::{self, Command};
 use crate::{autostart, hotkey, link, theme, VERSION};
 
+/// The one-line description under every app name (README, Tools, tray).
+pub const TAGLINE: &str = "Press a shortcut, type, and any file or folder shows up.";
+/// The user guide, shipped with the app and published here.
+pub const GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/tree/main/docs/user";
+const CONNECTED_GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/blob/main/docs/user/with-other-apps.md";
+const LICENCES_URL: &str = "https://github.com/qa-p1/Arcade-Find/blob/main/THIRD_PARTY_NOTICES.md";
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Page {
     General,
+    Shortcuts,
     Locations,
-    Shortcut,
     Index,
     Connected,
     About,
 }
 
-const PAGES: [(Page, &str); 6] = [
-    (Page::General, "General"),
-    (Page::Locations, "Locations"),
-    (Page::Shortcut, "Shortcut"),
-    (Page::Index, "Index"),
-    (Page::Connected, "Connected apps"),
-    (Page::About, "About"),
+/// The standard order (STANDARD §6): General, Shortcuts, Find's own pages,
+/// Connected apps, About.
+const PAGES: [(Page, &str, &str); 6] = [
+    (Page::General, "General", "settings"),
+    (Page::Shortcuts, "Shortcuts", "keyboard"),
+    (Page::Locations, "Locations", "folder"),
+    (Page::Index, "Index", "list"),
+    (Page::Connected, "Connected apps", "apps"),
+    (Page::About, "About", "info"),
 ];
 
 /// Results of background work.
 enum Bg {
     LoginState(Option<bool>),
     LoginSaved(Result<bool, String>),
-    Settings(Settings),
-    IntegrationHints(Vec<String>),
+    SettingsChanged,
+    Integration {
+        hints: Vec<String>,
+        channel: Option<String>,
+    },
     Status(Option<Value>),
-    Registry(Registry, Vec<(String, AppState)>),
+    Registry(Registry, Vec<(String, AppState)>, Option<String>),
+    DesktopBindings(Result<hotkey::hyprland::DesktopBindings, String>),
     Ripgrep(Option<find_core::content::Ripgrep>),
     Saved(Result<(), String>),
-    Message(String),
+    CommandDone(Result<Option<&'static str>, String>),
+    Toast(String, Tone),
+    /// Another launch asked for Settings: come to the front.
+    Focus,
 }
 
 struct SettingsApp {
     login_state: Option<bool>,
     login_pending: bool,
-    _settings_watch: Option<notify::RecommendedWatcher>,
+    _watch: Option<notify::RecommendedWatcher>,
     integration_hints: Vec<String>,
+    channel: Option<String>,
     paths: AppPaths,
+    pending_commands: usize,
+    notify_close: Arc<AtomicBool>,
     locations: Locations,
     settings: Settings,
-    page: Page,
-    status: Option<Value>,
+    page: usize,
+    /// The running instance's status; `None` before the first answer.
+    status: Option<Option<Value>>,
     status_at: Option<Instant>,
     registry: Option<Registry>,
+    registry_error: Option<String>,
+    desktop_bindings: hotkey::hyprland::DesktopBindings,
+    desktop_bindings_error: Option<String>,
     states: Vec<(String, AppState)>,
     ripgrep: Option<Option<find_core::content::Ripgrep>>,
     tx: Sender<Bg>,
@@ -72,33 +103,111 @@ struct SettingsApp {
     new_root: String,
     new_exclude: String,
     exclude_names: String,
-    recording: bool,
-    message: Option<(String, Instant)>,
+    recorder: ShortcutRecorder,
+    toast: Option<Toast>,
     drives: Vec<PathBuf>,
+    glyphs: Vec<(String, egui::TextureHandle)>,
+    rescanning: bool,
+    save_tx: Sender<Settings>,
+    pending_saves: usize,
+    save_error: Option<String>,
+    closing: bool,
+    welcome: bool,
+    window_state: Option<crate::window_state::WindowState>,
+    _window_lock: Option<instance::InstanceLock>,
+}
+
+/// The file another launch touches to bring an open Settings window forward.
+pub fn focus_request(paths: &AppPaths) -> PathBuf {
+    paths.runtime.join("settings.focus")
+}
+
+fn forward_watch_event(event: &notify::Event, settings: &Path, focus: &Path, tx: &Sender<Bg>, ctx: &egui::Context) {
+    // inotify emits Access events for our own reads. Feeding those back into
+    // SettingsChanged creates an endless read -> notification -> read loop.
+    if !matches!(event.kind, notify::EventKind::Any | notify::EventKind::Create(_) | notify::EventKind::Modify(_) | notify::EventKind::Remove(_)) {
+        return;
+    }
+    if event.paths.iter().any(|path| path == settings) {
+        let _ = tx.send(Bg::SettingsChanged);
+        ctx.request_repaint();
+    }
+    if event.paths.iter().any(|path| path == focus) {
+        let _ = tx.send(Bg::Focus);
+        ctx.request_repaint();
+    }
 }
 
 pub fn run(paths: AppPaths) -> ExitCode {
+    let mut window_paths = paths.clone();
+    window_paths.runtime = paths.runtime.join("settings-window");
+    let window_lock = match instance::acquire(&window_paths) {
+        Ok(Some(lock)) => lock,
+        Ok(None) => {
+            return match arcade_link::paths::write_atomic(&focus_request(&paths), b"focus", true) {
+                Ok(()) => ExitCode::SUCCESS,
+                Err(error) => {
+                    eprintln!("arcade-find: Couldn't focus Settings. {error}");
+                    ExitCode::FAILURE
+                }
+            }
+        }
+        Err(error) => {
+            eprintln!("arcade-find: Couldn't open Settings. {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+    crate::debug!("settings: loading settings");
     let (settings, _) = Settings::load(&paths.settings_file());
+    crate::debug!("settings: reading system theme");
+    theme::refresh_system_theme();
+    crate::debug!("settings: starting eframe");
+    let window_state = crate::window_state::WindowState::new(&paths, "settings", [size::SETTINGS_WIDTH, size::SETTINGS_HEIGHT]);
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Arcade Find Settings")
-            .with_app_id("arcade-find-settings")
-            .with_inner_size([780.0, 560.0])
-            .with_min_inner_size([620.0, 440.0])
-            .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
+        viewport: window_state.viewport(
+            egui::ViewportBuilder::default()
+                .with_title("Settings — Arcade Find")
+                .with_app_id(crate::os::APP_ID)
+                .with_inner_size([size::SETTINGS_WIDTH, size::SETTINGS_HEIGHT])
+                .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
+                .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
+        ),
         ..Default::default()
     };
+    let closed_paths = paths.clone();
+    let notify_close = Arc::new(AtomicBool::new(true));
+    let close_notice = notify_close.clone();
     let r = eframe::run_native(
-        "Arcade Find Settings",
+        "Arcade Find",
         options,
         Box::new(move |cc| {
-            theme::refresh_system_theme();
-            apply_visuals(&cc.egui_ctx, settings.theme);
-            Ok(Box::new(SettingsApp::new(paths, settings, cc.egui_ctx.clone())))
+            crate::debug!("settings: creating UI");
+            arcade_link::design::egui::install_inter(&cc.egui_ctx);
+            apply_theme(&cc.egui_ctx, settings.theme);
+            // Explicit text scaling for the native UI matrix (also useful on
+            // desktops that do not publish a system text-scale preference).
+            if let Ok(scale) = std::env::var("ARCADE_FIND_UI_SCALE") {
+                if let Ok(scale) = scale.parse::<f32>() {
+                    if (1.0..=1.25).contains(&scale) {
+                        cc.egui_ctx.set_zoom_factor(scale);
+                    }
+                }
+            }
+            let mut app = SettingsApp::new(paths, settings, cc.egui_ctx.clone());
+            app.notify_close = notify_close;
+            app._window_lock = Some(window_lock);
+            app.window_state = Some(window_state);
+            crate::debug!("settings: UI created");
+            Ok(Box::new(app))
         }),
     );
     match r {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => {
+            if close_notice.load(Ordering::Relaxed) {
+                let _ = instance::send(&closed_paths, &Command::WindowClosed, Duration::from_millis(500));
+            }
+            ExitCode::SUCCESS
+        }
         Err(e) => {
             eprintln!("arcade-find: settings: {e}");
             ExitCode::FAILURE
@@ -106,51 +215,77 @@ pub fn run(paths: AppPaths) -> ExitCode {
     }
 }
 
-fn apply_visuals(ctx: &egui::Context, t: Theme) {
-    let dark = match t {
-        Theme::Dark => true,
-        Theme::Light => false,
-        Theme::System => theme::system_dark(),
-    };
-    let mut v = if dark { egui::Visuals::dark() } else { egui::Visuals::light() };
-    let accent = theme::ACCENT;
-    let a = egui::Color32::from_rgb((accent >> 16) as u8, (accent >> 8) as u8, accent as u8);
-    v.selection.bg_fill = a.gamma_multiply(if dark { 0.55 } else { 0.35 });
-    v.hyperlink_color = a;
-    ctx.set_visuals(v);
+/// Applies the kit for the Appearance setting. "System" is resolved here
+/// (the XDG portal, the registry or `defaults`), since winit can't report
+/// the system theme on every Linux desktop.
+fn apply_theme(ctx: &egui::Context, t: find_core::settings::Theme) {
+    let resolved = if theme::kit_theme(t).is_dark() { "dark" } else { "light" };
+    arcade_link::design::apply_egui(ctx, resolved, link::ME);
+}
+
+fn texture(ctx: &egui::Context, name: &str, rgba: Vec<u8>, px: u32) -> egui::TextureHandle {
+    let image = egui::ColorImage::from_rgba_unmultiplied([px as usize, px as usize], &rgba);
+    ctx.load_texture(name, image, egui::TextureOptions::LINEAR)
 }
 
 impl SettingsApp {
     fn new(paths: AppPaths, settings: Settings, ctx: egui::Context) -> SettingsApp {
         let (tx, rx) = channel();
-        let exclude_names = settings.exclude_names.join(", ");
-        let (watch_tx, watch_path, watch_ctx) = (tx.clone(), paths.settings_file(), ctx.clone());
-        let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
-            if event.is_ok_and(|e| e.paths.contains(&watch_path)) {
-                if let Some(s) = std::fs::read(&watch_path).ok().and_then(|b| serde_json::from_slice(&b).ok()) {
-                    let _ = watch_tx.send(Bg::Settings(s));
-                    watch_ctx.request_repaint();
+        let (save_tx, save_rx) = channel::<Settings>();
+        let (saved_tx, saved_paths, saved_ctx) = (tx.clone(), paths.clone(), ctx.clone());
+        // One writer preserves the order of rapid changes. The resident
+        // reload also stays off the UI thread.
+        std::thread::spawn(move || {
+            for settings in save_rx {
+                let result =
+                    settings.save(&saved_paths.settings_file()).map_err(|_| "Couldn't save settings. Check that the settings folder is writable.".to_string());
+                if result.is_ok() {
+                    let _ = instance::send(&saved_paths, &Command::Reload, Duration::from_secs(3));
                 }
+                let _ = saved_tx.send(Bg::Saved(result));
+                saved_ctx.request_repaint();
             }
+        });
+        let exclude_names = settings.exclude_names.join(", ");
+        let (watch_tx, settings_path, focus_path, watch_ctx) = (tx.clone(), paths.settings_file(), focus_request(&paths), ctx.clone());
+        let mut watcher = notify::recommended_watcher(move |event: notify::Result<notify::Event>| {
+            let Ok(event) = event else { return };
+            forward_watch_event(&event, &settings_path, &focus_path, &watch_tx, &watch_ctx);
         })
         .ok();
-        if std::fs::create_dir_all(&paths.config).is_ok() {
-            if let Some(w) = &mut watcher {
-                let _ = w.watch(&paths.config, notify::RecursiveMode::NonRecursive);
+        for dir in [&paths.config, &paths.runtime] {
+            if std::fs::create_dir_all(dir).is_ok() {
+                if let Some(w) = &mut watcher {
+                    let _ = w.watch(dir, notify::RecursiveMode::NonRecursive);
+                }
             }
         }
+        // The system theme changes live (the XDG portal on Linux).
+        let theme_ctx = ctx.clone();
+        theme::watch_system_theme(move || theme_ctx.request_repaint());
+        let mut glyphs = vec![("brand".to_string(), texture(&ctx, "brand", crate::ui::icons::glyph_mask_rgba(link::ME, 64), 64))];
+        for id in link::apps::known() {
+            glyphs.push((id.to_string(), texture(&ctx, id, crate::ui::icons::glyph_mask_rgba(id, 64), 64)));
+        }
+        let welcome = !settings.welcome_complete;
         let app = SettingsApp {
             login_state: None,
             login_pending: false,
-            _settings_watch: watcher,
+            _watch: watcher,
             integration_hints: Vec::new(),
+            channel: None,
             locations: Locations::discover(),
             paths,
+            pending_commands: 0,
+            notify_close: Arc::new(AtomicBool::new(true)),
             settings,
-            page: Page::General,
+            page: 0,
             status: None,
             status_at: None,
             registry: None,
+            registry_error: None,
+            desktop_bindings: hotkey::hyprland::DesktopBindings::default(),
+            desktop_bindings_error: None,
             states: Vec::new(),
             ripgrep: None,
             tx,
@@ -158,9 +293,18 @@ impl SettingsApp {
             new_root: String::new(),
             new_exclude: String::new(),
             exclude_names,
-            recording: false,
-            message: None,
+            recorder: ShortcutRecorder::default(),
+            toast: None,
             drives: find_core::mounts::MountTable::read().suggested_drives(),
+            glyphs,
+            rescanning: false,
+            save_tx,
+            pending_saves: 0,
+            save_error: None,
+            closing: false,
+            welcome,
+            window_state: None,
+            _window_lock: None,
         };
         app.refresh_status(&ctx);
         app.refresh_login(&ctx);
@@ -170,13 +314,13 @@ impl SettingsApp {
         std::thread::spawn(move || {
             let _ = tx.send(Bg::Ripgrep(find_core::content::detect(&[])));
             let mut hints = Vec::new();
+            let mut channel = None;
             if let Ok(environment) = arcade_link::install::Environment::discover() {
-                if let Ok(status) =
-                    arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
-                {
+                if let Ok(status) = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default()) {
                     if let Some(hint) = status.path_hint {
                         hints.push(hint);
                     }
+                    channel = status.receipt.as_ref().map(|r| r.channel.clone());
                     #[cfg(target_os = "macos")]
                     if let Some(receipt) = status.receipt {
                         if receipt.integration.cli.is_none() {
@@ -189,7 +333,7 @@ impl SettingsApp {
                     }
                 }
             }
-            let _ = tx.send(Bg::IntegrationHints(hints));
+            let _ = tx.send(Bg::Integration { hints, channel });
             c.request_repaint();
         });
         app
@@ -219,7 +363,9 @@ impl SettingsApp {
             let reg = Registry::load(&loc);
             let me = link::me();
             let states = app_ids(&reg).into_iter().map(|id| (id.clone(), app_state(&loc, &reg, &id, &me))).collect();
-            let _ = tx.send(Bg::Registry(reg, states));
+            let error = registry_read_error(&loc.registry);
+            let _ = tx.send(Bg::Registry(reg, states, error));
+            let _ = tx.send(Bg::DesktopBindings(hotkey::hyprland::desktop_bindings()));
             c.request_repaint();
         });
     }
@@ -227,32 +373,67 @@ impl SettingsApp {
     /// Saves and tells the running instance (off the UI thread).
     fn save(&mut self, ctx: &egui::Context) {
         self.settings.sanitize();
-        let (tx, p, s, c) = (self.tx.clone(), self.paths.clone(), self.settings.clone(), ctx.clone());
-        apply_visuals(ctx, s.theme);
-        std::thread::spawn(move || {
-            let r = s.save(&p.settings_file()).map_err(|e| format!("Couldn't save settings: {e}"));
-            if r.is_ok() {
-                let _ = instance::send(&p, &Command::Reload, Duration::from_secs(3));
-            }
-            let _ = tx.send(Bg::Saved(r));
-            c.request_repaint();
-        });
+        apply_theme(ctx, self.settings.theme);
+        if self.save_tx.send(self.settings.clone()).is_ok() {
+            self.pending_saves += 1;
+        } else {
+            self.save_error = Some("Couldn't save settings. Restart Settings and try again.".into());
+        }
     }
 
-    fn command(&self, ctx: &egui::Context, cmd: Command, done: &'static str) {
+    fn command(&mut self, ctx: &egui::Context, cmd: Command, done: Option<&'static str>) {
+        self.pending_commands += 1;
+        if matches!(cmd, Command::Quit) {
+            self.notify_close.store(false, Ordering::Relaxed);
+        }
         let (tx, p, c) = (self.tx.clone(), self.paths.clone(), ctx.clone());
         std::thread::spawn(move || {
-            let msg = match instance::send(&p, &cmd, Duration::from_secs(3)) {
-                Ok(_) => done.to_string(),
-                Err(_) => "Arcade Find isn't running.".to_string(),
+            let result = match instance::send(&p, &cmd, Duration::from_secs(3)) {
+                Ok(v) if v["ok"] == false => {
+                    let why = v["error"].as_str().unwrap_or("It's busy").trim_end_matches('.');
+                    Err(format!("Couldn't do that now. {why}. Try again in a moment."))
+                }
+                Ok(_) => Ok(done),
+                Err(_) => Err("Arcade Find isn't running. Start it from your apps menu.".into()),
             };
-            let _ = tx.send(Bg::Message(msg));
+            let _ = tx.send(Bg::CommandDone(result));
             c.request_repaint();
         });
     }
 
-    fn drain(&mut self, ctx: &egui::Context) {
-        while let Ok(m) = self.rx.try_recv() {
+    fn toast(&mut self, message: impl Into<String>, tone: Tone) {
+        self.toast = Some(Toast::new(message, tone));
+    }
+
+    fn copy(&mut self, ctx: &egui::Context, text: String) {
+        ctx.copy_text(text);
+        self.toast = Some(Toast::copied());
+    }
+
+    fn open_url(&mut self, url: &str) {
+        if open::that_detached(url).is_err() {
+            self.toast("Couldn't open the browser. Copy the address from the user guide instead.", Tone::Danger);
+        }
+    }
+
+    fn open_path(&mut self, path: &Path) {
+        if path.extension().is_none() {
+            let _ = std::fs::create_dir_all(path);
+        }
+        if open::that_detached(path).is_err() {
+            self.toast("Couldn't open it. Check that a file manager is installed.", Tone::Danger);
+        }
+    }
+
+    fn drain(&mut self, ctx: &egui::Context) -> bool {
+        let mut save_failed = false;
+        // Bound one frame's work even if another process writes continuously.
+        // Messages stay queued, and the next frame resumes processing them.
+        for index in 0..256 {
+            let Ok(m) = self.rx.try_recv() else { break };
+            if index == 255 {
+                ctx.request_repaint();
+            }
             match m {
                 Bg::LoginState(state) => self.login_state = state,
                 Bg::LoginSaved(result) => {
@@ -263,36 +444,143 @@ impl SettingsApp {
                             self.settings.start_at_login = Some(on);
                             self.save(ctx);
                         }
-                        Err(e) => self.message = Some((e, Instant::now())),
+                        Err(_) => {
+                            self.toast("Couldn't change Start at login. Check your desktop's autostart folder.", Tone::Danger);
+                            self.closing = false;
+                            save_failed = true;
+                        }
                     }
                 }
-                Bg::Settings(s) => {
-                    if s != self.settings {
-                        self.exclude_names = s.exclude_names.join(", ");
-                        self.settings = s;
-                        apply_visuals(ctx, self.settings.theme);
-                        self.refresh_status(ctx);
+                Bg::SettingsChanged => {
+                    // A watch event may outlive the write that caused it.
+                    // Read the latest file instead of applying a stale value.
+                    if self.pending_saves == 0 && !self.login_pending {
+                        if let Some(s) = std::fs::read(self.paths.settings_file()).ok().and_then(|b| serde_json::from_slice::<Settings>(&b).ok()) {
+                            if s != self.settings {
+                                self.exclude_names = s.exclude_names.join(", ");
+                                self.settings = s;
+                                apply_theme(ctx, self.settings.theme);
+                                self.refresh_status(ctx);
+                            }
+                        }
                     }
                 }
-                Bg::IntegrationHints(hints) => self.integration_hints = hints,
+                Bg::Integration { hints, channel } => {
+                    self.integration_hints = hints;
+                    self.channel = channel;
+                }
                 Bg::Status(s) => {
-                    self.status = s;
+                    if self.rescanning
+                        && s.as_ref().is_some_and(|s| s["engine"]["phase"] != "crawling")
+                        && self.status_at.is_some_and(|t| t.elapsed() > Duration::from_secs(3))
+                    {
+                        self.rescanning = false;
+                    }
+                    self.status = Some(s);
                     self.status_at = Some(Instant::now());
                 }
-                Bg::Registry(r, st) => {
+                Bg::Registry(r, st, error) => {
+                    self.registry_error = error;
                     self.registry = Some(r);
                     self.states = st;
                 }
+                Bg::DesktopBindings(result) => match result {
+                    Ok(bindings) => {
+                        self.desktop_bindings = bindings;
+                        self.desktop_bindings_error = None;
+                    }
+                    Err(error) => self.desktop_bindings_error = Some(error),
+                },
                 Bg::Ripgrep(r) => self.ripgrep = Some(r),
-                Bg::Saved(Err(e)) | Bg::Message(e) => self.message = Some((e, Instant::now())),
-                Bg::Saved(Ok(())) => {}
+                Bg::Saved(result) => {
+                    self.pending_saves = self.pending_saves.saturating_sub(1);
+                    if let Err(error) = result {
+                        self.save_error = Some(error);
+                        self.closing = false;
+                        save_failed = true;
+                    } else {
+                        self.save_error = None;
+                    }
+                }
+                Bg::CommandDone(result) => {
+                    self.pending_commands = self.pending_commands.saturating_sub(1);
+                    match result {
+                        Ok(Some(message)) => self.toast(message, Tone::Ok),
+                        Ok(None) => {}
+                        Err(message) => {
+                            self.closing = false;
+                            self.notify_close.store(true, Ordering::Relaxed);
+                            self.toast(message, Tone::Danger);
+                        }
+                    }
+                }
+                Bg::Toast(m, tone) => self.toast(m, tone),
+                Bg::Focus => {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+                }
             }
+        }
+        save_failed
+    }
+
+    fn close_if_saved(&mut self, ctx: &egui::Context, requested: bool, save_failed: bool) {
+        let pending = self.pending_saves > 0 || self.login_pending || self.pending_commands > 0;
+        if requested && (pending || save_failed) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+        }
+        if requested && !save_failed {
+            self.closing = true;
+        }
+        if self.closing && !pending && !save_failed {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+
+    fn glyph(&self, id: &str) -> Option<egui::TextureId> {
+        self.glyphs.iter().find(|(g, _)| g == id).map(|(_, t)| t.id())
+    }
+
+    fn page_changed(&mut self, ctx: &egui::Context) {
+        match PAGES[self.page].0 {
+            Page::General => self.refresh_login(ctx),
+            Page::Index | Page::About => self.refresh_status(ctx),
+            Page::Shortcuts | Page::Connected => {
+                self.refresh_registry(ctx);
+                self.refresh_status(ctx);
+            }
+            Page::Locations => {}
         }
     }
 }
 
 /// The apps the Connected apps page lists: the family, plus any other
 /// installed Arcade app (a new app shows up without a Find update).
+fn registry_read_error(path: &Path) -> Option<String> {
+    let entries = match std::fs::read_dir(path) {
+        Ok(entries) => entries,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => return None,
+        Err(error) => return Some(error.to_string()),
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(error) => return Some(error.to_string()),
+        };
+        if entry.path().extension().is_none_or(|ext| ext != "json") {
+            continue;
+        }
+        let bytes = match std::fs::read_to_string(entry.path()) {
+            Ok(bytes) => bytes,
+            Err(error) => return Some(error.to_string()),
+        };
+        if let Err(error) = arcade_link::manifest::ManifestDocument::from_json(&bytes) {
+            return Some(error.to_string());
+        }
+    }
+    None
+}
+
 fn app_ids(reg: &Registry) -> Vec<String> {
     let mut v: Vec<String> = link::apps::known().iter().map(|s| s.to_string()).collect();
     for m in reg.apps() {
@@ -303,302 +591,416 @@ fn app_ids(reg: &Registry) -> Vec<String> {
     v
 }
 
-fn heading(ui: &mut egui::Ui, t: &str) {
-    ui.add_space(4.0);
-    ui.label(egui::RichText::new(t).size(18.0).strong());
-    ui.add_space(8.0);
-}
-
-fn note(ui: &mut egui::Ui, t: &str) {
-    ui.label(egui::RichText::new(t).weak());
-}
-
 fn path_valid(p: &Path) -> bool {
     p.is_absolute() && p.is_dir()
 }
 
+fn folder_name(path: &Path) -> String {
+    if path == find_core::paths::home_dir() {
+        "Home".to_string()
+    } else {
+        path.file_name().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string())
+    }
+}
+
+/// Small muted text under a list (`.section-note`).
+fn note(ui: &mut egui::Ui, kit: &Kit, text: &str) {
+    ui.add_space(8.0);
+    ui.add(
+        egui::Label::new(
+            egui::RichText::new(text)
+                .font(arcade_link::design::egui::font(arcade_link::design::text::SMALL))
+                .color(arcade_link::design::egui::colour(kit.palette.muted)),
+        )
+        .wrap(),
+    );
+}
+
 impl eframe::App for SettingsApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        self.drain(ctx);
-        let ctx = ctx.clone();
-        // While indexing, keep the Index page current (only while it's open).
-        if self.page == Page::Index && self.status_at.is_some_and(|t| t.elapsed() > Duration::from_secs(2)) {
-            self.status_at = Some(Instant::now());
-            self.refresh_status(&ctx);
+        theme::follow_native_theme(ctx);
+        if let Some(state) = &mut self.window_state {
+            state.observe(ctx);
         }
-        if self.page == Page::Index {
+        let save_failed = self.drain(ctx);
+        let close_requested = ctx.input(|i| i.viewport().close_requested());
+        // Follow a System appearance live.
+        if self.settings.theme == find_core::settings::Theme::System {
+            let dark = theme::system_dark();
+            if ctx.style().visuals.dark_mode != dark {
+                apply_theme(ctx, self.settings.theme);
+            }
+        }
+        let page = PAGES[self.page].0;
+        // Data and desktop binding snapshots refresh only while their page
+        // is open. Reading the compositor never blocks key recording.
+        if page == Page::Index || page == Page::Shortcuts || self.welcome {
+            if self.status_at.is_some_and(|t| t.elapsed() > Duration::from_secs(2)) {
+                self.status_at = Some(Instant::now());
+                self.refresh_status(ctx);
+                if page == Page::Shortcuts || self.welcome {
+                    self.refresh_registry(ctx);
+                }
+            }
             ctx.request_repaint_after(Duration::from_secs(2));
         }
-        egui::SidePanel::left("nav").exact_width(170.0).show(&ctx, |ui| {
-            ui.add_space(10.0);
-            ui.label(egui::RichText::new("Arcade Find").size(16.0).strong());
-            ui.add_space(10.0);
-            for (p, name) in PAGES {
-                if ui.selectable_label(self.page == p, name).clicked() {
-                    self.page = p;
-                    if p == Page::General {
-                        self.refresh_login(&ctx);
-                    }
-                    if p == Page::Index || p == Page::Shortcut {
-                        self.refresh_status(&ctx);
-                    }
-                    if p == Page::Connected {
-                        self.refresh_registry(&ctx);
+        self.keys(ctx);
+        let kit = Kit::for_theme(if ctx.style().visuals.dark_mode { arcade_link::design::Theme::Dark } else { arcade_link::design::Theme::Light }, link::ME);
+        let items: Vec<NavItem> = PAGES.iter().map(|&(_, label, icon)| NavItem { label, icon, count: None }).collect();
+        let brand = self.glyph("brand");
+        if kit.sidebar_with_brand(ctx, "Arcade Find", VERSION, brand, &items, &mut self.page) {
+            self.page_changed(ctx);
+        }
+        let (page, title, _) = PAGES[self.page];
+        let description = match page {
+            Page::General => "How Find looks, starts and lists results.",
+            Page::Shortcuts => "The shortcut that opens Find, and the keys inside the search.",
+            Page::Locations => "The folders Find indexes, and what it skips.",
+            Page::Index => "What Find knows about your files.",
+            Page::Connected => "Which Arcade apps work with Find, and how.",
+            Page::About => "Version, updates, help and licences.",
+        };
+        let busy = self.rescanning || self.status.as_ref().and_then(|s| s.as_ref()).is_some_and(|s| s["engine"]["phase"] == "crawling");
+        let can_rescan = page == Page::Index && self.status.as_ref().is_some_and(|s| s.is_some());
+        let mut rescan = false;
+        let mut skip = false;
+        let welcome = self.welcome;
+        kit.page_with_head_actions(
+            ctx,
+            if welcome { "Welcome" } else { title },
+            if welcome { "Set your shortcut and choose how Find connects." } else { description },
+            |ui| {
+                if welcome {
+                    skip = kit.button(ui, "Skip", ButtonKind::Ghost).clicked();
+                }
+                if can_rescan && !welcome {
+                    rescan = kit.button_state(ui, if busy { "Rescanning" } else { "Rescan now" }, ButtonKind::Primary, true, busy, false).clicked();
+                }
+            },
+            |ui| {
+                if let Some(error) = self.save_error.clone() {
+                    let mut retry = false;
+                    kit.notice_action(ui, &error, Tone::Danger, |ui| {
+                        retry = kit.button_state(ui, "Retry", ButtonKind::Default, true, self.pending_saves > 0, true).clicked();
+                    });
+                    ui.add_space(16.0);
+                    if retry {
+                        self.save(ctx);
                     }
                 }
-            }
-        });
-        egui::CentralPanel::default().show(&ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| match self.page {
-                Page::General => self.general(ui, &ctx),
-                Page::Locations => self.locations_page(ui, &ctx),
-                Page::Shortcut => self.shortcut(ui, &ctx),
-                Page::Index => self.index(ui, &ctx),
-                Page::Connected => self.connected(ui, &ctx),
-                Page::About => self.about(ui),
-            });
-            if let Some((m, t)) = &self.message {
-                if t.elapsed() < Duration::from_secs(5) {
-                    ui.add_space(8.0);
-                    ui.label(egui::RichText::new(m).color(ui.visuals().warn_fg_color));
-                    ctx.request_repaint_after(Duration::from_secs(5));
+                if welcome {
+                    self.welcome_page(ui, &kit, ctx);
+                    return;
                 }
+                match page {
+                    Page::General => self.general(ui, &kit, ctx),
+                    Page::Shortcuts => self.shortcuts(ui, &kit, ctx),
+                    Page::Locations => self.locations_page(ui, &kit, ctx),
+                    Page::Index => self.index(ui, &kit, ctx),
+                    Page::Connected => self.connected(ui, &kit, ctx),
+                    Page::About => self.about(ui, &kit, ctx),
+                }
+            },
+        );
+        if skip {
+            self.finish_welcome(ctx);
+        }
+        if rescan {
+            self.rescanning = true;
+            self.command(ctx, Command::Rescan, None);
+        }
+        self.close_if_saved(ctx, close_requested, save_failed);
+        if let Some(t) = &self.toast {
+            if !t.show(ctx, &kit) {
+                self.toast = None;
             }
-        });
+        }
     }
 }
 
 impl SettingsApp {
-    fn general(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        heading(ui, "General");
+    fn keys(&mut self, ctx: &egui::Context) {
+        let editing = ctx.wants_keyboard_input();
+        if self.recorder.recording {
+            return;
+        }
+        let (esc, f1, close, search, settings, quit) = ctx.input(|i| {
+            (
+                i.key_pressed(egui::Key::Escape),
+                i.key_pressed(egui::Key::F1),
+                i.modifiers.command && i.key_pressed(egui::Key::W),
+                i.modifiers.command && i.key_pressed(egui::Key::K),
+                i.modifiers.command && i.key_pressed(egui::Key::Comma),
+                i.modifiers.command && i.key_pressed(egui::Key::Q),
+            )
+        });
+        if (esc && !editing) || close {
+            self.closing = true;
+        }
+        if f1 {
+            self.open_url(GUIDE_URL);
+        }
+        if settings {
+            self.page = 0;
+            self.welcome = false;
+        }
+        if search {
+            self.command(ctx, Command::Show { query: None, reveal: None }, None);
+            self.closing = true;
+        }
+        if quit {
+            self.command(ctx, Command::Quit, None);
+            self.closing = true;
+        }
+    }
+
+    fn finish_welcome(&mut self, ctx: &egui::Context) {
+        self.welcome = false;
+        self.settings.welcome_complete = true;
+        self.save(ctx);
+    }
+
+    fn welcome_page(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        kit.welcome_head(ui, self.glyph("brand"), "search", "Arcade Find", TAGLINE);
+        kit.section_head(ui, "1. Choose your shortcut");
         let mut changed = false;
-        ui.horizontal(|ui| {
-            ui.label("Theme");
-            for (t, name) in [(Theme::System, "System"), (Theme::Light, "Light"), (Theme::Dark, "Dark")] {
-                changed |= ui.radio_value(&mut self.settings.theme, t, name).changed();
+        let desktop_bindings = self.desktop_bindings.clone();
+        kit.list(ui, |ui| {
+            let spec = ShortcutSpec {
+                title: "Open Arcade Find",
+                description: "Press it from any app to search your files.",
+                default: find_core::settings::DEFAULT_SHORTCUT,
+                allow_clear: false,
+            };
+            changed |= self.recorder.row(ui, kit, &spec, &mut self.settings.shortcut, |accelerator| {
+                self.registry
+                    .as_ref()
+                    .and_then(|registry| registry.shortcut_owner(link::ME, accelerator))
+                    .or_else(|| desktop_bindings.conflict(accelerator))
+                    .or_else(|| hotkey::known_conflict(accelerator).map(str::to_string))
+            });
+        });
+        if let Some(error) = &self.desktop_bindings_error {
+            kit.notice_action(ui, error, Tone::Warn, |ui| {
+                if kit.button(ui, "Retry", ButtonKind::Default).clicked() {
+                    self.refresh_registry(ctx);
+                }
+            });
+        }
+        kit.section_head(ui, "2. Connect your apps");
+        kit.list(ui, |ui| {
+            changed |= kit
+                .switch_row(ui, &mut self.settings.link.enabled, "Connect with other Arcade apps", "Preview results, run tools and keep files on a shelf.")
+                .changed();
+        });
+        kit.section_head(ui, "3. Start searching");
+        kit.list(ui, |ui| {
+            kit.row(ui, "Type a file or folder name", "Use arrows to select, Enter to preview, and Tab for actions.", |_| ());
+        });
+        kit.dialog_actions(ui, |ui| {
+            if kit.button(ui, "Get started", ButtonKind::Primary).clicked() {
+                self.finish_welcome(ctx);
             }
         });
-        ui.add_space(6.0);
-        let allowed = self.login_state.is_some() && !self.login_pending;
-        // The login entry is the truth (Arcade Tools can switch it too).
-        let mut login = self.login_state.unwrap_or(self.settings.start_at_login.unwrap_or(false));
-        let r = ui.add_enabled(allowed, egui::Checkbox::new(&mut login, "Start at login"));
-        if r.changed() {
-            self.login_pending = true;
-            let (tx, ctx) = (self.tx.clone(), ctx.clone());
-            std::thread::spawn(move || {
-                let result = autostart::set(login).map(|_| login);
-                let _ = tx.send(Bg::LoginSaved(result));
-                ctx.request_repaint();
-            });
-        }
-        if !allowed {
-            note(ui, "Available for installed copies (not development builds or test profiles).");
-        } else if cfg!(target_os = "linux") && hotkey::hyprland::active() {
-            note(ui, "Hyprland doesn't run desktop autostart entries by itself. Add `exec-once = arcade-find --background` to your Hyprland config, or use a session that runs XDG autostart.");
-        }
-        changed |= ui.checkbox(&mut self.settings.show_recent_on_open, "Show recent and pinned items when the search opens").changed();
-        changed |= ui.checkbox(&mut self.settings.show_hidden, "Show hidden files (toggle any time with Ctrl+H)").changed();
-        ui.add_space(6.0);
-        ui.horizontal(|ui| {
-            ui.label("Rows shown");
-            changed |= ui.add(egui::DragValue::new(&mut self.settings.rows.visible).range(3..=12)).changed();
-            ui.label("growing up to");
-            changed |= ui.add(egui::DragValue::new(&mut self.settings.rows.stretch).range(self.settings.rows.visible..=16)).changed();
-            ui.label("before scrolling");
-        });
-        ui.add_space(6.0);
-        changed |= ui.checkbox(&mut self.settings.content_search, "Search inside files with / (uses ripgrep)").changed();
-        match &self.ripgrep {
-            None => note(ui, "Looking for ripgrep…"),
-            Some(Some(rg)) => note(ui, &format!("ripgrep {} found at {}", rg.version, rg.path.display())),
-            Some(None) => note(ui, "ripgrep isn't installed. Install it from your package manager (package \"ripgrep\") to search file contents; Find never downloads it."),
-        }
-        if !self.integration_hints.is_empty() {
-            egui::CollapsingHeader::new("Terminal command").show(ui, |ui| {
-                for hint in &self.integration_hints {
-                    ui.monospace(hint);
-                }
-                note(ui, "Run the command yourself to enable terminal access. Find never edits shell profiles.");
-            });
-        }
         if changed {
             self.save(ctx);
         }
     }
 
-    fn locations_page(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        heading(ui, "Locations");
+    fn general(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        use find_core::settings::Theme;
         let mut changed = false;
-        ui.label(egui::RichText::new("Folders to index").strong());
-        let mut remove = None;
-        for (i, r) in self.settings.roots.iter().enumerate() {
-            ui.horizontal(|ui| {
-                ui.monospace(r);
-                if self.settings.roots.len() > 1 && ui.small_button("Remove").clicked() {
-                    remove = Some(i);
-                }
+        kit.list(ui, |ui| {
+            kit.row(ui, "Appearance", "System, light or dark.", |ui| {
+                changed |= kit.segmented(ui, &mut self.settings.theme, &[(Theme::System, "System"), (Theme::Light, "Light"), (Theme::Dark, "Dark")]).changed();
             });
-        }
-        if let Some(i) = remove {
-            self.settings.roots.remove(i);
-            changed = true;
-        }
-        ui.horizontal(|ui| {
-            ui.add(egui::TextEdit::singleline(&mut self.new_root).hint_text("/mnt/Data or ~/Projects").desired_width(320.0));
-            let p = expand_tilde(self.new_root.trim());
-            if ui.add_enabled(path_valid(&p), egui::Button::new("Add folder")).clicked() {
-                self.settings.roots.push(tilde(&p));
-                self.new_root.clear();
-                changed = true;
-            }
-        });
-        let suggestions: Vec<PathBuf> =
-            self.drives.iter().filter(|d| !self.settings.roots.iter().any(|r| expand_tilde(r) == **d)).cloned().collect();
-        if !suggestions.is_empty() {
-            note(ui, "Other drives (not indexed unless you add them):");
-            for d in suggestions {
-                ui.horizontal(|ui| {
-                    ui.monospace(d.display().to_string());
-                    if ui.small_button("Add").clicked() {
-                        self.settings.roots.push(d.display().to_string());
-                        changed = true;
-                    }
-                });
-            }
-        }
-        ui.add_space(10.0);
-        ui.label(egui::RichText::new("Skip these names everywhere").strong());
-        let r = ui.add(egui::TextEdit::multiline(&mut self.exclude_names).desired_rows(2).desired_width(f32::INFINITY));
-        if r.lost_focus() {
-            self.settings.exclude_names =
-                self.exclude_names.split([',', '\n']).map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-            changed = true;
-        }
-        note(ui, "Comma-separated; * and ? work (e.g. node_modules, *.tmp).");
-        ui.add_space(10.0);
-        ui.label(egui::RichText::new("Skip these folders").strong());
-        let mut remove = None;
-        for (i, r) in self.settings.exclude_paths.iter().enumerate() {
-            ui.horizontal(|ui| {
-                ui.monospace(r);
-                if ui.small_button("Remove").clicked() {
-                    remove = Some(i);
-                }
-            });
-        }
-        if let Some(i) = remove {
-            self.settings.exclude_paths.remove(i);
-            changed = true;
-        }
-        ui.horizontal(|ui| {
-            ui.add(egui::TextEdit::singleline(&mut self.new_exclude).hint_text("~/Downloads/old").desired_width(320.0));
-            let p = expand_tilde(self.new_exclude.trim());
-            if ui.add_enabled(p.is_absolute(), egui::Button::new("Add")).clicked() {
-                self.settings.exclude_paths.push(tilde(&p));
-                self.new_exclude.clear();
-                changed = true;
-            }
-        });
-        ui.add_space(6.0);
-        changed |= ui.checkbox(&mut self.settings.skip_network_mounts, "Skip network drives (NFS, SMB, SSHFS…)").changed();
-        note(ui, "Symbolic links are never followed, so nothing is indexed twice.");
-        if changed {
-            self.save(ctx);
-        }
-    }
-
-    fn shortcut(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        heading(ui, "Shortcut");
-        let mut changed = false;
-        ui.horizontal(|ui| {
-            ui.label("Open Arcade Find");
-            if self.recording {
-                ui.label(egui::RichText::new("Press the new shortcut…").italics());
-                let pressed = ui.input(|i| {
-                    i.events.iter().find_map(|e| match e {
-                        egui::Event::Key { key, pressed: true, modifiers, .. } if *key != egui::Key::Escape => Some((*key, *modifiers)),
-                        _ => None,
-                    })
-                });
-                if ui.input(|i| i.key_pressed(egui::Key::Escape)) || ui.button("Cancel").clicked() {
-                    self.recording = false;
-                } else if let Some((key, m)) = pressed {
-                    let mut parts = Vec::new();
-                    if m.ctrl {
-                        parts.push("Ctrl".to_string());
-                    }
-                    if m.alt {
-                        parts.push("Alt".to_string());
-                    }
-                    if m.shift {
-                        parts.push("Shift".to_string());
-                    }
-                    if m.mac_cmd || (m.command && !m.ctrl) {
-                        parts.push("Super".to_string());
-                    }
-                    parts.push(key.name().to_string());
-                    let accel = parts.join("+");
-                    if hotkey::parse(&accel).is_ok() {
-                        self.settings.shortcut = accel;
-                        self.recording = false;
-                        changed = true;
-                    }
-                }
+            let allowed = self.login_state.is_some() && !self.login_pending;
+            // The login entry is the truth (Arcade Tools can switch it too).
+            let mut login = self.login_state.unwrap_or(self.settings.start_at_login.unwrap_or(false));
+            let description = if self.login_state.is_none() && !self.login_pending {
+                "Install Find to start it at login."
+            } else if cfg!(target_os = "linux") && hotkey::hyprland::active() {
+                "Hyprland doesn't run autostart entries itself: add exec-once = arcade-find --background to your Hyprland config."
             } else {
-                ui.monospace(&self.settings.shortcut);
-                if ui.button("Change…").clicked() {
-                    self.recording = true;
+                "Starts in the background, with the tray icon only."
+            };
+            let r = ui.add_enabled_ui(allowed, |ui| kit.switch_row(ui, &mut login, "Start at login", description)).inner;
+            if r.changed() {
+                self.login_pending = true;
+                let (tx, ctx) = (self.tx.clone(), ctx.clone());
+                std::thread::spawn(move || {
+                    let result = autostart::set(login).map(|_| login);
+                    let _ = tx.send(Bg::LoginSaved(result));
+                    ctx.request_repaint();
+                });
+            }
+            changed |= kit
+                .switch_row(ui, &mut self.settings.notifications, "Notifications", "Background action errors and a one-time reminder that Find keeps running.")
+                .changed();
+            changed |= kit
+                .switch_row(ui, &mut self.settings.show_recent_on_open, "Show recent and pinned on open", "Lists them as soon as the search opens.")
+                .changed();
+            changed |= kit.switch_row(ui, &mut self.settings.show_hidden, "Show hidden files", "Ctrl+H switches this in the search too.").changed();
+        });
+
+        kit.section_head(ui, "Results");
+        kit.list(ui, |ui| {
+            let visible: Vec<(u32, String)> = (3..=12).map(|n| (n, format!("{n} rows"))).collect();
+            let options: Vec<(u32, &str)> = visible.iter().map(|(n, l)| (*n, l.as_str())).collect();
+            kit.row(ui, "Rows shown", "How many results show before the list scrolls.", |ui| {
+                changed |= kit.select(ui, "rows-visible", &mut self.settings.rows.visible, &options).changed();
+            });
+            let stretch: Vec<(u32, String)> = (self.settings.rows.visible..=16).map(|n| (n, format!("{n} rows"))).collect();
+            let options: Vec<(u32, &str)> = stretch.iter().map(|(n, l)| (*n, l.as_str())).collect();
+            kit.row(ui, "Growing up to", "The list grows to this many rows before it scrolls.", |ui| {
+                changed |= kit.select(ui, "rows-stretch", &mut self.settings.rows.stretch, &options).changed();
+            });
+            let rg = match &self.ripgrep {
+                None => "Looking for ripgrep…".to_string(),
+                Some(Some(rg)) => format!("Start a search with / to look inside files. Uses ripgrep {}.", rg.version),
+                Some(None) => "Start a search with / to look inside files. Needs ripgrep.".to_string(),
+            };
+            changed |= kit.switch_row(ui, &mut self.settings.content_search, "Search inside files", &rg).changed();
+        });
+        if matches!(self.ripgrep, Some(None)) && self.settings.content_search {
+            ui.add_space(10.0);
+            kit.notice(ui, "ripgrep isn't installed. Install the \u{201c}ripgrep\u{201d} package to search inside files; Find never downloads it.", Tone::Warn);
+        }
+
+        kit.section_head(ui, "Terminal command");
+        if self.integration_hints.is_empty() {
+            kit.list(ui, |ui| {
+                kit.row(ui, "arcade-find", "Use arcade-find --show, --search, --settings or --help in a terminal.", |ui| {
+                    if kit.button_state(ui, "Copy", ButtonKind::Default, true, false, true).clicked() {
+                        self.copy(ctx, "arcade-find --help".into());
+                    }
+                });
+            });
+        } else {
+            let hints = self.integration_hints.clone();
+            let mut copy = None;
+            kit.list(ui, |ui| {
+                for hint in &hints {
+                    kit.row(ui, hint, "Run this yourself to use arcade-find in a terminal. Find never edits shell profiles.", |ui| {
+                        if kit.button_state(ui, "Copy", ButtonKind::Default, true, false, true).clicked() {
+                            copy = Some(hint.clone());
+                        }
+                    });
                 }
-                if self.settings.shortcut != find_core::settings::DEFAULT_SHORTCUT && ui.button("Reset").clicked() {
-                    self.settings.shortcut = find_core::settings::DEFAULT_SHORTCUT.into();
-                    changed = true;
+            });
+            if let Some(c) = copy {
+                self.copy(ctx, c);
+            }
+        }
+        kit.section_head(ui, "Welcome");
+        kit.list(ui, |ui| {
+            kit.row(ui, "Welcome to Arcade Find", "Choose a shortcut and learn the search controls.", |ui| {
+                if kit.button_state(ui, "Open welcome", ButtonKind::Default, true, false, true).clicked() {
+                    self.welcome = true;
+                }
+            });
+        });
+        if changed {
+            self.save(ctx);
+        }
+    }
+
+    fn shortcuts(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        let state = self.status.clone().flatten().map(|s| s["shortcut"].clone());
+        let status = match state.as_ref().and_then(|s| s["mode"].as_str()) {
+            Some("native") => "Registered with the system.".to_string(),
+            Some("hyprland") => "Bound in the running Hyprland session.".to_string(),
+            Some("manual") | Some("failed") => "Not active yet: see below.".to_string(),
+            Some(_) => String::new(),
+            None if self.status.is_none() => "Checking…".to_string(),
+            None => "Arcade Find isn't running, so the shortcut isn't active.".to_string(),
+        };
+        let registry = self.registry.clone();
+        let desktop_bindings = self.desktop_bindings.clone();
+        let mut changed = false;
+        kit.list(ui, |ui| {
+            let spec = ShortcutSpec { title: "Open Arcade Find", description: &status, default: find_core::settings::DEFAULT_SHORTCUT, allow_clear: false };
+            changed |= self.recorder.row(ui, kit, &spec, &mut self.settings.shortcut, |accelerator| {
+                registry
+                    .as_ref()
+                    .and_then(|r| r.shortcut_owner(link::ME, accelerator))
+                    .or_else(|| desktop_bindings.conflict(accelerator))
+                    .or_else(|| hotkey::known_conflict(accelerator).map(|what| format!("{what} (usually)")))
+            });
+        });
+        if let Some(error) = &self.desktop_bindings_error {
+            kit.notice_action(ui, error, Tone::Warn, |ui| {
+                if kit.button(ui, "Retry", ButtonKind::Default).clicked() {
+                    self.refresh_registry(ctx);
+                }
+            });
+        }
+        if let Some(what) = hotkey::known_conflict(&self.settings.shortcut) {
+            ui.add_space(10.0);
+            kit.notice(ui, &format!("Usually used by {what}."), Tone::Warn);
+        }
+        if let Some(st) = state.as_ref().filter(|s| matches!(s["mode"].as_str(), Some("manual" | "failed"))) {
+            let why = st["reason"].as_str().or(st["error"].as_str()).unwrap_or("The desktop didn't accept the shortcut.").to_string();
+            ui.add_space(10.0);
+            kit.notice(ui, &why, Tone::Warn);
+            if let Some(cmd) = st["command"].as_str().map(str::to_string) {
+                ui.add_space(10.0);
+                let mut copy = false;
+                kit.list(ui, |ui| {
+                    kit.row(ui, &cmd, "Bind this command to a shortcut in your desktop's keyboard settings.", |ui| {
+                        copy = kit.button_state(ui, "Copy", ButtonKind::Default, true, false, true).clicked();
+                    });
+                });
+                if copy {
+                    self.copy(ctx, cmd);
                 }
             }
-        });
-        if let Some(what) = hotkey::known_conflict(&self.settings.shortcut) {
-            ui.label(egui::RichText::new(format!("Usually used by {what}.")).color(ui.visuals().warn_fg_color));
         }
-        if let Some(owner) = self.registry.as_ref().and_then(|r| r.shortcut_owner(link::ME, &self.settings.shortcut)) {
-            ui.label(egui::RichText::new(format!("Used by {owner}.")).color(ui.visuals().warn_fg_color));
-        }
-        ui.add_space(8.0);
         if cfg!(target_os = "linux") {
-            changed |=
-                ui.checkbox(&mut self.settings.hyprland_runtime_bind, "On Hyprland, add the shortcut as a runtime key binding").changed();
-            note(ui, "Runtime only: Find never edits your Hyprland config. Without it, add this line yourself:");
-            if let Some(line) = hotkey::hyprland::config_line(&self.settings.shortcut, &hotkey::toggle_command()) {
-                ui.horizontal(|ui| {
-                    ui.monospace(&line);
-                    if ui.small_button("Copy").clicked() {
-                        ui.ctx().copy_text(line.clone());
+            kit.section_head(ui, "Hyprland");
+            let line = hotkey::hyprland::config_line(&self.settings.shortcut, &hotkey::toggle_command());
+            let mut copy = None;
+            kit.list(ui, |ui| {
+                changed |= kit
+                    .switch_row(
+                        ui,
+                        &mut self.settings.hyprland_runtime_bind,
+                        "Add as a runtime key binding",
+                        "Only for this Hyprland session: Find never edits your Hyprland config.",
+                    )
+                    .changed();
+                if let Some(line) = &line {
+                    kit.row(ui, line, "Or add this line to your Hyprland config yourself.", |ui| {
+                        if kit.button_state(ui, "Copy", ButtonKind::Default, true, false, true).clicked() {
+                            copy = Some(line.clone());
+                        }
+                    });
+                }
+            });
+            if let Some(c) = copy {
+                self.copy(ctx, c);
+            }
+        }
+        kit.section_head(ui, "Keys in the search");
+        kit.list(ui, |ui| {
+            for (title, keys) in overlay_keys() {
+                kit.row(ui, &title, "", |ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    for (i, combo) in keys.iter().enumerate() {
+                        if i > 0 {
+                            ui.label(
+                                egui::RichText::new("or")
+                                    .font(arcade_link::design::egui::font(arcade_link::design::text::CAPTION))
+                                    .color(arcade_link::design::egui::colour(kit.palette.muted)),
+                            );
+                        }
+                        for key in combo.split('+') {
+                            kit.key_chip(ui, &crate::ui::render::key_label(key));
+                        }
                     }
                 });
             }
-        }
-        ui.add_space(8.0);
-        match self.status.as_ref().map(|s| &s["shortcut"]) {
-            Some(st) => match st["mode"].as_str() {
-                Some("native") => note(ui, "Working: registered with the system."),
-                Some("hyprland") => note(ui, "Working: bound in the running Hyprland session."),
-                Some("manual") | Some("failed") => {
-                    let why = st["reason"].as_str().or(st["error"].as_str()).unwrap_or_default();
-                    ui.label(egui::RichText::new(why).color(ui.visuals().warn_fg_color));
-                    if let Some(cmd) = st["command"].as_str() {
-                        note(ui, "Bind this command to a shortcut in your desktop's keyboard settings:");
-                        ui.horizontal(|ui| {
-                            ui.monospace(cmd);
-                            if ui.small_button("Copy").clicked() {
-                                ui.ctx().copy_text(cmd.to_string());
-                            }
-                        });
-                    }
-                }
-                _ => {}
-            },
-            None => note(ui, "Arcade Find isn't running, so the shortcut isn't active."),
-        }
-        note(ui, "Inside the search: ⏎ Quick Look · ⇧⏎ open · Ctrl+⏎ show in folder · Tab actions · Ctrl+H hidden files.");
+        });
         if changed {
             self.save(ctx);
             self.status_at = None;
@@ -606,186 +1008,701 @@ impl SettingsApp {
         }
     }
 
-    fn index(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        heading(ui, "Index");
-        let Some(st) = self.status.clone() else {
-            note(ui, "Arcade Find isn't running. Start it to build and update the index.");
-            return;
-        };
-        let e = &st["engine"];
-        let phase = e["phase"].as_str().unwrap_or("?");
-        let entries = e["entries"].as_u64().unwrap_or(0);
-        let label = match phase {
-            "crawling" => format!("Indexing… {} items so far", find_core::fmt::count(e["progress"]["entries"].as_u64().unwrap_or(entries))),
-            "loading" => "Loading the saved index…".to_string(),
-            "reconciling" => format!("{} items · checking for changes", find_core::fmt::count(entries)),
-            _ => format!("{} items indexed", find_core::fmt::count(entries)),
-        };
-        ui.label(egui::RichText::new(label).strong());
-        if let Some(cur) = e["progress"]["current"].as_str().filter(|c| !c.is_empty() && phase == "crawling") {
-            note(ui, cur);
-        }
-        ui.add_space(6.0);
-        ui.label(format!("Memory used by the index: {}", find_core::fmt::size(e["indexBytes"].as_u64().unwrap_or(0))));
-        if let Some(f) = e["indexFile"].as_str() {
-            let size = std::fs::metadata(f).map(|m| m.len()).unwrap_or(0);
-            ui.label(format!("Saved index: {} ({})", f, find_core::fmt::size(size)));
-        }
-        if e["loadedFromDisk"] == true {
-            ui.label(format!("Loaded in {} ms at startup", e["loadMs"].as_u64().unwrap_or(0)));
-        }
-        if let Some(t) = e["lastFullScan"].as_i64().filter(|t| *t > 0) {
-            ui.label(format!(
-                "Last full scan: {} ({} s)",
-                find_core::fmt::datetime(t, find_core::local_offset_secs()),
-                e["lastScanMs"].as_u64().unwrap_or(0) / 1000
-            ));
-        }
-        ui.add_space(10.0);
-        ui.label(egui::RichText::new("Live updates").strong());
-        let w = &e["watch"];
-        ui.label(w["detail"].as_str().unwrap_or(""));
-        if let Some(cmd) = w["fixCommand"].as_str() {
-            note(ui, "To watch every folder, raise the limit (Find never changes system settings itself):");
-            ui.horizontal(|ui| {
-                ui.monospace(cmd);
-                if ui.small_button("Copy").clicked() {
-                    ui.ctx().copy_text(cmd.to_string());
-                }
-            });
-        }
-        if let Some(err) = e["lastError"].as_str() {
-            ui.label(egui::RichText::new(err).color(ui.visuals().warn_fg_color));
-        }
-        ui.add_space(10.0);
-        ui.horizontal(|ui| {
-            if ui.button("Rescan now").clicked() {
-                self.command(ctx, Command::Rescan, "Rescanning…");
+    fn locations_page(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        let mut changed = false;
+        // Folders dropped on the window are added to the index.
+        let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().filter_map(|f| f.path.clone()).collect());
+        for p in dropped.into_iter().filter(|p| path_valid(p)) {
+            let t = tilde(&p);
+            if !self.settings.roots.contains(&t) {
+                self.settings.roots.push(t);
+                changed = true;
             }
-            ui.label("Full rescan every");
-            let mut h = self.settings.rescan_hours;
-            if ui.add(egui::DragValue::new(&mut h).range(1..=168).suffix(" h")).changed() {
-                self.settings.rescan_hours = h;
-                self.save(ctx);
+        }
+        kit.section_head(ui, "Folders to index");
+        let mut remove = None;
+        let only_one = self.settings.roots.len() <= 1;
+        kit.list(ui, |ui| {
+            for (i, r) in self.settings.roots.iter().enumerate() {
+                let shown = expand_tilde(r);
+                kit.row_with_glyph(ui, None, "folder", &folder_name(&shown), &shown.display().to_string(), |ui| {
+                    let label = if only_one { "The last folder can't be removed" } else { "Remove" };
+                    if kit.button_state(ui, "Remove", ButtonKind::Ghost, !only_one, false, true).on_hover_text(label).clicked() {
+                        remove = Some(i);
+                    }
+                });
             }
         });
-    }
-
-    fn connected(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        heading(ui, "Connected apps");
-        let mut changed = ui.checkbox(&mut self.settings.link.enabled, "Connect with other Arcade apps").changed();
-        note(ui, "Find shows other Arcade apps' actions for your results (Tab) and lets them search with Find.");
-        ui.add_space(8.0);
-        let tools_installed = self.registry.as_ref().is_some_and(|r| r.get(ids::TOOLS).is_some());
-        for (id, state) in self.states.clone() {
-            let name = self
-                .registry
-                .as_ref()
-                .and_then(|r| r.get(&id).map(|m| m.name.clone()))
-                .unwrap_or_else(|| link::apps::name(&id).to_string());
-            ui.group(|ui| {
-                ui.set_width(ui.available_width());
-                ui.horizontal(|ui| {
-                    ui.label(egui::RichText::new(&name).strong());
-                    let st = match &state {
-                        AppState::Running { version } => format!("Running · v{version}"),
-                        AppState::Installed { .. } => "Installed".to_string(),
-                        AppState::NotInstalled => "Not installed".to_string(),
-                    };
-                    ui.label(egui::RichText::new(st).weak());
-                });
-                match state {
-                    AppState::NotInstalled => {
-                        let pitch = link::apps::pitch(&id);
-                        if !pitch.is_empty() {
-                            note(ui, pitch);
-                        }
-                        if link::apps::known().contains(&id.as_str()) && ui.button("Get").clicked() {
-                            self.get_app(ctx, &id, tools_installed);
-                        }
-                    }
-                    _ => {
-                        let mut on = !self.settings.link.disabled_peers.contains(&id);
-                        if ui.add_enabled(self.settings.link.enabled, egui::Checkbox::new(&mut on, "Use with Arcade Find")).changed() {
-                            self.settings.link.disabled_peers.retain(|p| p != &id);
-                            if !on {
-                                self.settings.link.disabled_peers.push(id.clone());
-                            }
+        if let Some(i) = remove {
+            self.settings.roots.remove(i);
+            changed = true;
+        }
+        ui.add_space(10.0);
+        let p = expand_tilde(self.new_root.trim());
+        let invalid =
+            (!self.new_root.trim().is_empty() && !path_valid(&p)).then_some("Couldn't find that folder. Type a full path, such as /mnt/Data or ~/Projects.");
+        let mut add = false;
+        kit.list(ui, |ui| {
+            kit.row(ui, "Add folder", "Type a path, or drop a folder on this window.", |ui| {
+                add = kit.button_state(ui, "Add folder", ButtonKind::Primary, path_valid(&p), false, true).clicked();
+            });
+            let r = kit.text_input(ui, &mut self.new_root, "/mnt/Data or ~/Projects", invalid);
+            add |= r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && path_valid(&p);
+            ui.add_space(10.0);
+        });
+        if add {
+            self.settings.roots.push(tilde(&p));
+            self.new_root.clear();
+            changed = true;
+        }
+        let suggestions: Vec<PathBuf> = self.drives.iter().filter(|d| !self.settings.roots.iter().any(|r| expand_tilde(r) == **d)).cloned().collect();
+        if !suggestions.is_empty() {
+            kit.section_head(ui, "Other drives");
+            kit.list(ui, |ui| {
+                for d in suggestions {
+                    let shown = d.display().to_string();
+                    kit.row_with_glyph(ui, None, "monitor", &shown, "Not indexed unless you add it.", |ui| {
+                        if kit.button_state(ui, "Add", ButtonKind::Default, true, false, true).clicked() {
+                            self.settings.roots.push(shown.clone());
                             changed = true;
                         }
-                    }
+                    });
                 }
             });
         }
-        ui.add_space(8.0);
-        egui::CollapsingHeader::new("Diagnostics").show(ui, |ui| {
-            for (k, v) in arcade_link::presence::diagnostics(None, &self.locations) {
-                if k == "Endpoint" || k == "Last error" {
-                    continue;
-                }
-                ui.label(format!("{k}: {v}"));
-            }
-            match self.status.as_ref().map(|s| &s["link"]) {
-                Some(l) => {
-                    ui.label(format!("Endpoint: {}", if l["listening"] == true { "listening" } else { "not listening" }));
-                    ui.label(format!("Last error: {}", l["lastError"].as_str().unwrap_or("none")));
-                }
-                None => {
-                    ui.label("Endpoint: Arcade Find isn't running");
+
+        kit.section_head(ui, "Skip");
+        kit.list(ui, |ui| {
+            kit.row(ui, "Names", "Skipped wherever they appear. Separate with commas; * and ? work.", |_| ());
+            let r = kit.text_input(ui, &mut self.exclude_names, "node_modules, *.tmp", None);
+            if r.lost_focus() {
+                let names: Vec<String> = self.exclude_names.split([',', '\n']).map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+                if names != self.settings.exclude_names {
+                    self.settings.exclude_names = names;
+                    changed = true;
                 }
             }
-            if ui.small_button("Refresh").clicked() {
-                self.refresh_registry(ctx);
-                self.refresh_status(ctx);
+            ui.add_space(10.0);
+            changed |= kit.switch_row(ui, &mut self.settings.skip_network_mounts, "Skip network drives", "NFS, SMB, SSHFS and other network mounts.").changed();
+        });
+
+        kit.section_head(ui, "Skipped folders");
+        let mut remove = None;
+        kit.list(ui, |ui| {
+            for (i, r) in self.settings.exclude_paths.iter().enumerate() {
+                kit.row_with_glyph(ui, None, "folder", &folder_name(&expand_tilde(r)), r, |ui| {
+                    if kit.button_state(ui, "Remove", ButtonKind::Ghost, true, false, true).clicked() {
+                        remove = Some(i);
+                    }
+                });
+            }
+            let p = expand_tilde(self.new_exclude.trim());
+            let mut add = false;
+            kit.row(ui, "Skip a folder", "Type its full path.", |ui| {
+                add = kit.button_state(ui, "Add", ButtonKind::Default, p.is_absolute(), false, true).clicked();
+            });
+            let r = kit.text_input(ui, &mut self.new_exclude, "~/Downloads/old", None);
+            add |= r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && p.is_absolute();
+            ui.add_space(10.0);
+            if add {
+                self.settings.exclude_paths.push(tilde(&p));
+                self.new_exclude.clear();
+                changed = true;
             }
         });
+        if let Some(i) = remove {
+            self.settings.exclude_paths.remove(i);
+            changed = true;
+        }
+        note(ui, kit, "Symbolic links are never followed, so nothing is indexed twice.");
         if changed {
             self.save(ctx);
         }
     }
 
-    /// "Get": Arcade Tools when installed (the user confirms there), else the releases page.
-    fn get_app(&self, ctx: &egui::Context, id: &str, tools: bool) {
+    fn index(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        let Some(status) = self.status.clone() else {
+            kit.list(ui, |ui| {
+                for _ in 0..3 {
+                    kit.skeleton_row(ui);
+                }
+            });
+            return;
+        };
+        let Some(st) = status else {
+            let mut start = false;
+            let mut retry = false;
+            kit.empty_state(ui, "search", "Arcade Find isn't running", "Start it to build and update the index.", |ui| {
+                ui.horizontal(|ui| {
+                    retry = kit.button(ui, "Retry", ButtonKind::Default).clicked();
+                    start = kit.button(ui, "Start Arcade Find", ButtonKind::Primary).clicked();
+                });
+            });
+            if start {
+                let exe = arcade_link::manifest::current_executable();
+                let mut command = std::process::Command::new(exe);
+                if arcade_link::childenv::detach_from_image(&mut command).arg("--background").spawn().is_err() {
+                    self.toast("Couldn't start Arcade Find. Open it from your apps menu.", Tone::Danger);
+                }
+                self.status_at = Some(Instant::now() - Duration::from_secs(1));
+            }
+            if retry {
+                self.refresh_status(ctx);
+            }
+            return;
+        };
+        let e = &st["engine"];
+        let phase = e["phase"].as_str().unwrap_or("");
+        let entries = e["entries"].as_u64().unwrap_or(0);
+        let count = |n: u64| format_count(n.min(i64::MAX as u64) as i64);
+        let headline = match phase {
+            "crawling" => format!("Indexing… {} files so far", count(e["progress"]["entries"].as_u64().unwrap_or(entries))),
+            "loading" => "Loading the saved index…".to_string(),
+            "reconciling" => format!("{} files · checking for changes", count(entries)),
+            _ => format!("{} files indexed", count(entries)),
+        };
+        if let Some(err) = e["lastError"].as_str() {
+            let mut retry = false;
+            let mut details = false;
+            kit.notice_action(ui, "Couldn't finish indexing. Check the folders in Locations, then retry.", Tone::Danger, |ui| {
+                retry = kit.button_state(ui, "Retry", ButtonKind::Default, true, self.rescanning, true).clicked();
+                details = kit.button_state(ui, "Copy details", ButtonKind::Ghost, true, false, true).clicked();
+            });
+            if retry {
+                self.rescanning = true;
+                self.command(ctx, Command::Rescan, None);
+            }
+            if details {
+                self.copy(ctx, err.into());
+            }
+            ui.add_space(10.0);
+        }
+        let now = find_core::now_secs();
+        let offset = (find_core::local_offset_secs() / 60) as i32;
+        let mut rescan_hours = self.settings.rescan_hours;
+        let mut copy = None;
+        kit.list(ui, |ui| {
+            kit.row(ui, "Files", &headline, |_| ());
+            if let Some(cur) = e["progress"]["current"].as_str().filter(|c| !c.is_empty() && phase == "crawling") {
+                kit.row(ui, "Now scanning", cur, |_| ());
+            }
+            kit.row(ui, "Memory used", "The index in memory, while Find runs.", |ui| {
+                ui.label(format_size(e["indexBytes"].as_u64().unwrap_or(0)));
+            });
+            if let Some(f) = e["indexFile"].as_str() {
+                let size = std::fs::metadata(f).map(|m| m.len()).unwrap_or(0);
+                kit.row(ui, "Saved index", f, |ui| {
+                    ui.label(format_size(size));
+                });
+            }
+            if let Some(t) = e["lastFullScan"].as_i64().filter(|t| *t > 0) {
+                let took = arcade_link::design::format::format_duration(
+                    (e["lastScanMs"].as_u64().unwrap_or(0) / 1000) as f64,
+                    arcade_link::design::format::DurationStyle::Job,
+                );
+                kit.row(ui, "Last full scan", &format!("Took {took}."), |ui| {
+                    ui.label(format_relative(t * 1000, now * 1000, offset));
+                });
+            }
+            let hours = [1u32, 2, 4, 6, 12, 24, 48, 72, 168];
+            let labels: Vec<(u32, String)> = hours.iter().map(|&h| (h, if h == 1 { "Every hour".into() } else { format!("Every {h} hours") })).collect();
+            let options: Vec<(u32, &str)> = labels.iter().map(|(h, l)| (*h, l.as_str())).collect();
+            kit.row(ui, "Full rescan", "Live updates keep the index current in between.", |ui| {
+                kit.select(ui, "rescan", &mut rescan_hours, &options);
+            });
+        });
+        kit.section_head(ui, "Live updates");
+        let w = &e["watch"];
+        kit.list(ui, |ui| {
+            kit.row(ui, w["detail"].as_str().unwrap_or("Watching for changes"), "", |_| ());
+            if let Some(cmd) = w["fixCommand"].as_str() {
+                kit.row(ui, cmd, "Raise the limit to watch every folder. Find never changes system settings itself.", |ui| {
+                    if kit.button_state(ui, "Copy", ButtonKind::Default, true, false, true).clicked() {
+                        copy = Some(cmd.to_string());
+                    }
+                });
+            }
+        });
+        if let Some(c) = copy {
+            self.copy(ctx, c);
+        }
+        if rescan_hours != self.settings.rescan_hours {
+            self.settings.rescan_hours = rescan_hours;
+            self.save(ctx);
+        }
+    }
+
+    fn connected(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        let mut changed = false;
+        if !self.settings.link.enabled {
+            let mut on = false;
+            kit.notice_action(ui, "Connections are off in this app", Tone::Neutral, |ui| {
+                on = kit.button_state(ui, "Turn on", ButtonKind::Primary, true, false, true).clicked();
+            });
+            if on {
+                self.settings.link.enabled = true;
+                changed = true;
+            }
+            ui.add_space(10.0);
+        }
+        kit.list(ui, |ui| {
+            changed |= kit
+                .switch_row(
+                    ui,
+                    &mut self.settings.link.enabled,
+                    "Connect with other Arcade apps",
+                    "Their actions show for your results (Tab), and they can search with Find.",
+                )
+                .changed();
+        });
+        kit.section_head(ui, "Apps");
+        if let Some(error) = self.registry_error.clone() {
+            let mut retry = false;
+            let mut details = false;
+            kit.notice_action(ui, "Couldn't read connected apps. Check the registry folder, then retry.", Tone::Danger, |ui| {
+                retry = kit.button_state(ui, "Retry", ButtonKind::Default, true, false, true).clicked();
+                details = kit.button_state(ui, "Copy details", ButtonKind::Ghost, true, false, true).clicked();
+            });
+            if retry {
+                self.refresh_registry(ctx);
+            }
+            if details {
+                self.copy(ctx, error);
+            }
+        }
+        if self.registry.is_none() {
+            kit.list(ui, |ui| {
+                for _ in 0..3 {
+                    kit.skeleton_row(ui);
+                }
+            });
+        }
+        let tools_installed = self.registry.as_ref().is_some_and(|r| r.get(ids::TOOLS).is_some());
+        let mut install = None;
+        let mut open_app = None;
+        let states = self.states.clone();
+        let link_on = self.settings.link.enabled;
+        if !states.is_empty() {
+            kit.list(ui, |ui| {
+                for (id, state) in &states {
+                    let name = self.registry.as_ref().and_then(|r| r.get(id).map(|m| m.name.clone())).unwrap_or_else(|| link::apps::name(id).to_string());
+                    let installed = !matches!(state, AppState::NotInstalled);
+                    let mut use_it = !self.settings.link.disabled_peers.contains(id);
+                    let (badge, tone) = match state {
+                        AppState::Running { .. } if link_on && use_it => ("Connected", Tone::Ok),
+                        AppState::NotInstalled => ("Not installed", Tone::Neutral),
+                        _ => ("Not running", Tone::Neutral),
+                    };
+                    let glyph = self.glyph(id);
+                    kit.row_with_glyph(ui, glyph, "apps", &name, arcade_link::manifest::peer_description(link::ME, id), |ui| {
+                        kit.badge(ui, badge, tone);
+                        if installed {
+                            let r = ui.add_enabled_ui(link_on, |ui| kit.switch(ui, &mut use_it, &format!("Use {name} with Arcade Find"))).inner;
+                            if r.changed() {
+                                self.settings.link.disabled_peers.retain(|p| p != id);
+                                if !use_it {
+                                    self.settings.link.disabled_peers.push(id.clone());
+                                }
+                                changed = true;
+                            }
+                            if kit.button_state(ui, "Open", ButtonKind::Default, true, false, true).clicked() {
+                                open_app = Some(id.clone());
+                            }
+                        } else if link::apps::known().contains(&id.as_str())
+                            && kit.button_state(ui, "Install", ButtonKind::Default, true, false, true).clicked()
+                        {
+                            install = Some(id.clone());
+                        }
+                    });
+                }
+            });
+        }
+        if let Some(id) = install {
+            self.install_app(ctx, &id, tools_installed);
+        }
+        if let Some(id) = open_app {
+            self.open_app(&id);
+        }
+        ui.add_space(16.0);
+        let activity: Vec<(i64, String)> = self
+            .status
+            .clone()
+            .flatten()
+            .and_then(|s| s["activity"].as_array().cloned())
+            .unwrap_or_default()
+            .iter()
+            .filter_map(|a| Some((a["at"].as_i64()?, a["text"].as_str()?.to_string())))
+            .collect();
+        kit.disclosure(ui, "activity", "Recent activity", |ui| {
+            if activity.is_empty() {
+                kit.empty_state(ui, "clock", "No activity yet", "Use another app's action on a result to see it here.", |_| ());
+            } else {
+                let now = find_core::now_secs() * 1000;
+                let offset = (find_core::local_offset_secs() / 60) as i32;
+                kit.list(ui, |ui| {
+                    for (at, text) in &activity {
+                        kit.row(ui, text, &format_relative(at * 1000, now, offset), |_| ());
+                    }
+                });
+            }
+        });
+        let diagnostics: Vec<(String, String)> =
+            arcade_link::presence::diagnostics(None, &self.locations).into_iter().filter(|(k, _)| k != "Endpoint" && k != "Last error").collect();
+        let (endpoint, last) = match self.status.clone().flatten().map(|s| s["link"].clone()) {
+            Some(l) => (if l["listening"] == true { "Listening" } else { "Not listening" }.to_string(), l["lastError"].as_str().unwrap_or("None").to_string()),
+            None => ("Arcade Find isn't running".to_string(), "None".to_string()),
+        };
+        kit.disclosure(ui, "diagnostics", "Diagnostics", |ui| {
+            kit.list(ui, |ui| {
+                for (k, v) in &diagnostics {
+                    kit.row(ui, k, v, |_| ());
+                }
+                kit.row(ui, "Endpoint", &endpoint, |_| ());
+                kit.row(ui, "Last error", &last, |_| ());
+            });
+        });
+        ui.add_space(10.0);
+        if kit.button(ui, "How it works", ButtonKind::Ghost).clicked() {
+            self.open_url(CONNECTED_GUIDE_URL);
+        }
+        if changed {
+            self.save(ctx);
+            self.refresh_registry(ctx);
+        }
+    }
+
+    fn open_app(&mut self, id: &str) {
+        let Some(m) = self.registry.as_ref().and_then(|r| r.get(id)).cloned() else {
+            return self.toast("Couldn't open the app. It isn't installed any more.", Tone::Danger);
+        };
+        let mut command = std::process::Command::new(&m.executable);
+        if arcade_link::childenv::detach_from_image(&mut command).spawn().is_err() {
+            self.toast(format!("Couldn't open {}. Try opening it from your apps menu.", m.name), Tone::Danger);
+        }
+    }
+
+    /// "Install": Arcade Tools when installed (the user confirms there), else the releases page.
+    fn install_app(&self, ctx: &egui::Context, id: &str, tools: bool) {
         let (tx, loc, reg, id, c) = (self.tx.clone(), self.locations.clone(), self.registry.clone(), id.to_string(), ctx.clone());
         std::thread::spawn(move || {
             let via_tools = tools
-                && reg
-                    .as_ref()
-                    .and_then(|r| r.get(ids::TOOLS))
-                    .and_then(|m| m.action("tools.install").map(|a| (m.clone(), a.clone())))
-                    .is_some_and(|(m, a)| {
+                && reg.as_ref().and_then(|r| r.get(ids::TOOLS)).and_then(|m| m.action("tools.install").map(|a| (m.clone(), a.clone()))).is_some_and(
+                    |(m, a)| {
                         let req = link::request(&a, vec![arcade_link::Content::plain(id.clone())], serde_json::json!({ "app": id }));
                         link::invoke(&loc, &m, &req, None, None).is_ok()
-                    });
-            if !via_tools {
-                if let Err(e) = open::that_detached(link::apps::releases_url(&id)) {
-                    let _ = tx.send(Bg::Message(format!("Couldn't open the browser: {e}")));
-                }
+                    },
+                );
+            if !via_tools && open::that_detached(link::apps::releases_url(&id)).is_err() {
+                let _ = tx.send(Bg::Toast("Couldn't open the browser. Install the app from Arcade Tools instead.".into(), Tone::Danger));
             }
             c.request_repaint();
         });
     }
 
-    fn about(&mut self, ui: &mut egui::Ui) {
-        heading(ui, "About");
-        ui.label(egui::RichText::new(format!("Arcade Find {VERSION}")).strong());
-        note(ui, "Find any file or folder instantly. Local only: no network access, and file contents are read only when you search inside files.");
-        ui.add_space(8.0);
-        for (k, v) in [
-            ("Settings", self.paths.settings_file()),
-            ("Data", self.paths.data.clone()),
-            ("Index", self.paths.index_file()),
-            ("Runtime", self.paths.runtime.clone()),
-        ] {
-            ui.horizontal(|ui| {
-                ui.label(format!("{k}:"));
-                ui.monospace(v.display().to_string());
+    fn about(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
+        let tools = self.registry.as_ref().and_then(|r| r.get(ids::TOOLS)).is_some();
+        let channel = match self.channel.as_deref() {
+            Some("stable") => "Stable",
+            Some("beta") => "Beta",
+            Some("nightly") => "Nightly",
+            Some(_) => "Other channel",
+            None => "Not installed",
+        };
+        let brand = self.glyph("brand");
+        let mut action = None;
+        kit.list(ui, |ui| {
+            kit.row_with_glyph(ui, brand, "search", &format!("Version {VERSION}"), TAGLINE, |ui| {
+                kit.badge(ui, channel, Tone::Neutral);
             });
+            if tools {
+                kit.row(ui, "Updates are managed by Arcade Tools", "Tools checks for new versions and installs them.", |ui| {
+                    if kit.button_state(ui, "Open Tools", ButtonKind::Default, true, false, true).clicked() {
+                        action = Some("tools");
+                    }
+                });
+            } else {
+                kit.row(ui, "Updates", "Install Arcade Tools to get updates automatically.", |ui| {
+                    if kit.button_state(ui, "Check for updates", ButtonKind::Default, true, false, true).clicked() {
+                        action = Some("releases");
+                    }
+                });
+            }
+            kit.row(ui, "User guide", "How to search, filter and use Find with other apps.", |ui| {
+                if kit.button_state(ui, "Open user guide", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("guide");
+                }
+            });
+            kit.row(ui, "Logs", &self.paths.log_dir().display().to_string(), |ui| {
+                if kit.button_state(ui, "Open logs folder", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("logs");
+                }
+            });
+            kit.row(ui, "Diagnostics", "App, version, desktop and Link details for a bug report. No file names.", |ui| {
+                if kit.button_state(ui, "Copy diagnostics", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("diagnostics");
+                }
+            });
+            kit.row(ui, "Licences", "MIT OR Apache-2.0. Third-party licences ship with the app.", |ui| {
+                if kit.button_state(ui, "Open", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("licences");
+                }
+            });
+            kit.row(ui, "Restart Arcade Find", "Reloads the index and the shortcut.", |ui| {
+                if kit.button_state(ui, "Restart", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("restart");
+                }
+            });
+            kit.row(ui, "Quit Arcade Find", "Stops Find and its global shortcut.", |ui| {
+                if kit.button_state(ui, "Quit", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("quit");
+                }
+            });
+        });
+        match action {
+            Some("tools") => self.open_app(ids::TOOLS),
+            Some("releases") => self.open_url(link::apps::releases_url(link::ME)),
+            Some("guide") => self.open_url(GUIDE_URL),
+            Some("logs") => {
+                let dir = self.paths.log_dir();
+                self.open_path(&dir);
+            }
+            Some("diagnostics") => {
+                let text = diagnostics(&self.locations, self.channel.as_deref(), self.status.clone().flatten());
+                self.copy(ctx, text);
+            }
+            Some("licences") => {
+                let local =
+                    PathBuf::from(arcade_link::manifest::current_executable()).parent().map(|d| d.join("THIRD_PARTY_NOTICES.md")).filter(|p| p.is_file());
+                match local {
+                    Some(p) => self.open_path(&p),
+                    None => self.open_url(LICENCES_URL),
+                }
+            }
+            Some("restart") => self.command(ctx, Command::Restart, Some("Restarting Arcade Find…")),
+            Some("quit") => {
+                self.command(ctx, Command::Quit, None);
+                self.closing = true;
+            }
+            _ => {}
         }
-        ui.add_space(8.0);
-        note(ui, "License: MIT OR Apache-2.0. Third-party licenses are listed in THIRD_PARTY_NOTICES.md, shipped with the app. Glyphs and tokens from Arcade Link v0.2.0; Hyprland binding code adapted from Arcade Lens.");
-        if ui.link("github.com/qa-p1/Arcade-Find").clicked() {
-            let _ = open::that_detached("https://github.com/qa-p1/Arcade-Find");
+    }
+}
+
+/// The overlay's keys, from the same file Arcade Tools' shortcut sheet
+/// reads (`docs/user/shortcuts.json`): (title, alternative combos).
+fn overlay_keys() -> Vec<(String, Vec<String>)> {
+    let doc: Value = serde_json::from_str(include_str!("../../../docs/user/shortcuts.json")).unwrap_or(Value::Null);
+    let mut out = Vec::new();
+    for group in doc["groups"].as_array().into_iter().flatten().filter(|g| g["context"] != "global") {
+        for s in group["shortcuts"].as_array().into_iter().flatten() {
+            let keys = &s["keys"];
+            let platform = if cfg!(target_os = "macos") { "macos" } else { "default" };
+            // As tools/validate_shortcuts.py: the platform's binding if the key is
+            // present (null: none on this platform), else the default. A binding
+            // is one key or a list of equivalent keys.
+            let binding = keys.get(platform).unwrap_or(&keys["default"]);
+            let combos: Vec<String> = match binding {
+                Value::String(key) => vec![key.clone()],
+                Value::Array(list) => list.iter().filter_map(|k| k.as_str().map(str::to_string)).collect(),
+                _ => Vec::new(),
+            };
+            if let (Some(title), false) = (s["title"].as_str(), combos.is_empty()) {
+                out.push((title.to_string(), combos));
+            }
         }
+    }
+    out
+}
+
+/// "Copy diagnostics": Link's shared header, then Find's lines. No queries,
+/// file names or settings payloads.
+pub fn diagnostics(locations: &Locations, channel: Option<&str>, status: Option<Value>) -> String {
+    let mut header = arcade_link::diagnostics::Header::new(link::ME, VERSION, channel.unwrap_or("development"));
+    header.peers_from(locations);
+    let rg = find_core::content::detect(&[]);
+    header.engine("ripgrep", &rg.map(|r| r.version.to_string()).unwrap_or_else(|| "not installed".into()));
+    let mut out = header.render();
+    match status {
+        Some(s) => {
+            let e = &s["engine"];
+            out.push_str(&format!(
+                "Index: {} entries, phase {}, watch {}\n",
+                e["entries"].as_u64().unwrap_or(0),
+                e["phase"].as_str().unwrap_or("?"),
+                e["watch"]["mode"].as_str().unwrap_or("?")
+            ));
+            out.push_str(&format!("Shortcut: {}\n", s["shortcut"]["mode"].as_str().unwrap_or("?")));
+            out.push_str(&format!("Tray: {}\n", s["tray"].as_str().unwrap_or("?")));
+            out.push_str(&format!("Link endpoint: {}\n", if s["link"]["listening"] == true { "listening" } else { "not listening" }));
+        }
+        None => out.push_str("Running: no\n"),
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn invalid_peer_data_is_reported_and_retry_recovers() {
+        let root = std::env::temp_dir().join(format!("find-registry-error-{}", arcade_link::endpoint::new_token().unwrap()));
+        std::fs::create_dir_all(&root).unwrap();
+        assert!(registry_read_error(&root).is_none());
+        let file = root.join("arcade.look.json");
+        std::fs::write(&file, b"{ broken data").unwrap();
+        assert!(registry_read_error(&root).is_some());
+        std::fs::remove_file(file).unwrap();
+        assert!(registry_read_error(&root).is_none(), "Retry must read repaired data");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn settings_watcher_does_not_feed_its_own_reads_back_into_the_ui() {
+        let settings = Path::new("settings.json");
+        let focus = Path::new("settings.focus");
+        let (tx, rx) = channel();
+        let ctx = egui::Context::default();
+        for kind in [
+            notify::EventKind::Access(notify::event::AccessKind::Read),
+            notify::EventKind::Access(notify::event::AccessKind::Open(notify::event::AccessMode::Read)),
+            notify::EventKind::Access(notify::event::AccessKind::Close(notify::event::AccessMode::Read)),
+        ] {
+            forward_watch_event(&notify::Event::new(kind).add_path(settings.into()), settings, focus, &tx, &ctx);
+            assert!(rx.try_recv().is_err(), "reading the settings file must not enqueue another read");
+        }
+        forward_watch_event(
+            &notify::Event::new(notify::EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content))).add_path(settings.into()),
+            settings,
+            focus,
+            &tx,
+            &ctx,
+        );
+        assert!(matches!(rx.try_recv(), Ok(Bg::SettingsChanged)), "real edits still reload");
+        forward_watch_event(&notify::Event::new(notify::EventKind::Create(notify::event::CreateKind::File)).add_path(focus.into()), settings, focus, &tx, &ctx);
+        assert!(matches!(rx.try_recv(), Ok(Bg::Focus)), "second launches still focus Settings");
+    }
+
+    #[test]
+    fn closing_waits_for_the_resident_command_acknowledgment() {
+        let ctx = egui::Context::default();
+        let root = std::env::temp_dir().join(format!("find-command-close-{}", arcade_link::endpoint::new_token().unwrap()));
+        let mut app = SettingsApp::new(AppPaths::under(&root, ""), Settings::default(), ctx.clone());
+        app.pending_commands = 1;
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, true, false));
+        assert!(output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::CancelClose));
+        assert!(!output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::Close));
+        app.tx.send(Bg::CommandDone(Ok(None))).unwrap();
+        app.drain(&ctx);
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, false, false));
+        assert!(output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::Close));
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn rapid_changes_save_the_last_choice_and_close_waits_for_it() {
+        let ctx = egui::Context::default();
+        let root = std::env::temp_dir().join(format!("find-settings-save-{}", arcade_link::endpoint::new_token().unwrap()));
+        let paths = AppPaths::under(&root, "");
+        let mut app = SettingsApp::new(paths.clone(), Settings::default(), ctx.clone());
+        for index in 0..24 {
+            app.settings.rescan_hours = 1 + index;
+            app.save(&ctx);
+        }
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, true, false));
+        let commands = &output.viewport_output[&egui::ViewportId::ROOT].commands;
+        assert!(commands.contains(&egui::ViewportCommand::CancelClose));
+        assert!(!commands.contains(&egui::ViewportCommand::Close));
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while app.pending_saves > 0 && Instant::now() < deadline {
+            assert!(!app.drain(&ctx));
+            std::thread::yield_now();
+        }
+        assert_eq!(app.pending_saves, 0);
+        let saved: Settings = serde_json::from_slice(&std::fs::read(paths.settings_file()).unwrap()).unwrap();
+        assert_eq!(saved.rescan_hours, 24, "the last user choice must win");
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, false, false));
+        assert!(output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::Close));
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn a_save_error_keeps_settings_open_even_when_close_was_requested() {
+        let ctx = egui::Context::default();
+        let root = std::env::temp_dir().join(format!("find-settings-error-{}", arcade_link::endpoint::new_token().unwrap()));
+        let mut app = SettingsApp::new(AppPaths::under(&root, ""), Settings::default(), ctx.clone());
+        app.pending_saves = 1;
+        app.closing = true;
+        app.tx.send(Bg::Saved(Err("Couldn't save settings. Check the settings folder.".into()))).unwrap();
+        let failed = app.drain(&ctx);
+        assert!(failed);
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, true, failed));
+        let commands = &output.viewport_output[&egui::ViewportId::ROOT].commands;
+        assert!(commands.contains(&egui::ViewportCommand::CancelClose));
+        assert!(!commands.contains(&egui::ViewportCommand::Close));
+        assert!(!app.closing);
+        assert!(app.save_error.is_some());
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn folder_rows_name_the_folder_once_and_keep_the_full_path() {
+        let ctx = egui::Context::default();
+        arcade_link::design::egui::install_inter(&ctx);
+        arcade_link::design::apply_egui(&ctx, "light", link::ME);
+        let kit = Kit::for_theme(arcade_link::design::Theme::Light, link::ME);
+        let long = "a-long-folder-name-".repeat(7);
+        let root = std::env::temp_dir().join(format!("find-folder-layout-{}", std::process::id()));
+        let path = root.join(&long).display().to_string();
+        let settings = Settings { roots: vec![path.clone()], ..Settings::default() };
+        let mut app = SettingsApp::new(AppPaths::under(&root, ""), settings, ctx.clone());
+        for _ in 0..4 {
+            let output = ctx.run(
+                egui::RawInput { screen_rect: Some(egui::Rect::from_min_size(egui::Pos2::ZERO, egui::vec2(720.0, 520.0))), ..Default::default() },
+                |ctx| kit.page_with_head(ctx, "Locations", "The folders Find indexes, and what it skips.", |ui| app.locations_page(ui, &kit, ctx)),
+            );
+            let text: Vec<&str> = output
+                .shapes
+                .iter()
+                .filter_map(|shape| match &shape.shape {
+                    egui::Shape::Text(text) => Some(text.galley.job.text.as_str()),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(text.iter().filter(|s| **s == path).count(), 1, "the full path appears once");
+            assert_eq!(text.iter().filter(|s| **s == long).count(), 1, "the folder has its own name");
+        }
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn pages_follow_the_standard_order() {
+        let names: Vec<&str> = PAGES.iter().map(|p| p.1).collect();
+        assert_eq!(names, ["General", "Shortcuts", "Locations", "Index", "Connected apps", "About"]);
+        for (_, _, icon) in PAGES {
+            assert!(arcade_link::design::icon(icon).is_some(), "{icon} is a kit icon");
+        }
+    }
+
+    #[test]
+    fn the_key_list_comes_from_the_shortcut_sheet() {
+        let keys = overlay_keys();
+        assert!(keys.iter().any(|(t, k)| t == "Select the next result" && k[0] == "Down"));
+        assert!(!keys.iter().any(|(t, _)| t == "Show or hide Find"), "the global shortcut has its own row");
+        let trash: Vec<_> = keys.iter().filter(|(t, _)| t == "Confirm moving items to Trash").collect();
+        assert_eq!(trash.len(), 1, "equivalent keys share one row");
+        assert_eq!(trash[0].1, ["Enter", "Delete"]);
+    }
+
+    #[test]
+    fn diagnostics_have_the_shared_header_and_no_paths() {
+        let d = diagnostics(&Locations::discover(), Some("stable"), None);
+        assert!(d.contains("arcade.find") || d.contains("Arcade Find"));
+        assert!(d.contains(VERSION));
+        assert!(d.contains("Running: no"));
     }
 }

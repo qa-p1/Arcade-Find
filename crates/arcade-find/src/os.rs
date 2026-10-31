@@ -2,6 +2,20 @@
 //! overwriting), move to the trash (never a hard delete), and the clipboard.
 
 use std::path::{Path, PathBuf};
+
+/// The OS identifier (STANDARD §10): bundle id, AppUserModelID, desktop
+/// file, Wayland app_id and X11 WM_CLASS.
+pub const APP_ID: &str = "dev.arcade.Find";
+
+/// Set the process identity before constructing any native window or tray.
+pub fn init_app_identity() {
+    #[cfg(windows)]
+    {
+        let id: Vec<u16> = APP_ID.encode_utf16().chain(Some(0)).collect();
+        // SAFETY: live, NUL-terminated UTF-16 input for the Win32 call.
+        unsafe { windows_sys::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID(id.as_ptr()) };
+    }
+}
 use std::sync::mpsc;
 use std::sync::OnceLock;
 
@@ -34,12 +48,7 @@ pub fn reveal(path: &Path) -> Result<(), String> {
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("/usr/bin/open")
-            .arg("-R")
-            .arg(path)
-            .spawn()
-            .map(|_| ())
-            .map_err(|e| format!("Couldn't open Finder: {e}"))
+        std::process::Command::new("/usr/bin/open").arg("-R").arg(path).spawn().map(|_| ()).map_err(|e| format!("Couldn't open Finder: {e}"))
     }
 }
 
@@ -155,7 +164,12 @@ pub fn trash(paths: &[PathBuf]) -> Result<(), String> {
 enum ClipReq {
     Text(String, mpsc::Sender<Result<(), String>>),
     Files(Vec<PathBuf>, mpsc::Sender<Result<(), String>>),
-    Get(mpsc::Sender<Option<String>>),
+    Get(mpsc::Sender<Option<ClipboardValue>>),
+}
+
+pub(crate) enum ClipboardValue {
+    Text(String),
+    Files(Vec<PathBuf>),
 }
 
 /// The clipboard lives on its own thread for the life of the app: on X11
@@ -172,21 +186,23 @@ fn clipboard() -> &'static mpsc::Sender<ClipReq> {
                 }
                 match req {
                     ClipReq::Text(t, reply) => {
-                        let r = cb
-                            .as_mut()
-                            .ok_or("The clipboard isn't available.".to_string())
-                            .and_then(|c| c.set_text(t).map_err(|e| e.to_string()));
+                        let r = cb.as_mut().ok_or("The clipboard isn't available.".to_string()).and_then(|c| c.set_text(t).map_err(|e| e.to_string()));
                         let _ = reply.send(r);
                     }
                     ClipReq::Files(f, reply) => {
-                        let r = cb
-                            .as_mut()
-                            .ok_or("The clipboard isn't available.".to_string())
-                            .and_then(|c| c.set().file_list(&f).map_err(|e| e.to_string()));
+                        let r = cb.as_mut().ok_or("The clipboard isn't available.".to_string()).and_then(|c| c.set().file_list(&f).map_err(|e| e.to_string()));
                         let _ = reply.send(r);
                     }
                     ClipReq::Get(reply) => {
-                        let _ = reply.send(cb.as_mut().and_then(|c| c.get_text().ok()));
+                        let value = cb.as_mut().and_then(|c| {
+                            if let Ok(paths) = c.get().file_list() {
+                                if !paths.is_empty() {
+                                    return Some(ClipboardValue::Files(paths));
+                                }
+                            }
+                            c.get_text().ok().map(ClipboardValue::Text)
+                        });
+                        let _ = reply.send(value);
                     }
                 }
             }
@@ -208,6 +224,13 @@ pub fn copy_files(paths: Vec<PathBuf>) -> Result<(), String> {
 }
 
 pub fn paste_text() -> Option<String> {
+    match paste_value()? {
+        ClipboardValue::Text(text) => Some(text),
+        ClipboardValue::Files(_) => None,
+    }
+}
+
+pub(crate) fn paste_value() -> Option<ClipboardValue> {
     let (tx, rx) = mpsc::channel();
     clipboard().send(ClipReq::Get(tx)).ok()?;
     rx.recv_timeout(std::time::Duration::from_secs(2)).ok().flatten()

@@ -80,12 +80,7 @@ impl link::Host for Controls {
         })
     }
     fn settings_export(&self) -> Result<Vec<Content>, LinkError> {
-        portable_settings::export_file(
-            &self.locations,
-            &Settings::load(&self.paths.settings_file()).0,
-            &Pins::default(),
-            &self.paths.config,
-        )
+        portable_settings::export_file(&self.locations, &Settings::load(&self.paths.settings_file()).0, &Pins::default(), &self.paths.config)
     }
     fn settings_import(&self, inputs: &[Content]) -> Result<arcade_link::app::ImportResult, LinkError> {
         let doc = portable_settings::read_import(inputs)?;
@@ -310,11 +305,7 @@ fn real_resident_rebinds_with_fake_hyprctl_and_persists_manifest_and_import() {
         .env("XDG_RUNTIME_DIR", root.join("run"))
         .env("HYPRLAND_INSTANCE_SIGNATURE", "fake-find-test")
         .env("FAKE_HYPR_LOG", &log)
-        .env(
-            "PATH",
-            std::env::join_paths(std::iter::once(fake).chain(std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default())))
-                .unwrap(),
-        )
+        .env("PATH", std::env::join_paths(std::iter::once(fake).chain(std::env::split_paths(&std::env::var_os("PATH").unwrap_or_default()))).unwrap())
         .env("DBUS_SESSION_BUS_ADDRESS", format!("unix:path={}/no-bus", root.display()))
         .env_remove("DISPLAY")
         .env_remove("WAYLAND_DISPLAY")

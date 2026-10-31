@@ -40,7 +40,7 @@ If Tools is running and hosting Find, use its Find submenu. Quitting Tools, disa
 
 ## The launcher or terminal command points at an old file
 
-Run the moved AppImage with `--repair`, then inspect `--integration-status`. Repair follows the receipt and never edits shell profiles. If icons were manually deleted, rerun the AppImage installer to recreate its bundled icon files. The terminal PATH/symlink hint is also shown in Settings → General → Terminal command. For Hyprland startup and binds, read [the Hyprland guide](../HYPRLAND.md).
+Run the moved AppImage with `--repair`, then inspect `--integration-status`. Repair follows the receipt and never edits shell profiles. If icons were manually deleted, rerun the AppImage installer to recreate its bundled icon files. The terminal PATH/symlink hint is also shown in Settings → General → Terminal command. For Hyprland startup and binds, read [the Hyprland guide](https://github.com/qa-p1/Arcade-Find/blob/main/docs/dev/hyprland.md).
 
 ## Importing settings failed
 

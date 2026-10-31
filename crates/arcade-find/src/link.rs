@@ -58,10 +58,7 @@ const BOX_FEATURED_MAX: usize = 5;
 pub fn actions() -> Vec<Action> {
     vec![
         Action::new("find.search", "Find matching files", "search").accepts(&["text/plain"]).produces(&["file/*[]", "folder/reference"]),
-        Action::new("find.show", "Search in Find", "search")
-            .accepts(&["text/plain", "file/*", "folder/reference"])
-            .effects(&["opens-ui"])
-            .interactive(true),
+        Action::new("find.show", "Search in Find", "search").accepts(&["text/plain", "file/*", "folder/reference"]).effects(&["opens-ui"]).interactive(true),
     ]
 }
 
@@ -329,8 +326,8 @@ pub fn peer_offers(registry: &Registry, disabled: &[String], sel: &Selection, pi
                     continue;
                 }
                 if a.id.starts_with("box:") {
-                    let featured_here = !a.featured_for.is_empty()
-                        && sel.inputs.iter().all(|c| a.featured_for.iter().any(|f| content::type_matches(f, &c.kind)));
+                    let featured_here =
+                        !a.featured_for.is_empty() && sel.inputs.iter().all(|c| a.featured_for.iter().any(|f| content::type_matches(f, &c.kind)));
                     if !featured_here || featured >= BOX_FEATURED_MAX {
                         continue;
                     }
@@ -528,7 +525,7 @@ pub fn run_search(host: &dyn Host, req: &InvokeRequest) -> Result<InvokeResult, 
     let message = match out.matched {
         0 => "No matches".to_string(),
         1 => "1 match".to_string(),
-        n => format!("{} matches", find_core::fmt::count(n as u64)),
+        n => format!("{} matches", arcade_link::design::format::format_count(n as i64)),
     };
     Ok(InvokeResult {
         outputs: sel.inputs,
@@ -554,12 +551,7 @@ fn quote_scope(path: &Path) -> Result<String, LinkError> {
 
 /// The query and the item to select for `find.show`.
 pub fn show_args(req: &InvokeRequest) -> Result<(Option<String>, Option<PathBuf>), LinkError> {
-    let extra = req
-        .options
-        .get("query")
-        .and_then(Value::as_str)
-        .map(|s| s.lines().next().unwrap_or("").trim().to_string())
-        .filter(|s| !s.is_empty());
+    let extra = req.options.get("query").and_then(Value::as_str).map(|s| s.lines().next().unwrap_or("").trim().to_string()).filter(|s| !s.is_empty());
     if extra.as_ref().is_some_and(|s| s.len() > QUERY_MAX) {
         return Err(LinkError::unsupported("The query is too long"));
     }
@@ -572,12 +564,8 @@ pub fn show_args(req: &InvokeRequest) -> Result<(Option<String>, Option<PathBuf>
         }
         return Ok((Some(q.to_string()).filter(|s| !s.is_empty()).or(extra), None));
     }
-    let path = c
-        .path
-        .as_deref()
-        .or(c.paths.first().map(String::as_str))
-        .map(PathBuf::from)
-        .ok_or_else(|| LinkError::unsupported("Arcade Find needs a path"))?;
+    let path =
+        c.path.as_deref().or(c.paths.first().map(String::as_str)).map(PathBuf::from).ok_or_else(|| LinkError::unsupported("Arcade Find needs a path"))?;
     if !path.is_absolute() {
         return Err(LinkError::unsupported("Arcade Find needs an absolute path"));
     }
@@ -586,10 +574,7 @@ pub fn show_args(req: &InvokeRequest) -> Result<(Option<String>, Option<PathBuf>
         return Ok((Some(q), None));
     }
     if content::type_matches("file/*[]", &c.kind) {
-        let name = path
-            .file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .ok_or_else(|| LinkError::unsupported("Arcade Find needs a file name"))?;
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).ok_or_else(|| LinkError::unsupported("Arcade Find needs a file name"))?;
         let q = if name.chars().any(char::is_whitespace) && !name.contains('"') { format!("\"{name}\"") } else { name };
         return Ok((Some(q), Some(path)));
     }
@@ -675,12 +660,7 @@ impl Host for OfflineHost {
         let (index, _) = find_core::persist::load(&self.paths.index_file())
             .map_err(|_| LinkError::unavailable("Arcade Find hasn't indexed your files yet. Open it once to start indexing"))?;
         let engine = find_core::Engine::offline(index, settings.clone());
-        let opts = find_core::SearchOptions {
-            limit,
-            show_hidden: hidden || settings.show_hidden,
-            now: find_core::now_secs(),
-            ..Default::default()
-        };
+        let opts = find_core::SearchOptions { limit, show_hidden: hidden || settings.show_hidden, now: find_core::now_secs(), ..Default::default() };
         let (hits, r) = engine.search_hits(query, &opts);
         Ok(SearchOut { hits, matched: r.matched, elapsed_ms: r.elapsed.as_secs_f64() * 1000.0, indexing: false })
     }
@@ -817,11 +797,7 @@ mod tests {
         let r = InvokeRequest::new("find.show", "t").input(Content::plain("report 2024\nignored"));
         assert_eq!(show_args(&r).unwrap(), (Some("report 2024".into()), None));
         let home = find_core::paths::home_dir();
-        let folder = Content {
-            kind: "folder/reference".into(),
-            path: Some(home.join("My Stuff").to_string_lossy().into_owned()),
-            ..Default::default()
-        };
+        let folder = Content { kind: "folder/reference".into(), path: Some(home.join("My Stuff").to_string_lossy().into_owned()), ..Default::default() };
         let r = InvokeRequest::new("find.show", "t").input(folder).options(json!({"query": "ext:png"}));
         let (q, reveal) = show_args(&r).unwrap();
         assert_eq!(q.as_deref(), Some(format!("in:\"{}\" ext:png", find_core::paths::tilde(&home.join("My Stuff"))).as_str()));
@@ -866,10 +842,7 @@ mod tests {
 
     #[test]
     fn search_results() {
-        let h = FindHandler {
-            host: Arc::new(FakeHost(vec![hit("/h/a.png", false), hit("/h/d", true), hit("/h/b.pdf", false)])),
-            background: true,
-        };
+        let h = FindHandler { host: Arc::new(FakeHost(vec![hit("/h/a.png", false), hit("/h/d", true), hit("/h/b.pdf", false)])), background: true };
         let r = h.handle(InvokeRequest::new("find.search", "t").input(Content::plain("a")).options(json!({"limit": 2}))).unwrap();
         assert_eq!(r.message.as_deref(), Some("3 matches"));
         let d = r.data.unwrap();

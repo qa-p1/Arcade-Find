@@ -3,8 +3,16 @@
 //! separate isolated end-to-end check. No real desktop paths are involved.
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Mutex, MutexGuard};
+
+// A parallel fork can inherit another fixture's still-writable copied ELF
+// before exec closes its descriptors. Linux then rejects that ELF with
+// ETXTBSY even after the copying parent closes it. Keep copy/fork lifetimes
+// separate; every test and installer assertion still runs.
+static FIXTURE_IO: Mutex<()> = Mutex::new(());
 
 struct Fixture {
+    _serial: MutexGuard<'static, ()>,
     root: PathBuf,
     binary: PathBuf,
     appdir: PathBuf,
@@ -12,6 +20,7 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        let serial = FIXTURE_IO.lock().unwrap_or_else(|error| error.into_inner());
         let root = std::env::temp_dir().join(format!("find-install-cli-{}", arcade_link::endpoint::new_token().unwrap()));
         let appdir = root.join("mount");
         std::fs::create_dir_all(appdir.join("usr/bin")).unwrap();
@@ -19,7 +28,7 @@ impl Fixture {
         std::fs::copy(env!("CARGO_BIN_EXE_arcade-find"), &binary).unwrap();
         let image = root.join("Downloaded.AppImage");
         std::fs::write(&image, b"synthetic AppImage bytes").unwrap();
-        Self { root, binary, appdir, image }
+        Self { _serial: serial, root, binary, appdir, image }
     }
     fn command(&self, binary: &Path) -> Command {
         let mut c = Command::new(binary);
@@ -68,6 +77,11 @@ fn cli_install_status_move_repair_and_receipt_uninstall() {
     let desktop = PathBuf::from(receipt["integration"]["desktopEntry"].as_str().unwrap());
     let entry = std::fs::read_to_string(&desktop).unwrap();
     assert!(entry.contains("X-Arcade-Id=arcade.find"));
+    assert_eq!(desktop.file_name().unwrap(), "dev.arcade.Find.desktop");
+    assert!(entry.contains("StartupWMClass=dev.arcade.Find"));
+    assert!(entry.contains("Comment=Press a shortcut, type, and any file or folder shows up."));
+    assert!(entry.contains("Categories=Utility;FileTools;"));
+    assert!(entry.contains("[Desktop Action Settings]\nName=Settings"));
     assert!(entry.contains("--uninstall"));
     assert!(entry.contains("--settings"));
     assert_eq!(receipt["integration"]["icons"].as_array().unwrap().len(), 10);
@@ -104,11 +118,40 @@ fn remove_data_is_explicit_and_dev_or_inherited_appimage_never_installs() {
     fixture.run(&["--uninstall", "--silent", "--remove-data"]);
     assert!(!fixture.root.join("find/config").exists());
     assert!(!fixture.root.join("find/data").exists());
-    let output =
-        fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).args(["--install", "--silent", "--no-launch"]).output().unwrap();
+    let output = fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).args(["--install", "--silent", "--no-launch"]).output().unwrap();
     assert!(!output.status.success(), "a dev binary must not install an inherited AppImage");
     assert!(!fixture.root.join("arcade/installs/arcade.find.json").exists());
     let output = fixture.command(Path::new(env!("CARGO_BIN_EXE_arcade-find"))).arg("--arcade-manifest").output().unwrap();
     let manifest: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(manifest["install"], "dev");
+}
+
+#[test]
+fn legacy_folders_are_verified_before_removal_and_keep_shortcuts_and_history() {
+    let fixture = Fixture::new();
+    let config = fixture.root.join("config/arcade-find");
+    let data = fixture.root.join("data/arcade-find");
+    std::fs::create_dir_all(&config).unwrap();
+    std::fs::create_dir_all(&data).unwrap();
+    let settings = serde_json::json!({"schema":1,"shortcut":"Ctrl+Alt+J","roots":[fixture.root],"theme":"light"});
+    std::fs::write(config.join("settings.json"), serde_json::to_vec(&settings).unwrap()).unwrap();
+    std::fs::write(data.join("pins.json"), b"[\"kept\"]").unwrap();
+    std::fs::write(data.join("frecency.json"), b"history fixture").unwrap();
+    // Every mutating entry point migrates before IPC. Quit exercises that
+    // startup path without creating a background resident that never exits.
+    // No display is present, so this is not a native UI check.
+    let output = fixture
+        .command(&fixture.binary)
+        .env_remove("ARCADE_FIND_HOME")
+        .env("XDG_CACHE_HOME", fixture.root.join("cache"))
+        .env("ARCADE_NO_INSTALL_PROMPT", "1")
+        .arg("--quit")
+        .output()
+        .unwrap();
+    let migrated: serde_json::Value = serde_json::from_slice(&std::fs::read(fixture.root.join("config/arcade/find/settings.json")).unwrap()).unwrap();
+    assert_eq!(migrated["shortcut"], "Ctrl+Alt+J", "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(migrated["theme"], "light");
+    assert_eq!(std::fs::read(fixture.root.join("data/arcade/find/pins.json")).unwrap(), b"[\"kept\"]");
+    assert_eq!(std::fs::read(fixture.root.join("data/arcade/find/frecency.json")).unwrap(), b"history fixture");
+    assert!(!config.exists() && !data.exists(), "only verified originals may be removed");
 }

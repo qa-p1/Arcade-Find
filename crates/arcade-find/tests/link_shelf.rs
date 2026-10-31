@@ -7,10 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use arcade_link::manifest::write_manifest;
 use arcade_link::server::ServerConfig;
-use arcade_link::{
-    Action, ErrorCode, Handler, InvokeContext, InvokeRequest, InvokeResult, LinkError, Locations, Manifest, PeerInfo, Registry, Reply,
-    Server,
-};
+use arcade_link::{Action, ErrorCode, Handler, InvokeContext, InvokeRequest, InvokeResult, LinkError, Locations, Manifest, PeerInfo, Registry, Reply, Server};
 use serde_json::json;
 
 use arcade_find::link::{self, Item, Offer, Selection};
@@ -58,11 +55,7 @@ impl Handler for MockShelf {
         if let Some(e) = &self.fail {
             return Err(e.clone());
         }
-        Ok(Reply::Done(InvokeResult {
-            message: Some(format!("Added {n} items to Quick Shelf")),
-            outputs: vec![],
-            data: Some(json!({ "added": n })),
-        }))
+        Ok(Reply::Done(InvokeResult { message: Some(format!("Added {n} items to Quick Shelf")), outputs: vec![], data: Some(json!({ "added": n })) }))
     }
 }
 
@@ -70,18 +63,14 @@ fn start_mock(loc: &Locations, fail: Option<LinkError>) -> (Server, Arc<MockShel
     let exe = std::env::current_exe().unwrap();
     write_manifest(loc, &shelf_manifest(exe.to_str().unwrap())).unwrap();
     let mock = Arc::new(MockShelf { seen: Mutex::new(Vec::new()), fail });
-    let server =
-        Server::start(ServerConfig { app: PeerInfo { id: SHELF.into(), version: "0.1.0".into() }, locations: loc.clone() }, mock.clone())
-            .unwrap();
+    let server = Server::start(ServerConfig { app: PeerInfo { id: SHELF.into(), version: "0.1.0".into() }, locations: loc.clone() }, mock.clone()).unwrap();
     (server, mock)
 }
 
 /// Real files, so sizes and kinds are what the index would report.
 fn fixture(root: &Path) -> Vec<(PathBuf, bool)> {
     let mut out = Vec::new();
-    for (name, dir) in
-        [("logo.svg", false), ("brief.pdf", false), ("fonts", true), ("hero.png", false), ("refs", true), ("notes.md", false)]
-    {
+    for (name, dir) in [("logo.svg", false), ("brief.pdf", false), ("fonts", true), ("hero.png", false), ("refs", true), ("notes.md", false)] {
         let p = root.join(name);
         if dir {
             std::fs::create_dir_all(&p).unwrap();

@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 
 use x11rb::connection::{Connection, RequestConnection};
 use x11rb::protocol::xproto::{
-    Atom, AtomEnum, ClientMessageEvent, ConfigureWindowAux, ConnectionExt as _, CreateGCAux, CreateWindowAux, EventMask, ImageFormat,
-    KeyButMask, PropMode, SelectionNotifyEvent, SelectionRequestEvent, StackMode, Window, WindowClass, SELECTION_NOTIFY_EVENT,
+    Atom, AtomEnum, ClientMessageEvent, ConfigureWindowAux, ConnectionExt as _, CreateGCAux, CreateWindowAux, EventMask, ImageFormat, KeyButMask, PropMode,
+    SelectionNotifyEvent, SelectionRequestEvent, StackMode, Window, WindowClass, SELECTION_NOTIFY_EVENT,
 };
 use x11rb::protocol::Event;
 use x11rb::rust_connection::RustConnection;
@@ -77,8 +77,7 @@ pub fn drag(paths: Vec<PathBuf>, own: u32, image: Option<Image>) -> Result<bool,
     let atoms = Atoms::new(&conn).map_err(|x| e(&x))?.reply().map_err(|x| e(&x))?;
     let win = conn.generate_id().map_err(|x| e(&x))?;
     conn.create_window(0, win, root, -10, -10, 1, 1, 0, WindowClass::INPUT_ONLY, 0, &CreateWindowAux::new()).map_err(|x| e(&x))?;
-    let mut s =
-        Source { conn, root, win, atoms, paths, target: None, accepted: false, awaiting_status: false, finished: false, image: None };
+    let mut s = Source { conn, root, win, atoms, paths, target: None, accepted: false, awaiting_status: false, finished: false, image: None };
     if let Some(img) = image {
         // Cosmetic: a drag that can't show its image still works.
         s.image = s.image_window(screen, &img).ok();

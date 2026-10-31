@@ -435,9 +435,7 @@ impl Scanner {
                     // Changed kind (file ↔ folder): replace.
                     remove.push(id);
                 } else {
-                    if old.size != crate::index::decode_size(crate::index::encode_size(it.meta.size))
-                        || old.mtime != it.meta.mtime.clamp(0, u32::MAX as i64)
-                    {
+                    if old.size != crate::index::decode_size(crate::index::encode_size(it.meta.size)) || old.mtime != it.meta.mtime.clamp(0, u32::MAX as i64) {
                         ix.set_meta(id, it.meta.size, it.meta.mtime);
                         p.changed.fetch_add(1, Ordering::Relaxed);
                     }
@@ -507,8 +505,7 @@ pub fn apply_names(scanner: &Scanner, changes: &[(u32, Vec<u8>)]) -> ScanStats {
                 // SAFETY: names come from the OS via `as_encoded_bytes`.
                 let os = unsafe { std::ffi::OsStr::from_encoded_bytes_unchecked(n) };
                 let path = dpath.join(os);
-                let st =
-                    stat(&path).ok().filter(|(m, _, _)| m.flags & flag::DIR == 0 || !scanner.excludes.path_excluded(&path, &scanner.roots));
+                let st = stat(&path).ok().filter(|(m, _, _)| m.flags & flag::DIR == 0 || !scanner.excludes.path_excluded(&path, &scanner.roots));
                 ops.push((*d, n.to_vec(), key_child(*dkey, n), st.map(|(m, dev, _)| (m, dev))));
             }
         }
@@ -549,8 +546,7 @@ pub fn apply_names(scanner: &Scanner, changes: &[(u32, Vec<u8>)]) -> ScanStats {
             ix.remove_many(&remove);
         }
         // Paths for the new folders.
-        let jobs: Vec<Job> =
-            new_dirs.iter().map(|&(id, key, dev)| Job { id, path: ix.path(id), key, fresh: true, recurse: true, dev }).collect();
+        let jobs: Vec<Job> = new_dirs.iter().map(|&(id, key, dev)| Job { id, path: ix.path(id), key, fresh: true, recurse: true, dev }).collect();
         drop(ix);
         if !jobs.is_empty() {
             return scanner.run(jobs, Children::None);
