@@ -26,6 +26,11 @@ Resumed PR #11 from GPT's checkpoint (`5103750`). Not merged or released.
   125 %): no layout defects beyond the duplicate Trash row above.
 - Local: docs, vendored (v0.4.12), fmt, clippy `-D warnings`, all workspace tests, 190 contrast
   pairs pass. Native and upgrade checks need CI.
+- **macOS runners**: runs 107 and 108 (both attempts) had `check (macos-14)` cancelled before a
+  runner started. The job annotation names the cause: a scheduled macOS 14 image brownout; GitHub
+  retires macOS 14 on 2026-11-02 (actions/runner-images#13518). CI now uses `macos-15` for checks
+  and the universal DMG, builds with `MACOSX_DEPLOYMENT_TARGET=11.0` (the app's
+  `LSMinimumSystemVersion`), and the DMG step fails unless both slices require macOS 11.0.
 
 ## 2026-10-31: paused by owner; not release-ready
 
