@@ -75,7 +75,7 @@ def main():
         announcements.append(str(event.any_data))
 
     bus = dbus.SessionBus()
-    props = dbus.Interface(bus.get_object('org.a11y.Bus', '/org/a11y/status'), 'org.freedesktop.DBus.Properties')
+    props = dbus.Interface(bus.get_object('org.a11y.Bus', '/org/a11y/bus'), 'org.freedesktop.DBus.Properties')
     props.Set('org.a11y.Status', 'IsEnabled', dbus.Boolean(False))
     pyatspi.Registry.registerEventListener(listener, 'object:announcement')
     events = threading.Thread(target=pyatspi.Registry.start, daemon=True)

@@ -2,6 +2,8 @@
 """Install real 0.4.3, retain its configured data, then install and use this package."""
 import json
 import os
+import hashlib
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -23,9 +25,20 @@ def main():
     assert os.environ.get('ARCADE_E2E_INNER') == '1' and root != Path('/')
     for key in ('HOME', 'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_RUNTIME_DIR', 'ARCADE_HOME'):
         assert Path(os.environ[key]).resolve().is_relative_to(root), key
-    previous, current = [Path(arg).resolve(strict=True) for arg in sys.argv[1:]]
+    sources = [Path(arg).resolve(strict=True) for arg in sys.argv[1:]]
+    # Use real downloaded packages outside a source checkout. Link deliberately
+    # refuses to install a file below .git, even when it is a built AppImage.
+    downloads = root / 'Downloads'
+    downloads.mkdir()
+    packages = []
+    for name, source in zip(('previous.AppImage', 'current.AppImage'), sources):
+        target = downloads / name
+        shutil.copy2(source, target)
+        assert hashlib.sha256(source.read_bytes()).digest() == hashlib.sha256(target.read_bytes()).digest()
+        packages.append(target)
+    previous, current = packages
     env = dict(os.environ, APPIMAGE_EXTRACT_AND_RUN='1', ARCADE_NO_INSTALL_PROMPT='1')
-    for key in ('ARCADE_FIND_HOME', 'ARCADE_FIND_PROFILE', 'APPIMAGE', 'APPDIR'):
+    for key in ('ARCADE_FIND_HOME', 'ARCADE_FIND_PROFILE', 'APPIMAGE', 'APPDIR', 'ARCADE_DEV_BUILD'):
         env.pop(key, None)
     files = root / 'old-indexed-files'
     files.mkdir()
