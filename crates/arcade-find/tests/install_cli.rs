@@ -3,8 +3,16 @@
 //! separate isolated end-to-end check. No real desktop paths are involved.
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::{Mutex, MutexGuard};
+
+// A parallel fork can inherit another fixture's still-writable copied ELF
+// before exec closes its descriptors. Linux then rejects that ELF with
+// ETXTBSY even after the copying parent closes it. Keep copy/fork lifetimes
+// separate; every test and installer assertion still runs.
+static FIXTURE_IO: Mutex<()> = Mutex::new(());
 
 struct Fixture {
+    _serial: MutexGuard<'static, ()>,
     root: PathBuf,
     binary: PathBuf,
     appdir: PathBuf,
@@ -12,6 +20,7 @@ struct Fixture {
 }
 impl Fixture {
     fn new() -> Self {
+        let serial = FIXTURE_IO.lock().unwrap_or_else(|error| error.into_inner());
         let root = std::env::temp_dir().join(format!("find-install-cli-{}", arcade_link::endpoint::new_token().unwrap()));
         let appdir = root.join("mount");
         std::fs::create_dir_all(appdir.join("usr/bin")).unwrap();
@@ -19,7 +28,7 @@ impl Fixture {
         std::fs::copy(env!("CARGO_BIN_EXE_arcade-find"), &binary).unwrap();
         let image = root.join("Downloaded.AppImage");
         std::fs::write(&image, b"synthetic AppImage bytes").unwrap();
-        Self { root, binary, appdir, image }
+        Self { _serial: serial, root, binary, appdir, image }
     }
     fn command(&self, binary: &Path) -> Command {
         let mut c = Command::new(binary);
