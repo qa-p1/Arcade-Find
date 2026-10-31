@@ -1,12 +1,11 @@
-# Checks, tests, end-to-end runs and package builds. Packages are workflow
-# artifacts; a version tag (v<Cargo version>) also publishes them, with
-# arcade-release.json and checksums, as a GitHub release Arcade Tools installs.
+# Checks, tests, end-to-end runs and package builds. Packages, arcade-release.json
+# and checksums are workflow artifacts. Releases are published only by release.yml,
+# which calls this workflow (see tag.yml for the order).
 name: CI
 
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
   workflow_dispatch:
   workflow_call:
@@ -222,33 +221,3 @@ jobs:
           path: |
             dist/arcade-release.json
             dist/SHA256SUMS.txt
-
-  publish:
-    name: publish release
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [release-manifest, e2e-linux]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          pattern: package-*
-          path: dist
-          merge-multiple: true
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
-        with:
-          name: release-manifest
-          path: dist
-      - name: Publish
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          v=$(grep -m1 '^version' Cargo.toml | cut -d'"' -f2)
-          test "$GITHUB_REF_NAME" = "v$v" || { echo "tag $GITHUB_REF_NAME does not match version $v"; exit 1; }
-          python3 tools/release-notes.py CHANGELOG.md "$v" > notes.md
-          printf '\nUser guide: https://github.com/qa-p1/Arcade-Find/tree/main/docs/user\n' >> notes.md
-          ls -l dist
-          gh release create "$GITHUB_REF_NAME" dist/*.AppImage dist/*.exe dist/*.dmg dist/arcade-release.json dist/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "Arcade Find $v" --notes-file notes.md

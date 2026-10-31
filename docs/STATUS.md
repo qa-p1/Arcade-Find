@@ -1,5 +1,16 @@
 # Status
 
+## 2026-10-31 (night): PR #11 merged; CI no longer publishes on tags
+
+PR #11 merged as `8d25c46` (CI run 41233227380 green on head `5d85b0f`).
+
+- The first beta rehearsal (Release run 41234323506) failed at startup. release.yml calls
+  ci.yml from a job with `contents: read`, and ci.yml still had its old tag-push `publish` job
+  asking for `contents: write`. GitHub checks nested permissions before any job runs, even for
+  jobs that would be skipped. release.yml is the only publisher now, so ci.yml lost the `v*` tag
+  trigger and that job, matching Box, Look and Clipboard. Tags made by tag.yml use the workflow
+  token, so they never triggered that job anyway.
+
 ## 2026-10-31 (evening): both run-106 failures diagnosed and fixed; awaiting CI
 
 Resumed PR #11 from GPT's checkpoint (`5103750`). Not merged or released.
