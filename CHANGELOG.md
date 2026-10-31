@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0 — 2026-10-30
+## 0.5.0 — 2026-10-31
 
 - New lime accent, Inter and the shared Arcade kit across search, Settings and the install prompt.
 - Settings uses the standard page order, fixed headings, readable folder rows, a single helper window and ordered saves that finish before close.
@@ -10,6 +10,7 @@
 - Welcome and notification preferences, standard keyboard commands, per-monitor window geometry and pair-specific Connected apps copy.
 - Fixed Settings file-watch feedback, concurrent saves and the Wayland fallback's actual Show/Hide lifecycle without leaking drag workers.
 - File-list paste restores copied file references and preserves multi-selection; shortcut recording checks the running Hyprland bindings as well as Arcade's registry.
+- Native screen-reader search and result announcements, full-name tooltips, Quit in About and a one-time background reminder. Settings waits for resident commands before it exits.
 - Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
 
 ## 0.4.3 — 2026-10-19

@@ -92,8 +92,16 @@ def main():
         assert installed.is_relative_to(root)
         new_config = Path(env['XDG_CONFIG_HOME']) / 'arcade/find'
         new_data = Path(env['XDG_DATA_HOME']) / 'arcade/find'
-        for name, directory in [('settings.json', new_config), ('pins.json', new_data), ('frecency.json', new_data)]:
-            assert (directory / name).read_bytes() == kept[name], name + ' was not preserved'
+        before_settings = json.loads(kept['settings.json'])
+        after_settings = json.loads((new_config / 'settings.json').read_bytes())
+        (output / 'settings-before.json').write_text(json.dumps(before_settings, indent=2) + '\n')
+        (output / 'settings-after.json').write_text(json.dumps(after_settings, indent=2) + '\n')
+        # Installation records Start at login and serializes newly added
+        # defaults. Every existing preference must survive that serialization.
+        for key, value in before_settings.items():
+            assert key in after_settings and after_settings[key] == value, (key, value, after_settings.get(key))
+        for name in ('pins.json', 'frecency.json'):
+            assert (new_data / name).read_bytes() == kept[name], name + ' was not preserved'
         assert not legacy_config.exists() and not legacy_data.exists(), 'verified migration left the legacy folders'
         for key in ('desktopEntry', 'autostart'):
             entry = Path(new_receipt['integration'][key])

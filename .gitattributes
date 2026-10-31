@@ -6,3 +6,4 @@ packaging/windows/arcade.iss -text
 packaging/windows/arcade-integration.ps1 -text
 assets/glyphs/*.svg -text
 assets/app-icon/** -text
+assets/design-licenses/** -text

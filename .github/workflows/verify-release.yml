@@ -1,0 +1,56 @@
+name: Verify published release
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to verify
+        required: true
+        type: string
+      sha:
+        description: Full merge commit SHA behind the release
+        required: true
+        type: string
+      beta:
+        description: Verify a draft beta (stable also exercises Tools 0.4.1)
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.sha }}
+      - name: Remove incomplete pinned toolchain
+        run: rustup toolchain uninstall 1.88.0 || true
+      - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+      - name: Read-only Tools 0.4.1 checkout
+        if: inputs.beta == false
+        run: git clone --depth 1 --branch v0.4.1 https://github.com/qa-p1/Arcade-tools "$RUNNER_TEMP/tools"
+      - name: Verify REST assets, manifest and catalog; exercise the real Tools updater
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+          SHA: ${{ inputs.sha }}
+          BETA: ${{ inputs.beta }}
+        run: |
+          mkdir -p target/release-verification
+          if [ "$BETA" = true ]; then
+            args=(--beta)
+          else
+            args=(--tools "$RUNNER_TEMP/tools")
+          fi
+          python3 scripts/verify-release.py --tag "$TAG" --sha "$SHA" --output "$RUNNER_TEMP/verified-release" "${args[@]}" 2>&1 | tee target/release-verification/check.log
+          cp "$RUNNER_TEMP/verified-release/"*.json "$RUNNER_TEMP/verified-release/SHA256SUMS.txt" target/release-verification/
+          if [ "$BETA" = false ]; then
+            git -C "$RUNNER_TEMP/tools" diff --exit-code
+            test ! -e "$RUNNER_TEMP/tools/tests/verify_find_release.rs"
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: published-release-verification
+          path: target/release-verification

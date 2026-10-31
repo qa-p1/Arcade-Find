@@ -964,6 +964,10 @@ impl Service {
                 self.open_settings();
                 json!({ "ok": true })
             }
+            Command::WindowClosed => {
+                crate::notifications::background_once(self.paths.clone(), self.settings().notifications);
+                json!({ "ok": true })
+            }
             Command::Quit => {
                 self.send(UiMsg::Quit);
                 json!({ "ok": true })

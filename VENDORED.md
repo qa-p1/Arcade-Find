@@ -38,6 +38,7 @@ Copied unchanged from [Arcade Link](https://github.com/qa-p1/Arcade-Link/tree/v0
 License: MIT OR Apache-2.0.
 
 ```text
+262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a  assets/design-licenses/Inter-OFL.txt
 11405845a97dcec4150fb3943d03dbd11eeb086ded31a5cab27aa92b620838c1  assets/glyphs/arcade.box.svg
 bbf1518dc224aa8f8df59f432cf5eb8b6e25b1f4a4e4676fe231d84770dac156  assets/glyphs/arcade.clipboard.svg
 54c0b3e869912313a7b543175ad6bda5853b0bc8118d753e2c67de6dfdd07df9  assets/glyphs/arcade.find.svg

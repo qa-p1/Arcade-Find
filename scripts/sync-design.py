@@ -29,6 +29,7 @@ HEADER = "Arcade design kit"
 ICONS = "design/app-icons/find/"
 # (source in Link, destination here); a trailing slash copies the folder's files.
 FILES = [
+    ("design/fonts/OFL.txt", "assets/design-licenses/Inter-OFL.txt"),
     ("design/glyphs/", "assets/glyphs/"),
     (ICONS + "icon.svg", "assets/app-icon/icon.svg"),
     (ICONS + "find.ico", "assets/app-icon/arcade-find.ico"),
@@ -36,7 +37,7 @@ FILES = [
     (ICONS + "png/", "assets/app-icon/png/"),
 ]
 # Folders that hold only synced files, emptied first so removed files go too.
-OWNED = ["assets/glyphs", "assets/app-icon"]
+OWNED = ["assets/glyphs", "assets/app-icon", "assets/design-licenses"]
 
 
 def pinned_tag() -> str:

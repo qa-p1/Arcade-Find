@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 LICENSE_NAMES = ("license", "licence", "copying", "notice", "copyright")
 
@@ -59,6 +60,7 @@ def main():
     out.write("| Crate | Version | License | Source |\n|---|---|---|---|\n")
     for name, ver, lic, repo, _ in rows:
         out.write(f"| {name} | {ver} | {lic} | {repo} |\n")
+    out.write("\n## Inter font licence\n\n```text\n" + (Path(__file__).resolve().parents[1] / "assets/design-licenses/Inter-OFL.txt").read_text().strip() + "\n```\n")
     out.write("\n## License texts\n")
     for h, (t, users) in sorted(texts.items(), key=lambda kv: kv[1][1][0].lower()):
         shown = ", ".join(users[:12]) + (f" and {len(users) - 12} more" if len(users) > 12 else "")

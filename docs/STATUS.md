@@ -1,5 +1,26 @@
 # Status
 
+## 2026-10-31: final acceptance gates
+
+PR #11 remains open; no new release has been published. Run 41053930348 passed
+all three OS source suites, the 96-view Settings matrix, Windows/macOS installer
+checks and the AppImage install/repair/uninstall check. The new native AT-SPI
+regression stopped at an incorrect test bus object path; the package upgrade
+correctly refused to install a build still under the checkout's `.git` tree.
+Run 41168494645 confirmed native result announcements, complete names and safe
+focus. Its next assertion requested AT-SPI EditableText, which the pinned Unix
+adapter does not implement; the test now uses its supported focus/Text interfaces
+and real keyboard search. The upgrade now reaches the settings check: installation
+reserializes defaults and Start at login, so every old setting value is checked
+while pins/history remain byte-for-byte checks. Both fixes require a green run.
+
+The remaining standard code now includes Quit in About, a one-time background
+notice after Settings closes, and waiting for resident command acknowledgments
+before the Settings helper exits. Native notice/Quit checks are being added.
+The bundled Inter OFL licence is synced unchanged from Link and included in the
+shipped third-party notices. No unfinished native check is called passed.
+
+
 ## 2026-10-30: Find 0.5.0 final verification in progress
 
 Continuing PR #11 on `claude/arcade-overhaul-q3xegk`. Not merged or released.

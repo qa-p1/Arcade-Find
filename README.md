@@ -64,7 +64,7 @@ Find works on its own. It connects to other installed Arcade apps automatically 
 
 Other apps can call `find.search` to get matching paths without opening the overlay, or `find.show` to open Find on a query or item.
 
-When Arcade Tools is running, its tray icon hosts Find's menu (Open Find, Open Settings, Rescan index, Restart, Quit). When Tools quits, Find's own tray icon returns. Turning off **Connect with other Arcade apps** always restores Find's icon.
+When Arcade Tools is running, its tray icon hosts Find's menu (Open Arcade Find, Settings, Rescan index, Restart Arcade Find, Quit Arcade Find). When Tools quits, Find's own tray icon returns. Turning off **Connect with other Arcade apps** always restores Find's icon.
 
 See [how Find works with other Arcade apps](docs/user/with-other-apps.md) and the [Arcade Link reference](docs/dev/link.md).
 

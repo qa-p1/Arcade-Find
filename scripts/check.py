@@ -58,8 +58,10 @@ def main():
             print('Old ' + label + ' regression reproduced: ' + expected + '.')
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/clipboard-paste.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/file-actions.py', str(binary), env=env)
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/os-handoffs.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', sys.executable, 'tests/hover-tooltip.py', str(binary), env=env)
     run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/accessibility.py', str(binary), env=env)
+    run(sys.executable, str(link / 'tools/e2e.py'), 'run', '--', '/usr/bin/python3', 'tests/background-notice.py', str(binary), env=env)
     for peer in ('LOOK', 'BOX'):
         if not os.environ.get('ARCADE_' + peer + '_BIN'):
             raise SystemExit('The real released ' + peer.title() + ' is required for peer verification.')

@@ -100,12 +100,20 @@ def main():
             until(lambda: status().get('ui', {}).get('selectedPath') == str(files / names[0]),
                   'accessible focus did not select the result')
             assert status().get('ui', {}).get('visible'), 'focusing a result unexpectedly opened it'
-            query = next(node for node in descendants(window()) if node.name == 'Search your files')
-            assert query.queryEditableText().setTextContents('reader-file-beta ext:txt'), 'accessible query was not editable'
+            # AccessKit's Unix adapter exposes editable state, focus and Text,
+            # but does not implement AT-SPI EditableText. Exercise the reader's
+            # real focus/text interfaces and normal keyboard entry instead.
+            def enter_query(value):
+                query = next(node for node in descendants(window()) if node.name == 'Search your files')
+                assert query.getState().contains(pyatspi.STATE_EDITABLE), 'query is exposed as read-only'
+                assert query.queryComponent().grabFocus(), 'reader could not focus search'
+                subprocess.run(['xdotool', 'key', 'ctrl+a', 'type', '--clearmodifiers', value], env=env, check=True)
+                until(lambda: next(node for node in descendants(window()) if node.name == 'Search your files').queryText().getText(0, -1) == value,
+                      'reader could not read the entered query')
+            enter_query('reader-file-beta ext:txt')
             until(lambda: status().get('ui', {}).get('rows') == 1, 'accessible query did not search')
             until(lambda: '1 result' in announcements, 'singular result count was not announced')
-            query = next(node for node in descendants(window()) if node.name == 'Search your files')
-            assert query.queryEditableText().setTextContents('reader-file-missing ext:txt')
+            enter_query('reader-file-missing ext:txt')
             until(lambda: '0 results for “reader-file-missing ext:txt”' in announcements, 'empty result count and query were not announced')
             tree = [{'role': node.getRoleName(), 'name': node.name, 'description': node.description}
                     for node in descendants(window())]
@@ -121,7 +129,7 @@ def main():
             process.wait(timeout=10)
             pyatspi.Registry.stop()
             events.join(timeout=3)
-    print('Real AT-SPI: complete long names and paths; focus selects without opening; editable query searches; 2, 1 and 0 result announcements received.')
+    print('Real AT-SPI: complete long names and paths; focus selects without opening; reader focus/text and keyboard query search work; 2, 1 and 0 result announcements received.')
 
 
 if __name__ == '__main__':

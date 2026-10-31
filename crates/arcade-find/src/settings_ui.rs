@@ -7,6 +7,10 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 use std::time::{Duration, Instant};
 
 use arcade_link::client::{app_state, AppState};
@@ -67,6 +71,7 @@ enum Bg {
     DesktopBindings(Result<hotkey::hyprland::DesktopBindings, String>),
     Ripgrep(Option<find_core::content::Ripgrep>),
     Saved(Result<(), String>),
+    CommandDone(Result<Option<&'static str>, String>),
     Toast(String, Tone),
     /// Another launch asked for Settings: come to the front.
     Focus,
@@ -79,6 +84,8 @@ struct SettingsApp {
     integration_hints: Vec<String>,
     channel: Option<String>,
     paths: AppPaths,
+    pending_commands: usize,
+    notify_close: Arc<AtomicBool>,
     locations: Locations,
     settings: Settings,
     page: usize,
@@ -167,6 +174,9 @@ pub fn run(paths: AppPaths) -> ExitCode {
         ),
         ..Default::default()
     };
+    let closed_paths = paths.clone();
+    let notify_close = Arc::new(AtomicBool::new(true));
+    let close_notice = notify_close.clone();
     let r = eframe::run_native(
         "Arcade Find",
         options,
@@ -184,6 +194,7 @@ pub fn run(paths: AppPaths) -> ExitCode {
                 }
             }
             let mut app = SettingsApp::new(paths, settings, cc.egui_ctx.clone());
+            app.notify_close = notify_close;
             app._window_lock = Some(window_lock);
             app.window_state = Some(window_state);
             crate::debug!("settings: UI created");
@@ -191,7 +202,12 @@ pub fn run(paths: AppPaths) -> ExitCode {
         }),
     );
     match r {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => {
+            if close_notice.load(Ordering::Relaxed) {
+                let _ = instance::send(&closed_paths, &Command::WindowClosed, Duration::from_millis(500));
+            }
+            ExitCode::SUCCESS
+        }
         Err(e) => {
             eprintln!("arcade-find: settings: {e}");
             ExitCode::FAILURE
@@ -260,6 +276,8 @@ impl SettingsApp {
             channel: None,
             locations: Locations::discover(),
             paths,
+            pending_commands: 0,
+            notify_close: Arc::new(AtomicBool::new(true)),
             settings,
             page: 0,
             status: None,
@@ -363,23 +381,22 @@ impl SettingsApp {
         }
     }
 
-    fn command(&self, ctx: &egui::Context, cmd: Command, done: Option<&'static str>) {
+    fn command(&mut self, ctx: &egui::Context, cmd: Command, done: Option<&'static str>) {
+        self.pending_commands += 1;
+        if matches!(cmd, Command::Quit) {
+            self.notify_close.store(false, Ordering::Relaxed);
+        }
         let (tx, p, c) = (self.tx.clone(), self.paths.clone(), ctx.clone());
         std::thread::spawn(move || {
-            match instance::send(&p, &cmd, Duration::from_secs(3)) {
+            let result = match instance::send(&p, &cmd, Duration::from_secs(3)) {
                 Ok(v) if v["ok"] == false => {
-                    let why = v["error"].as_str().unwrap_or("It's busy").trim_end_matches('.').to_string();
-                    let _ = tx.send(Bg::Toast(format!("Couldn't do that now. {why}. Try again in a moment."), Tone::Danger));
+                    let why = v["error"].as_str().unwrap_or("It's busy").trim_end_matches('.');
+                    Err(format!("Couldn't do that now. {why}. Try again in a moment."))
                 }
-                Ok(_) => {
-                    if let Some(done) = done {
-                        let _ = tx.send(Bg::Toast(done.to_string(), Tone::Ok));
-                    }
-                }
-                Err(_) => {
-                    let _ = tx.send(Bg::Toast("Arcade Find isn't running. Start it from your apps menu.".to_string(), Tone::Danger));
-                }
-            }
+                Ok(_) => Ok(done),
+                Err(_) => Err("Arcade Find isn't running. Start it from your apps menu.".into()),
+            };
+            let _ = tx.send(Bg::CommandDone(result));
             c.request_repaint();
         });
     }
@@ -485,6 +502,18 @@ impl SettingsApp {
                         self.save_error = None;
                     }
                 }
+                Bg::CommandDone(result) => {
+                    self.pending_commands = self.pending_commands.saturating_sub(1);
+                    match result {
+                        Ok(Some(message)) => self.toast(message, Tone::Ok),
+                        Ok(None) => {}
+                        Err(message) => {
+                            self.closing = false;
+                            self.notify_close.store(true, Ordering::Relaxed);
+                            self.toast(message, Tone::Danger);
+                        }
+                    }
+                }
                 Bg::Toast(m, tone) => self.toast(m, tone),
                 Bg::Focus => {
                     ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(false));
@@ -496,7 +525,7 @@ impl SettingsApp {
     }
 
     fn close_if_saved(&mut self, ctx: &egui::Context, requested: bool, save_failed: bool) {
-        let pending = self.pending_saves > 0 || self.login_pending;
+        let pending = self.pending_saves > 0 || self.login_pending || self.pending_commands > 0;
         if requested && (pending || save_failed) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
         }
@@ -805,8 +834,9 @@ impl SettingsApp {
                     ctx.request_repaint();
                 });
             }
-            changed |=
-                kit.switch_row(ui, &mut self.settings.notifications, "Notifications", "Only when an action needs attention while Find is hidden.").changed();
+            changed |= kit
+                .switch_row(ui, &mut self.settings.notifications, "Notifications", "Background action errors and a one-time reminder that Find keeps running.")
+                .changed();
             changed |= kit
                 .switch_row(ui, &mut self.settings.show_recent_on_open, "Show recent and pinned on open", "Lists them as soon as the search opens.")
                 .changed();
@@ -1422,6 +1452,11 @@ impl SettingsApp {
                     action = Some("restart");
                 }
             });
+            kit.row(ui, "Quit Arcade Find", "Stops Find and its global shortcut.", |ui| {
+                if kit.button_state(ui, "Quit", ButtonKind::Default, true, false, true).clicked() {
+                    action = Some("quit");
+                }
+            });
         });
         match action {
             Some("tools") => self.open_app(ids::TOOLS),
@@ -1444,6 +1479,10 @@ impl SettingsApp {
                 }
             }
             Some("restart") => self.command(ctx, Command::Restart, Some("Restarting Arcade Find…")),
+            Some("quit") => {
+                self.command(ctx, Command::Quit, None);
+                self.closing = true;
+            }
             _ => {}
         }
     }
@@ -1535,6 +1574,23 @@ mod tests {
         assert!(matches!(rx.try_recv(), Ok(Bg::SettingsChanged)), "real edits still reload");
         forward_watch_event(&notify::Event::new(notify::EventKind::Create(notify::event::CreateKind::File)).add_path(focus.into()), settings, focus, &tx, &ctx);
         assert!(matches!(rx.try_recv(), Ok(Bg::Focus)), "second launches still focus Settings");
+    }
+
+    #[test]
+    fn closing_waits_for_the_resident_command_acknowledgment() {
+        let ctx = egui::Context::default();
+        let root = std::env::temp_dir().join(format!("find-command-close-{}", arcade_link::endpoint::new_token().unwrap()));
+        let mut app = SettingsApp::new(AppPaths::under(&root, ""), Settings::default(), ctx.clone());
+        app.pending_commands = 1;
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, true, false));
+        assert!(output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::CancelClose));
+        assert!(!output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::Close));
+        app.tx.send(Bg::CommandDone(Ok(None))).unwrap();
+        app.drain(&ctx);
+        let output = ctx.run(Default::default(), |ctx| app.close_if_saved(ctx, false, false));
+        assert!(output.viewport_output[&egui::ViewportId::ROOT].commands.contains(&egui::ViewportCommand::Close));
+        drop(app);
+        let _ = std::fs::remove_dir_all(root);
     }
 
     #[test]
