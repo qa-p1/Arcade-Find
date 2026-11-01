@@ -342,7 +342,8 @@ if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype 
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
 for_window [app_id="dev.arcade.Find"] floating enable
-for_window [app_id="arcade.shelf"] floating enable, move position 40 40
+# Shelf's app id: arcade.shelf until 0.3, dev.arcade.Shelf from 0.4.
+for_window [app_id="^(arcade\.shelf|dev\.arcade\.Shelf)$"] floating enable, move position 40 40
 EOF
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman dbus-run-session -- sway -c "$T/sway.conf" >"$OUT/sway.log" 2>&1 &
   PIDS+=($!)
@@ -374,7 +375,7 @@ EOF
     wl_shelf_rect() {
       swaymsg -t get_tree | python3 -I -c 'import json,sys
 def walk(n):
-    if n.get("app_id") == "arcade.shelf" and n.get("visible"):
+    if n.get("app_id") in ("arcade.shelf", "dev.arcade.Shelf") and n.get("visible"):
         r = n["rect"]; print(r["x"], r["y"], r["width"], r["height"]); sys.exit(0)
     for c in n.get("nodes", []) + n.get("floating_nodes", []): walk(c)
 walk(json.load(sys.stdin)); sys.exit(1)'
