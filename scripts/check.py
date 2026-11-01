@@ -47,12 +47,20 @@ def main():
             ('hover-tooltip.py', 'full filename tooltip did not appear', 'tooltip'),
             ('accessibility.py', 'search window was not exposed to the accessibility bus', 'accessibility'),
         ):
-            regression = subprocess.run([sys.executable, str(link / 'tools/e2e.py'), 'run', '--',
-                                         ('/usr/bin/python3' if script == 'accessibility.py' else sys.executable), 'tests/' + script, old],
-                                        env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             evidence = ROOT / ('target/e2e/' + label + '-old-regression.log')
             evidence.parent.mkdir(parents=True, exist_ok=True)
-            evidence.write_text(regression.stdout)
+            attempts = []
+            # The old build also drops a --show sent before its UI attaches
+            # (fixed in 0.5.2). A run that fails before the regression point
+            # proves nothing either way, so try again; a pass is never retried.
+            for _ in range(3):
+                regression = subprocess.run([sys.executable, str(link / 'tools/e2e.py'), 'run', '--',
+                                             ('/usr/bin/python3' if script == 'accessibility.py' else sys.executable), 'tests/' + script, old],
+                                            env=env, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                attempts.append(regression.stdout)
+                if regression.returncode == 0 or expected in regression.stdout:
+                    break
+            evidence.write_text('\n\n==== next attempt ====\n\n'.join(attempts))
             if regression.returncode == 0 or expected not in regression.stdout:
                 raise SystemExit('The old ' + label + ' regression was not reproduced; see ' + str(evidence))
             print('Old ' + label + ' regression reproduced: ' + expected + '.')

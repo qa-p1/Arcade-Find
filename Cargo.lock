@@ -184,7 +184,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-find"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -1229,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "find-core"
-version = "0.5.1"
+version = "0.5.2"
 dependencies = [
  "arcade-link",
  "crc32fast",

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.2 — 2026-11-01
+
+- Fixed: the first search request after Find starts (the shortcut, **Open** in Arcade Tools, or `arcade-find --show`) could do nothing when it arrived while the window system was still starting. Requests that arrive early now wait and open search as soon as it is ready.
+- Includes everything in 0.5.1, which was tagged but not released.
+
 ## 0.5.1 — 2026-11-01
 
 - Built against Arcade Link 0.4.14. Settings pages scroll across the whole window, so the scroll bar sits at the window edge instead of on the cards' right border. The install prompt's second button reads **Just run it** from the shared copy (Find no longer rewrites it locally).

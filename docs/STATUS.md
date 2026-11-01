@@ -1,5 +1,19 @@
 # Status
 
+## 2026-11-01: 0.5.2 (startup show request fix)
+
+- The stable Release run for `v0.5.1` (41298010325) failed in the end-to-end gate: the old
+  reference build (`041ccef`) failed at "clipboard files did not populate" instead of the
+  regression it is there to show. Cause, shared by 0.5.1: the command channel accepts `--show`
+  before the UI attaches (`hotkey::apply` waits on the desktop portal in between), and
+  `Hub::send` dropped messages until then. Proved with a local 2-second delay before `run_ui`:
+  2 of 2 lost before the fix, 3 of 3 delivered after. `Hub` now keeps early messages (bounded,
+  index statuses collapse to one) and replays them in order when the UI attaches; unit tests
+  cover order and the bound.
+- The old-build regression gate retries (up to 3 runs) only when the old build fails before the
+  regression point; the expected failure is still required and every attempt is kept as evidence.
+- `v0.5.1` stays tagged with no release; 0.5.2 carries its changes.
+
 ## 2026-11-01: 0.5.1 in progress (Arcade Link 0.4.14, screenshots)
 
 - Pins Arcade Link **v0.4.14** (merge `b08c391`). Cargo.lock changes only the arcade-link entry and
