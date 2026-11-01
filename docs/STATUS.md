@@ -1,5 +1,19 @@
 # Status
 
+## 2026-11-01: 0.5.1 in progress (Arcade Link 0.4.14, screenshots)
+
+- Pins Arcade Link **v0.4.14** (merge `b08c391`). Cargo.lock changes only the arcade-link entry and
+  Find's own version; the design kit re-sync changed no file, only its recorded tag. Link 0.4.13
+  moves the Settings scroll bar to the window edge and ships "Just run it", so Find's local
+  rewrite of "Just run it once" is gone. The notices generator now reads the Link version from
+  the build instead of a hard-coded "v0.4.12".
+- 0.5.0 shipped with the pre-overhaul Settings screenshot in the README and user guide (old
+  accent and layout); FIND.md §6's retake was missed. `scripts/docs-screenshots.py` now takes
+  the overlay with results and Settings' General page in light and dark from the real binary,
+  and README and `docs/user/index.md` use them.
+- Local: `scripts/check --core-only` passed (docs, vendored, unit tests, fmt, clippy
+  `-D warnings`, workspace tests, 190 contrast pairs).
+
 ## 2026-11-01: 0.5.0 released and verified
 
 - PR #12 merged as `729f630`. tag.yml made `v0.5.0`, and Release run 41274926096 published it
@@ -17,7 +31,7 @@
   verifies for Linux x64, Windows x64 and macOS arm64 and x64.
 - The rehearsal draft `v0.5.0-beta.2` is still a private draft. It is not public and not read
   by Tools.
-- Next: adopt Arcade Link 0.4.14 when it is tagged.
+- Next: adopt Arcade Link 0.4.14 when it is tagged (0.5.1, above).
 
 ## 2026-10-31 (night): PR #11 merged; CI no longer publishes on tags
 

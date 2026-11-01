@@ -8,7 +8,9 @@ since: 0.2.1
 
 Arcade Find searches the names and details of files and folders on your computer. It builds a local index and opens a small search overlay when you press its shortcut.
 
-![Arcade Find settings showing theme, search result rows, and content search options](images/settings.png)
+![The Arcade Find search overlay showing results for “report”: a source file, a folder, an image, a spreadsheet and a note, each with its folder, date and size](images/overlay-light.png)
+
+![Arcade Find Settings on the General page: appearance, start at login, notifications, recent and pinned items, hidden files and result rows](images/settings-light.png)
 
 ## Three useful things to start with
 

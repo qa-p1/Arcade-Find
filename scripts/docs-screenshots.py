@@ -125,6 +125,10 @@ def shoot(binary, out, root, theme):
         wait(lambda: status().get("engine", {}).get("phase") == "ready", "the index did not finish")
         find("--show", QUERY)
         wait(lambda: status().get("ui", {}).get("rows", 0) >= 6, "the results did not populate")
+        # --show selects the query so typing replaces it; End shows it as typed.
+        overlay = x("search", "--onlyvisible", "--class", "^dev.arcade.Find$").split()[-1]
+        x("windowfocus", "--sync", overlay)
+        x("key", "--window", overlay, "End")
         x("mousemove", 5, 5)
         time.sleep(1.0)
         sh("import", "-window", "root", str(out / f"overlay-{theme}.png"), env=env)
