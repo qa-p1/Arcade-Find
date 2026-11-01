@@ -17,6 +17,13 @@
   come from NTFS's lazily updated index entries, so a quiet pass can still record one late time.
   The test allows that one catch-up pass on Windows (only when nothing was added or removed),
   then requires a quiet pass. The scanner keeps reading the listing (no per-entry stat).
+- The beta Release run on the merge (41316610485) failed the end-to-end job after the install
+  UI check had passed ("16 real install/update/open/uninstall views captured"): Link v0.4.12's
+  `e2e.py` removed the isolated root while the document portal's FUSE mount at `runtime/doc` was
+  still attached, and `shutil.rmtree` raised ECONNABORTED from `os.fstat` (not covered by
+  `ignore_errors` on Python 3.12). Link v0.4.14 detaches FUSE mounts first and never fails a run
+  on cleanup (d16b903). CI now clones the runner and Link CLI at v0.4.14, the tag Find's crates
+  already build against.
 
 ## 2026-11-01: 0.5.2 (startup show request fix)
 
