@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.3 — 2026-11-01
+
+- The fix in 0.5.2 (the first search request after Find starts is no longer lost), released. 0.5.2 was tagged but not released: its end-to-end run tripped over a test that didn't wait for the previous Arcade Shelf to exit. That test is fixed and also recognises Arcade Shelf 0.4's window. Find itself is unchanged since 0.5.2.
+
 ## 0.5.2 — 2026-11-01
 
 - Fixed: the first search request after Find starts (the shortcut, **Open** in Arcade Tools, or `arcade-find --show`) could do nothing when it arrived while the window system was still starting. Requests that arrive early now wait and open search as soon as it is ready.

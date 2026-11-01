@@ -1,5 +1,18 @@
 # Status
 
+## 2026-11-01: 0.5.3 (0.5.2 plus two end-to-end test fixes)
+
+- The stable Release run for `v0.5.2` (41302508703) failed one check: "wayland: real Shelf did not
+  create a visible window". The new Shelf launch exited with "Arcade Shelf isn't running": the
+  previous check had quit Shelf, and the wait for it used `pgrep -f "^$ARCADE_SHELF_BIN"`, which
+  never matches a released AppImage (AppRun execs `squashfs-root/usr/bin/arcade-shelf`), so the
+  next Shelf started while the old one still held its instance lock. The wait now matches the
+  binary's folder (confirmed: the old pattern matched 0 processes, the new one 1, gone after 2
+  polls). Shelf 0.4 also waits for a quitting resident instead of exiting.
+- The Wayland drag checks also accept Shelf 0.4's app id `dev.arcade.Shelf`, since CI uses the
+  latest released Shelf. Local: 71/71 with Shelf 0.3.3 and 71/71 with the Shelf 0.4 build.
+- `v0.5.2` stays tagged with no release; 0.5.3 carries it. No Find code changed.
+
 ## 2026-11-01: 0.5.2 (startup show request fix)
 
 - The stable Release run for `v0.5.1` (41298010325) failed in the end-to-end gate: the old

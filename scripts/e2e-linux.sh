@@ -252,7 +252,10 @@ real_shelf_checks() {
   $shot "$OUT/$name-find-show-from-shelf.png" || true
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
   # The next Shelf must not find this one still holding its instance lock.
-  for _ in $(seq 1 50); do pgrep -f "^$ARCADE_SHELF_BIN" >/dev/null || break; sleep 0.1; done
+  # Match the binary's folder: a released AppImage's AppRun execs
+  # usr/bin/arcade-shelf below it, which "^$ARCADE_SHELF_BIN" never matched.
+  local shelf_dir; shelf_dir=$(dirname "$ARCADE_SHELF_BIN")
+  for _ in $(seq 1 100); do pgrep -f -- "^$shelf_dir/" >/dev/null || break; sleep 0.1; done
 }
 
 # Dragging results out of the overlay onto a visible Shelf window
