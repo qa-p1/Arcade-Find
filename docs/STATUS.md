@@ -12,6 +12,11 @@
 - The Wayland drag checks also accept Shelf 0.4's app id `dev.arcade.Shelf`, since CI uses the
   latest released Shelf. Local: 71/71 with Shelf 0.3.3 and 71/71 with the Shelf 0.4 build.
 - `v0.5.2` stays tagged with no release; 0.5.3 carries it. No Find code changed.
+- PR CI on Windows once failed `scan::tests::crawl_reconcile_and_excludes` with (0, 0, 1) on the
+  "third pass changes nothing" check; the next run passed. The directory listing's write times
+  come from NTFS's lazily updated index entries, so a quiet pass can still record one late time.
+  The test allows that one catch-up pass on Windows (only when nothing was added or removed),
+  then requires a quiet pass. The scanner keeps reading the listing (no per-entry stat).
 
 ## 2026-11-01: 0.5.2 (startup show request fix)
 
