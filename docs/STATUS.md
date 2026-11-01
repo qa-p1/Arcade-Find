@@ -1,5 +1,24 @@
 # Status
 
+## 2026-11-01: 0.5.0 released and verified
+
+- PR #12 merged as `729f630`. tag.yml made `v0.5.0`, and Release run 41274926096 published it
+  as the latest release (`--latest`, not a prerelease). Its first attempt failed in the e2e
+  teardown: removing the isolated root raised ECONNABORTED from a document-portal FUSE mount.
+  That is a harness defect, fixed in Arcade Link 0.4.14 (`remove_root` detaches mounts first and
+  never fails a finished run). Infra re-run once: green.
+- Checked from the public API: `releases/latest` is `v0.5.0`. The assets downloaded and
+  `sha256sum -c SHA256SUMS.txt` passed for the dmg, the setup exe and the AppImage.
+  `arcade-release.json` is `arcade.find` 0.5.0, channel stable, with macOS universal dmg,
+  Windows x64 inno and Linux x64 AppImage.
+- The catalog maps `arcade.find` to `qa-p1/Arcade-Find`.
+- Tools 0.4.1's own update code, fed the published reply, assets and catalog, finds an update
+  for an installed 0.4.5 (`updateAvailable`, not held back). The file it would download
+  verifies for Linux x64, Windows x64 and macOS arm64 and x64.
+- The rehearsal draft `v0.5.0-beta.2` is still a private draft. It is not public and not read
+  by Tools.
+- Next: adopt Arcade Link 0.4.14 when it is tagged.
+
 ## 2026-10-31 (night): PR #11 merged; CI no longer publishes on tags
 
 PR #11 merged as `8d25c46` (CI run 41233227380 green on head `5d85b0f`).
