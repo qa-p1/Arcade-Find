@@ -28,6 +28,8 @@ pub const RESULT_LIMIT: usize = 200;
 const EMPTY_STATE_MAX: usize = 30;
 const CONTENT_LIMIT: usize = 500;
 const CONTENT_TIMEOUT: Duration = Duration::from_secs(20);
+/// Messages kept for a UI that has not attached yet (index statuses collapse to one).
+const EARLY_LIMIT: usize = 64;
 
 /// Messages for the UI thread.
 #[derive(Debug, Clone)]
@@ -90,6 +92,9 @@ impl Outcome {
 #[derive(Default)]
 struct Hub {
     ui: OnceLock<UiSender>,
+    /// What arrived before the UI attached (a `--show` sent right after start,
+    /// the first index status): replayed in order when it attaches.
+    early: Mutex<Vec<UiMsg>>,
     engine: OnceLock<Weak<Engine>>,
     visible: AtomicBool,
     last_refresh: Mutex<Option<Instant>>,
@@ -98,8 +103,35 @@ struct Hub {
 impl Hub {
     fn send(&self, m: UiMsg) {
         if let Some(f) = self.ui.get() {
-            f(m);
+            return f(m);
         }
+        let mut early = self.early.lock().unwrap_or_else(|e| e.into_inner());
+        // The UI may have attached while this waited for the lock.
+        if let Some(f) = self.ui.get() {
+            drop(early);
+            return f(m);
+        }
+        match m {
+            // Only the latest index status matters.
+            UiMsg::Status(_) => early.retain(|e| !matches!(e, UiMsg::Status(_))),
+            _ if early.len() >= EARLY_LIMIT => return,
+            _ => {}
+        }
+        early.push(m);
+    }
+
+    /// Delivers what arrived early, then lets messages through directly.
+    /// Holding the lock while replaying keeps the order: a sender that missed
+    /// the fast path waits here and goes after the replay.
+    fn attach(&self, ui: UiSender) {
+        let mut early = self.early.lock().unwrap_or_else(|e| e.into_inner());
+        if self.ui.get().is_some() {
+            return;
+        }
+        for m in early.drain(..) {
+            ui(m);
+        }
+        let _ = self.ui.set(ui);
     }
 
     fn on_engine(&self, ev: EngineEvent) {
@@ -253,7 +285,7 @@ impl Service {
 
     /// Connects the UI. Starts Link off the first-frame path.
     pub fn attach_ui(self: &Arc<Self>, ui: UiSender) {
-        let _ = self.hub.ui.set(ui);
+        self.hub.attach(ui);
         self.hub.send(UiMsg::Status(index_state(&self.engine)));
         let me = self.clone();
         let _ = std::thread::Builder::new().name("find-link".into()).spawn(move || me.start_link());
@@ -1287,6 +1319,34 @@ impl LinkHost {
 #[cfg(test)]
 mod hub_tests {
     use super::*;
+
+    #[test]
+    fn messages_before_the_ui_attaches_are_replayed_in_order() {
+        let hub = Hub::default();
+        hub.send(UiMsg::Status(IndexState::default()));
+        hub.send(UiMsg::Show { query: Some("report".into()), reveal: None });
+        hub.send(UiMsg::Status(IndexState::default()));
+        hub.send(UiMsg::Toggle);
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let sink = seen.clone();
+        hub.attach(Arc::new(move |m| sink.lock().unwrap().push(format!("{m:?}"))));
+        hub.send(UiMsg::Hide);
+        let seen = seen.lock().unwrap();
+        assert_eq!(seen.len(), 4, "{seen:?}");
+        assert!(seen[0].starts_with("Show") && seen[0].contains("report"), "{seen:?}");
+        assert!(seen[1].starts_with("Status") && seen[2] == "Toggle" && seen[3] == "Hide", "{seen:?}");
+        assert!(hub.early.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn early_messages_are_bounded() {
+        let hub = Hub::default();
+        for _ in 0..EARLY_LIMIT * 2 {
+            hub.send(UiMsg::Refresh);
+            hub.send(UiMsg::Status(IndexState::default()));
+        }
+        assert_eq!(hub.early.lock().unwrap().len(), EARLY_LIMIT);
+    }
 
     #[test]
     fn shutdown_releases_the_idle_search_worker_and_service() {
