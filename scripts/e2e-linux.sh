@@ -252,7 +252,10 @@ real_shelf_checks() {
   $shot "$OUT/$name-find-show-from-shelf.png" || true
   "$ARCADE_LINK_CLI" quit arcade.shelf >/dev/null 2>&1 || true
   # The next Shelf must not find this one still holding its instance lock.
-  for _ in $(seq 1 50); do pgrep -f "^$ARCADE_SHELF_BIN" >/dev/null || break; sleep 0.1; done
+  # Match the binary's folder: a released AppImage's AppRun execs
+  # usr/bin/arcade-shelf below it, which "^$ARCADE_SHELF_BIN" never matched.
+  local shelf_dir; shelf_dir=$(dirname "$ARCADE_SHELF_BIN")
+  for _ in $(seq 1 100); do pgrep -f -- "^$shelf_dir/" >/dev/null || break; sleep 0.1; done
 }
 
 # Dragging results out of the overlay onto a visible Shelf window
@@ -342,7 +345,8 @@ if command -v sway >/dev/null && command -v grim >/dev/null && command -v wtype 
 output HEADLESS-1 resolution 1280x800 bg #3a4a5a solid_color
 # The winit window (ARCADE_FIND_BACKEND=winit) floats, as on GNOME.
 for_window [app_id="dev.arcade.Find"] floating enable
-for_window [app_id="arcade.shelf"] floating enable, move position 40 40
+# Shelf's app id: arcade.shelf until 0.3, dev.arcade.Shelf from 0.4.
+for_window [app_id="^(arcade\.shelf|dev\.arcade\.Shelf)$"] floating enable, move position 40 40
 EOF
   WLR_BACKENDS=headless WLR_LIBINPUT_NO_DEVICES=1 WLR_RENDERER=pixman dbus-run-session -- sway -c "$T/sway.conf" >"$OUT/sway.log" 2>&1 &
   PIDS+=($!)
@@ -374,7 +378,7 @@ EOF
     wl_shelf_rect() {
       swaymsg -t get_tree | python3 -I -c 'import json,sys
 def walk(n):
-    if n.get("app_id") == "arcade.shelf" and n.get("visible"):
+    if n.get("app_id") in ("arcade.shelf", "dev.arcade.Shelf") and n.get("visible"):
         r = n["rect"]; print(r["x"], r["y"], r["width"], r["height"]); sys.exit(0)
     for c in n.get("nodes", []) + n.get("floating_nodes", []): walk(c)
 walk(json.load(sys.stdin)); sys.exit(1)'

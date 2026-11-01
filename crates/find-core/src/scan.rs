@@ -629,8 +629,13 @@ mod tests {
             assert_eq!(ix.size(ix.lookup(&root.join("Docs/report.pdf")).unwrap()), 20);
             assert_eq!(ix.live(), live_before - 4 + 2);
         }
-        // A third pass changes nothing.
-        let st = sc.full();
+        // A third pass changes nothing. On Windows a folder listing can report
+        // an entry's write time late (NTFS updates the parent's index entry
+        // lazily), so one pass may still record it; the pass after that is quiet.
+        let mut st = sc.full();
+        if cfg!(windows) && st.added == 0 && st.removed == 0 && st.changed > 0 {
+            st = sc.full();
+        }
         assert_eq!((st.added, st.removed, st.changed), (0, 0, 0));
         std::fs::remove_dir_all(dir).ok();
     }
