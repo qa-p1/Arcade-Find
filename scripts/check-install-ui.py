@@ -60,7 +60,7 @@ def main():
                     while time.monotonic() < deadline and not json.loads(config.read_text()).get('welcomeComplete'):
                         time.sleep(.05)
                     assert json.loads(config.read_text()).get('welcomeComplete'), 'Skip did not complete welcome'
-                    subprocess.run(['xdotool', 'key', 'ctrl+w'], check=True)
+                    subprocess.run(['xdotool', 'keydown', 'ctrl', 'sleep', '0.05', 'key', 'w', 'sleep', '0.05', 'keyup', 'ctrl'], check=True)  # held, as a person does
                     assert child.wait(timeout=10) == 0
                 finally:
                     if child.poll() is None:

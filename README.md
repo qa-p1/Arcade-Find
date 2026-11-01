@@ -17,7 +17,19 @@ Arcade Find opens a local file search with a shortcut. Type a few letters to fin
 
 It runs on **Linux** (x86_64; Wayland and X11), **Windows** (x64) and **macOS** (universal: Apple Silicon and Intel). Windows and macOS are built and tested in CI only, not verified on a real desktop.
 
-<p align="center"><img src="docs/user/images/settings.png" width="720" alt="Arcade Find settings showing theme, search result rows, and content search options"></p>
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/user/images/overlay-dark.png">
+    <img src="docs/user/images/overlay-light.png" width="720" alt="The Arcade Find search overlay showing results for “report”: a source file, a folder, an image, a spreadsheet and a note, each with its folder, date and size">
+  </picture>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/user/images/settings-dark.png">
+    <img src="docs/user/images/settings-light.png" width="560" alt="Arcade Find Settings on the General page: appearance, start at login, notifications, recent and pinned items, hidden files and result rows">
+  </picture>
+</p>
 
 ## Download and install
 
@@ -25,7 +37,7 @@ Download the file for your system from [Releases](https://github.com/qa-p1/Arcad
 
 | Platform | File | How to install |
 |---|---|---|
-| Linux x86_64 | `Arcade-Find-x86_64.AppImage` | Run it. The first run asks **Install Arcade Find?** and installs to `~/Applications/Arcade/`, adds a menu entry, an `arcade-find` link in `~/.local/bin` and an optional start at login. **Just run it once** skips installing. |
+| Linux x86_64 | `Arcade-Find-x86_64.AppImage` | Run it. The first run asks **Install Arcade Find?** and installs to `~/Applications/Arcade/`, adds a menu entry, an `arcade-find` link in `~/.local/bin` and an optional start at login. **Just run it** skips installing. |
 | Windows x64 | `Arcade-Find-<version>-x64-setup.exe` | Run Setup. Installs for your user without admin, adds a Start menu entry and an `arcade-find.cmd` shim in `%LOCALAPPDATA%\Arcade\bin` on the user PATH. |
 | macOS (universal) | `Arcade-Find-<version>-universal.dmg` | Open the dmg and drag Arcade Find to Applications. Run from the dmg or Downloads, it offers to move itself to Applications. |
 

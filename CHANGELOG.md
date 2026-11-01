@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.1 — 2026-11-01
+
+- Built against Arcade Link 0.4.14. Settings pages scroll across the whole window, so the scroll bar sits at the window edge instead of on the cards' right border. The install prompt's second button reads **Just run it** from the shared copy (Find no longer rewrites it locally).
+- README and user-guide screenshots show the 0.5 look: the search overlay with results and Settings' General page, in light and dark (`scripts/docs-screenshots.py` retakes them).
+
 ## 0.5.0 — 2026-10-31
 
 - New lime accent, Inter and the shared Arcade kit across search, Settings and the install prompt.

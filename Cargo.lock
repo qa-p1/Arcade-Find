@@ -184,7 +184,7 @@ dependencies = [
 
 [[package]]
 name = "arcade-find"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -224,8 +224,8 @@ dependencies = [
 
 [[package]]
 name = "arcade-link"
-version = "0.4.12"
-source = "git+https://github.com/qa-p1/Arcade-Link?tag=v0.4.12#aab656965489d7cdf0fa0b2670c55a20ac88e38a"
+version = "0.4.14"
+source = "git+https://github.com/qa-p1/Arcade-Link?tag=v0.4.14#b08c391de1bfc9a15c7f01b3c17911dd42a1f6e5"
 dependencies = [
  "egui",
  "getrandom 0.4.3",
@@ -1229,7 +1229,7 @@ dependencies = [
 
 [[package]]
 name = "find-core"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "arcade-link",
  "crc32fast",

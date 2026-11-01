@@ -48,6 +48,16 @@ at its top and bottom in both themes, at 720×520 and 760×560, with 100% and
 125% text. Download the evidence and inspect every capture. Automated bounds
 checks do not replace that review. Native evidence is under `target/e2e`.
 
+## Docs screenshots
+
+`scripts/docs-screenshots.py` retakes the README and `docs/user/images` screenshots (the search
+overlay with results and Settings' General page, light and dark) from the real release binary on a
+private Xvfb with xcompmgr, in a throwaway profile that indexes only a generated demo folder:
+
+    dbus-run-session -- python3 scripts/docs-screenshots.py target/release/arcade-find docs/user/images <work dir>
+
+It needs Xvfb, xcompmgr, xdotool and ImageMagick 6. Look at every image before committing it.
+
 ## Desktop-only checks
 
 The real Hyprland shortcut, cursor-monitor placement, warm-open budget,

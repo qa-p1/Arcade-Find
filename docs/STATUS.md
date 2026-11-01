@@ -1,5 +1,43 @@
 # Status
 
+## 2026-11-01: 0.5.1 in progress (Arcade Link 0.4.14, screenshots)
+
+- Pins Arcade Link **v0.4.14** (merge `b08c391`). Cargo.lock changes only the arcade-link entry and
+  Find's own version; the design kit re-sync changed no file, only its recorded tag. Link 0.4.13
+  moves the Settings scroll bar to the window edge and ships "Just run it", so Find's local
+  rewrite of "Just run it once" is gone. The notices generator now reads the Link version from
+  the build instead of a hard-coded "v0.4.12".
+- 0.5.0 shipped with the pre-overhaul Settings screenshot in the README and user guide (old
+  accent and layout); FIND.md §6's retake was missed. `scripts/docs-screenshots.py` now takes
+  the overlay with results and Settings' General page in light and dark from the real binary,
+  and README and `docs/user/index.md` use them.
+- CI's end-to-end job failed on the first PR push: Settings ignored `xdotool key ctrl+w`. Reproduced
+  locally only with Find pinned to a busy core (4 of 4 runs; 6 of 6 passed unloaded), and 0.5.0's
+  debug build fails the same way under the same load, so it is not new. Settings was idle and still
+  answered Ctrl+W when Ctrl was held: the instant press-and-release reached the starved window as a
+  bare W. The Settings close checks now hold the modifier for 50 ms (3 of 3 runs pass under load).
+- Local: `scripts/check --core-only` passed (docs, vendored, unit tests, fmt, clippy
+  `-D warnings`, workspace tests, 190 contrast pairs).
+
+## 2026-11-01: 0.5.0 released and verified
+
+- PR #12 merged as `729f630`. tag.yml made `v0.5.0`, and Release run 41274926096 published it
+  as the latest release (`--latest`, not a prerelease). Its first attempt failed in the e2e
+  teardown: removing the isolated root raised ECONNABORTED from a document-portal FUSE mount.
+  That is a harness defect, fixed in Arcade Link 0.4.14 (`remove_root` detaches mounts first and
+  never fails a finished run). Infra re-run once: green.
+- Checked from the public API: `releases/latest` is `v0.5.0`. The assets downloaded and
+  `sha256sum -c SHA256SUMS.txt` passed for the dmg, the setup exe and the AppImage.
+  `arcade-release.json` is `arcade.find` 0.5.0, channel stable, with macOS universal dmg,
+  Windows x64 inno and Linux x64 AppImage.
+- The catalog maps `arcade.find` to `qa-p1/Arcade-Find`.
+- Tools 0.4.1's own update code, fed the published reply, assets and catalog, finds an update
+  for an installed 0.4.5 (`updateAvailable`, not held back). The file it would download
+  verifies for Linux x64, Windows x64 and macOS arm64 and x64.
+- The rehearsal draft `v0.5.0-beta.2` is still a private draft. It is not public and not read
+  by Tools.
+- Next: adopt Arcade Link 0.4.14 when it is tagged (0.5.1, above).
+
 ## 2026-10-31 (night): PR #11 merged; CI no longer publishes on tags
 
 PR #11 merged as `8d25c46` (CI run 41233227380 green on head `5d85b0f`).

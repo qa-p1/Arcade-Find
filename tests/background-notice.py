@@ -93,7 +93,11 @@ def main():
                                         env=env, capture_output=True, text=True)
                 return result.stdout.splitlines()[-1] if result.returncode == 0 else None
             identifier = until(window, 'Settings did not map for close notice')
-            subprocess.run(['xdotool', 'windowfocus', '--sync', identifier, 'key', key], env=env, check=True)
+            # Hold the modifier, as a person does: a starved runner can otherwise
+            # deliver the key without it.
+            modifier, letter = key.split('+')
+            subprocess.run(['xdotool', 'windowfocus', '--sync', identifier, 'keydown', modifier, 'sleep', '0.05',
+                            'key', letter, 'sleep', '0.05', 'keyup', modifier], env=env, check=True)
             until(lambda: helper.poll() is not None, 'Settings did not exit after closing')
             assert helper.returncode == 0
         finally:
