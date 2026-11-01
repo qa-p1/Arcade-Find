@@ -25,7 +25,7 @@ Download the file for your system from [Releases](https://github.com/qa-p1/Arcad
 
 | Platform | File | How to install |
 |---|---|---|
-| Linux x86_64 | `Arcade-Find-x86_64.AppImage` | Run it. The first run asks **Install Arcade Find?** and installs to `~/Applications/Arcade/`, adds a menu entry, an `arcade-find` link in `~/.local/bin` and an optional start at login. **Just run it once** skips installing. |
+| Linux x86_64 | `Arcade-Find-x86_64.AppImage` | Run it. The first run asks **Install Arcade Find?** and installs to `~/Applications/Arcade/`, adds a menu entry, an `arcade-find` link in `~/.local/bin` and an optional start at login. **Just run it** skips installing. |
 | Windows x64 | `Arcade-Find-<version>-x64-setup.exe` | Run Setup. Installs for your user without admin, adds a Start menu entry and an `arcade-find.cmd` shim in `%LOCALAPPDATA%\Arcade\bin` on the user PATH. |
 | macOS (universal) | `Arcade-Find-<version>-universal.dmg` | Open the dmg and drag Arcade Find to Applications. Run from the dmg or Downloads, it offers to move itself to Applications. |
 

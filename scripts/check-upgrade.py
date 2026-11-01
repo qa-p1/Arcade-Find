@@ -9,6 +9,8 @@ import subprocess
 import sys
 import time
 
+VERSION = subprocess.run([sys.executable, str(Path(__file__).with_name('check-version.py'))], check=True, capture_output=True, text=True).stdout.strip()
+
 
 def until(fn, message, seconds=20):
     deadline = time.monotonic() + seconds
@@ -87,7 +89,7 @@ def main():
             (legacy_config, 'settings.json'), (legacy_data, 'pins.json'), (legacy_data, 'frecency.json'),
         )}
         new_receipt = command(current, '--install', '--silent', '--no-launch', '--keep-download')
-        assert new_receipt['version'] == '0.5.0', new_receipt
+        assert new_receipt['version'] == VERSION, new_receipt
         installed = Path(new_receipt['path'])
         assert installed.is_relative_to(root)
         new_config = Path(env['XDG_CONFIG_HOME']) / 'arcade/find'
@@ -138,10 +140,10 @@ def main():
         assert all((new_data / name).read_bytes() == kept[name] for name in ('pins.json', 'frecency.json'))
         assert (new_config / 'settings.json').exists() and pinned.exists() and recent.exists()
         assert not installed.exists()
-        (output / 'result.json').write_text(json.dumps({'from': '0.4.3', 'to': '0.5.0',
+        (output / 'result.json').write_text(json.dumps({'from': '0.4.3', 'to': VERSION,
             'shortcut': 'Ctrl+Alt+J', 'settings': True, 'pins': True, 'history': True,
             'desktopEntry': 'dev.arcade.Find.desktop', 'uninstallKeptData': True}, indent=2) + '\n')
-    print('Real AppImage upgrade 0.4.3 → 0.5.0: settings, shortcut, pins/history, verified folder migration, desktop/login entries and data-preserving uninstall passed.')
+    print(f'Real AppImage upgrade 0.4.3 → {VERSION}: settings, shortcut, pins/history, verified folder migration, desktop/login entries and data-preserving uninstall passed.')
 
 
 if __name__ == '__main__':
