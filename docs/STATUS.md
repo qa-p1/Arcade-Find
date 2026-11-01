@@ -11,6 +11,11 @@
   accent and layout); FIND.md §6's retake was missed. `scripts/docs-screenshots.py` now takes
   the overlay with results and Settings' General page in light and dark from the real binary,
   and README and `docs/user/index.md` use them.
+- CI's end-to-end job failed on the first PR push: Settings ignored `xdotool key ctrl+w`. Reproduced
+  locally only with Find pinned to a busy core (4 of 4 runs; 6 of 6 passed unloaded), and 0.5.0's
+  debug build fails the same way under the same load, so it is not new. Settings was idle and still
+  answered Ctrl+W when Ctrl was held: the instant press-and-release reached the starved window as a
+  bare W. The Settings close checks now hold the modifier for 50 ms (3 of 3 runs pass under load).
 - Local: `scripts/check --core-only` passed (docs, vendored, unit tests, fmt, clippy
   `-D warnings`, workspace tests, 190 contrast pairs).
 

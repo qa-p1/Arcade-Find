@@ -91,7 +91,7 @@ def main():
                                 headers.append(subprocess.check_output(['convert', str(destination), '-crop', f'{width}x{round(95 * zoom)}+0+0', '+repage', 'rgba:-']))
                                 captures.append(name + '-' + position)
                             assert headers[0] == headers[1], (name, 'page heading moved while its body scrolled')
-                    xdo('key', 'ctrl+w')
+                    xdo('keydown', 'ctrl', 'sleep', .05, 'key', 'w', 'sleep', .05, 'keyup', 'ctrl')  # held, as a person does
                     assert process.wait(timeout=10) == 0
                 finally:
                     if process.poll() is None:

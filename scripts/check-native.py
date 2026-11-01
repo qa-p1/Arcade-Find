@@ -68,6 +68,12 @@ def main():
         def xdo(*args):
             return subprocess.check_output(['xdotool', *map(str, args)], env=env, text=True).strip()
 
+        def chord(modifier, key):
+            # Hold the modifier the way a person does. `xdotool key ctrl+w` presses and
+            # releases Ctrl within microseconds; a starved CI runner can then deliver
+            # W to the window without Ctrl, and Settings stays open.
+            xdo('keydown', modifier, 'sleep', .05, 'key', key, 'sleep', .05, 'keyup', modifier)
+
         def window(pid, title):
             result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--pid', str(pid)], env=env, text=True, capture_output=True)
             for identifier in result.stdout.splitlines() if result.returncode == 0 else []:
@@ -121,7 +127,7 @@ def main():
                             xdo('click', 1)
                             time.sleep(.25)
                             capture(settings_window, f'settings-{page}-{theme}-{width}x{height}-{scale}')
-                    xdo('key', 'ctrl+w')
+                    chord('ctrl', 'w')
                     assert helper.wait(timeout=10) == 0
                     assert status()['pid'] == pid, 'closing Settings replaced or quit the resident'
             memory.append(int(next(line.split()[1] for line in Path(f'/proc/{pid}/status').read_text().splitlines() if line.startswith('VmRSS:'))))
@@ -138,7 +144,7 @@ def main():
             light = subprocess.check_output(['convert', str(OUT / 'live-light.png'), '-format', '%[pixel:p{400,20}]', 'info:'], text=True)
             dark = subprocess.check_output(['convert', str(OUT / 'live-dark.png'), '-format', '%[pixel:p{400,20}]', 'info:'], text=True)
             assert light != dark, (light, dark, 'theme did not change on the live window')
-            xdo('key', 'ctrl+w')
+            chord('ctrl', 'w')
             assert helper.wait(timeout=10) == 0
             # Native geometry survives closing the helper, independent of the
             # resident. This fails when every launch uses the default size.
@@ -149,7 +155,7 @@ def main():
             xdo('windowsize', '--sync', identifier, 900, 650)
             xdo('windowmove', '--sync', identifier, 100, 80)
             time.sleep(.4)
-            xdo('key', 'ctrl+w')
+            chord('ctrl', 'w')
             assert helper.wait(timeout=10) == 0
             helper = subprocess.Popen([str(binary), '--settings-window'], env=env, stdout=log, stderr=log)
             processes.append(helper)
@@ -157,7 +163,7 @@ def main():
             geometry = dict(line.split('=', 1) for line in xdo('getwindowgeometry', '--shell', identifier).splitlines())
             assert tuple(int(geometry[key]) for key in ('X', 'Y', 'WIDTH', 'HEIGHT')) == (100, 80, 900, 650), geometry
             xdo('windowfocus', '--sync', identifier)
-            xdo('key', 'ctrl+w')
+            chord('ctrl', 'w')
             assert helper.wait(timeout=10) == 0
             # Focus loss caused by mapping is ignored, later focus loss hides.
             focus_title = 'Find focus probe ' + str(os.getpid())
