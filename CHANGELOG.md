@@ -2,6 +2,7 @@
 
 ## 0.5.4 — 2026-11-06
 
+- Sanitize inherited AppImage paths when restarting Find, starting it from Settings, or opening another Arcade app, preventing the old image's libraries from leaking into the new launcher.
 - Keep Move to Trash confirmation open when modifiers, Tab, arrows, text or the search-focus shortcut are pressed. Enter/Delete confirm the same pending targets, and Escape cancels explicitly.
 - Add model regressions for unrelated keys followed by Enter, explicit cancellation and Delete confirmation. These tests inspect effects without performing file operations.
 

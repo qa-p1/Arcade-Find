@@ -1119,7 +1119,7 @@ pub fn restart_successor() -> Result<(), String> {
     let exe = arcade_link::manifest::current_executable();
     let mut command = std::process::Command::new(exe);
     // A program from another image: it mustn't keep this one mounted.
-    arcade_link::childenv::detach_from_image(&mut command)
+    arcade_link::childenv::sanitize(&mut command)
         .args(["--background", "--successor-of", &std::process::id().to_string()])
         .stdin(std::process::Stdio::null())
         .stdout(std::process::Stdio::null())
