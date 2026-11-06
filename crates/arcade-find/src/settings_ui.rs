@@ -1141,7 +1141,7 @@ impl SettingsApp {
             if start {
                 let exe = arcade_link::manifest::current_executable();
                 let mut command = std::process::Command::new(exe);
-                if arcade_link::childenv::detach_from_image(&mut command).arg("--background").spawn().is_err() {
+                if arcade_link::childenv::sanitize(&mut command).arg("--background").spawn().is_err() {
                     self.toast("Couldn't start Arcade Find. Open it from your apps menu.", Tone::Danger);
                 }
                 self.status_at = Some(Instant::now() - Duration::from_secs(1));
@@ -1376,7 +1376,7 @@ impl SettingsApp {
             return self.toast("Couldn't open the app. It isn't installed any more.", Tone::Danger);
         };
         let mut command = std::process::Command::new(&m.executable);
-        if arcade_link::childenv::detach_from_image(&mut command).spawn().is_err() {
+        if arcade_link::childenv::sanitize(&mut command).spawn().is_err() {
             self.toast(format!("Couldn't open {}. Try opening it from your apps menu.", m.name), Tone::Danger);
         }
     }

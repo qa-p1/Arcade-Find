@@ -881,7 +881,7 @@ impl Overlay {
             Key::F1 => return vec![Effect::OpenGuide],
             Key::Char('q') if primary => return vec![Effect::Quit],
             Key::Char(',') if primary => return vec![Effect::OpenSettings],
-            Key::Char('k') if primary => {
+            Key::Char('k') if primary && !matches!(self.mode, Mode::ConfirmTrash { .. }) => {
                 self.mode = Mode::Results;
                 self.nav = false;
                 self.input.select_all();
@@ -912,10 +912,16 @@ impl Overlay {
                 return vec![];
             }
             Mode::ConfirmTrash { targets } => {
-                let t = std::mem::take(targets);
-                self.mode = Mode::Results;
                 return match ev.key {
-                    Key::Enter | Key::Delete => vec![Effect::Trash(t)],
+                    Key::Enter | Key::Delete => {
+                        let t = std::mem::take(targets);
+                        self.mode = Mode::Results;
+                        vec![Effect::Trash(t)]
+                    }
+                    Key::Escape => {
+                        self.mode = Mode::Results;
+                        vec![]
+                    }
                     _ => vec![],
                 };
             }
@@ -1457,6 +1463,39 @@ mod tests {
         assert!(matches!(o.mode, Mode::ConfirmTrash { .. }));
         let e = o.key(&KeyEvent::new(Key::Enter), &Ctx(true));
         assert!(matches!(&e[0], Effect::Trash(t) if t.len() == 3));
+    }
+
+    #[test]
+    fn trash_confirmation_survives_unrelated_keys() {
+        let mut o = Overlay::default();
+        let targets = vec![row("keep.txt"), row("other.txt")];
+        o.mode = Mode::ConfirmTrash { targets: targets.clone() };
+        for event in [
+            KeyEvent::new(Key::Other).with(Mods { shift: true, ..Mods::default() }),
+            KeyEvent::new(Key::Tab),
+            KeyEvent::new(Key::Down),
+            KeyEvent::new(Key::Left),
+            KeyEvent::new(Key::PageDown),
+            KeyEvent::new(Key::Space),
+            KeyEvent::ch('x'),
+            KeyEvent::ch('k').with(Mods { ctrl: true, ..Mods::default() }),
+        ] {
+            assert!(o.key(&event, &Ctx(true)).is_empty());
+            assert!(matches!(&o.mode, Mode::ConfirmTrash { targets } if targets.len() == 2), "unrelated key dismissed confirmation: {event:?}");
+        }
+        let effects = o.key(&KeyEvent::new(Key::Enter), &Ctx(true));
+        assert!(matches!(&effects[..], [Effect::Trash(rows)] if rows.iter().map(|r| &r.path).eq(targets.iter().map(|r| &r.path))));
+        assert!(matches!(o.mode, Mode::Results));
+    }
+
+    #[test]
+    fn trash_confirmation_cancels_only_on_escape_and_keeps_delete_confirmation() {
+        let mut o = Overlay::default();
+        o.mode = Mode::ConfirmTrash { targets: vec![row("keep.txt")] };
+        assert!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)).is_empty());
+        assert!(matches!(o.mode, Mode::Results));
+        o.mode = Mode::ConfirmTrash { targets: vec![row("trash.txt")] };
+        assert!(matches!(&o.key(&KeyEvent::new(Key::Delete), &Ctx(true))[..], [Effect::Trash(rows)] if rows[0].name == "trash.txt"));
     }
 
     #[test]

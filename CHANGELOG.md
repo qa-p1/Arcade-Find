@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.4 — 2026-11-06
+
+- Sanitize inherited AppImage paths when restarting Find, starting it from Settings, or opening another Arcade app, preventing the old image's libraries from leaking into the new launcher.
+- Keep Move to Trash confirmation open when modifiers, Tab, arrows, text or the search-focus shortcut are pressed. Enter/Delete confirm the same pending targets, and Escape cancels explicitly.
+- Add model regressions for unrelated keys followed by Enter, explicit cancellation and Delete confirmation. These tests inspect effects without performing file operations.
+
 ## 0.5.3 — 2026-11-01
 
 - The fix in 0.5.2 (the first search request after Find starts is no longer lost), released. 0.5.2 was tagged but not released: its end-to-end run tripped over a test that didn't wait for the previous Arcade Shelf to exit. That test is fixed and also recognises Arcade Shelf 0.4's window. Find itself is unchanged since 0.5.2.
