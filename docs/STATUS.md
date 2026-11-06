@@ -1,5 +1,14 @@
 # Status
 
+## 2026-11-06: 0.5.4 confirmation keyboard follow-up
+
+The trash confirmation previously cleared its targets and returned to results
+before inspecting the key. An unrelated modifier or navigation key therefore
+silently cancelled it. The mode now retains its targets until Enter/Delete
+confirms or Escape cancels; the search-focus shortcut also leaves it intact.
+Model regressions cover unrelated keys followed by Enter and check explicit
+cancel/Delete behavior. No test executes the returned filesystem effects.
+
 ## 2026-11-01: 0.5.3 (0.5.2 plus two end-to-end test fixes)
 
 - The stable Release run for `v0.5.2` (41302508703) failed one check: "wayland: real Shelf did not
