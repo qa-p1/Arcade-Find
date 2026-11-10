@@ -1,0 +1,32 @@
+Arcade Find: press a shortcut, type, and any file or folder shows up.
+
+Usage: arcade-find [OPTION]
+
+  (no option)          Open the search overlay
+  --show [QUERY]       Open the overlay, optionally with a query
+  --toggle             Open or close the overlay (bind this to a shortcut)
+  --hide               Close the overlay
+  --background         Start without showing anything (login)
+  --settings           Open Settings
+  --search QUERY       Print matching paths (--limit N, --hidden, --json)
+  --status             Print the running instance's status as JSON
+  --rescan             Rescan all indexed folders
+  --restart            Restart the running instance
+  --quit               Quit the running instance
+  --version            Print the version
+  --install            Install this AppImage / macOS bundle
+    --silent           Same installation defaults, without a dialog
+    --no-launch        Install without starting the installed copy
+    --keep-download    Keep the AppImage in Downloads (by default --silent
+                       removes it there; files elsewhere are never removed)
+    --channel C        Receipt channel (default: stable)
+  --uninstall          Remove this installation via its receipt
+    --silent           Uninstall without a confirmation dialog
+    --remove-data      Also remove Find's settings, index, history and pins
+  --repair             Repair integration (run from a moved copy to repoint it)
+  --integration-status Print integration JSON without changing anything
+  --arcade-manifest    Print the Arcade Link manifest
+  --arcade-invoke      Serve one Arcade Link request from stdin
+
+Environment: ARCADE_FIND_HOME (isolated data root), ARCADE_FIND_PROFILE,
+ARCADE_HOME (Arcade Link locations).

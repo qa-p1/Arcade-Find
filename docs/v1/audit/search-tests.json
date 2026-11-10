@@ -1,0 +1,1407 @@
+[
+  {
+    "query": "Alpha",
+    "code": 0,
+    "response": {
+      "elapsedMs": 1.009919,
+      "matched": 2453,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d5/alpha-plan-5.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d7/alpha-alpha-7.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d38/alpha-beta-238.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d165/alpha-plan-765.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d189/alpha-beta-589.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d34/alpha-draft-34.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d46/alpha-notes-46.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d86/alpha-plan-486.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d88/alpha-alpha-88.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d105/alpha-plan-905.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d131/alpha-beta-131.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d187/alpha-beta-587.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d8/alpha-meeting-8.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d13/alpha-budget-13.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d16/alpha-beta-1216.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d18/alpha-beta-3418.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d21/alpha-beta-5621.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d23/alpha-plan-4823.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d26/alpha-plan-8826.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d27/alpha-gamma-427.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d31/alpha-plan-5831.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d31/alpha-plan-2231.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d35/alpha-backup-35.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d38/alpha-plan-7438.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d44/alpha-plan-2444.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d45/alpha-plan-4645.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d57/alpha-beta-8457.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d68/alpha-notes-668.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d71/alpha-plan-1871.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d71/alpha-notes-471.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d90/alpha-beta-5890.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d113/alpha-plan-6913.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d115/alpha-plan-6715.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d129/alpha-plan-1529.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d136/alpha-beta-2336.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d137/alpha-plan-5337.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d151/alpha-plan-8551.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d158/alpha-beta-5558.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d160/alpha-plan-5360.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d160/alpha-photo-160.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d168/alpha-beta-2168.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d170/alpha-notes-170.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d174/alpha-gamma-374.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d0/alpha-beta-4800.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d0/alpha-plan-3600.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d0/alpha-beta-3400.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d1/alpha-beta-1601.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d4/alpha-beta-9404.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d4/alpha-plan-9204.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d7/alpha-plan-4407.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d12/alpha-plan-7012.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d11/alpha-beta-4411.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d18/alpha-photo-818.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d20/alpha-photo-220.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d23/alpha-beta-8423.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d25/alpha-plan-3825.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d30/alpha-plan-3830.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d32/alpha-beta-9032.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d32/alpha-beta-3632.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d34/alpha-alpha-234.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d41/alpha-photo-641.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d43/alpha-beta-8443.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d52/alpha-plan-4652.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d53/alpha-plan-2653.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d56/alpha-photo-656.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d66/alpha-plan-6466.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d67/alpha-beta-5467.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d84/alpha-plan-3884.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d93/alpha-beta-6093.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d95/alpha-beta-2695.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d98/alpha-plan-7498.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d100/alpha-plan-5900.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d103/alpha-plan-5103.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d103/alpha-plan-4303.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d104/alpha-plan-2504.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d106/alpha-plan-3706.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d106/alpha-delta-506.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d105/alpha-delta-505.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d110/alpha-beta-7110.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d109/alpha-beta-6109.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d114/alpha-plan-1114.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d115/alpha-notes-115.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d118/alpha-plan-5518.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d127/alpha-draft-527.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d129/alpha-gamma-329.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d133/alpha-plan-1333.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d134/alpha-plan-7934.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d143/alpha-plan-5743.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d148/alpha-final-748.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d149/alpha-plan-2749.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d150/alpha-beta-8550.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d156/alpha-plan-4356.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d161/alpha-draft-561.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d163/alpha-beta-3563.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d169/alpha-plan-2169.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d170/alpha-plan-4370.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d177/alpha-draft-377.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d179/alpha-plan-8379.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d179/alpha-beta-1579.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d180/alpha-plan-9580.pdf",
+          "size": 0
+        }
+      ]
+    }
+  },
+  {
+    "query": "AlpRpt",
+    "code": 0,
+    "response": {
+      "elapsedMs": 1.002167,
+      "matched": 67,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/Alpha Report 2026.txt",
+          "size": 25
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d48/alpha-report-848.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d19/alpha-report-7819.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d36/alpha-report-3636.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d38/alpha-report-6838.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d46/alpha-report-5046.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d66/alpha-report-4666.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d78/alpha-report-1478.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d105/alpha-report-7105.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d105/alpha-report-4105.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d123/alpha-report-4123.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d127/alpha-report-4727.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d129/alpha-report-929.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d135/alpha-report-2335.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d159/alpha-report-6159.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d172/alpha-report-5572.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d178/alpha-report-9378.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d5/alpha-report-6805.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d14/alpha-report-6814.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d18/alpha-report-12818.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d20/alpha-report-9620.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d33/alpha-report-9033.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d49/alpha-report-6849.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d51/alpha-report-1251.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d52/alpha-report-9052.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d57/alpha-report-18857.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d62/alpha-report-8262.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d63/alpha-report-12263.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d66/alpha-report-8466.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d67/alpha-report-6667.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d69/alpha-report-1469.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d74/alpha-report-5474.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d94/alpha-report-7894.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d100/alpha-report-11700.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d125/alpha-report-3725.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d128/alpha-report-8328.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d145/alpha-report-11945.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d153/alpha-report-6753.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d176/alpha-report-3376.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d175/alpha-report-4575.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d177/alpha-report-16377.md",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d180/alpha-report-7180.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d184/alpha-report-15584.rs",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d1/alpha-report-14001.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d23/alpha-report-19423.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d24/alpha-report-15624.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d37/alpha-report-10437.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d56/alpha-report-11656.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d64/alpha-report-11664.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d69/alpha-report-13669.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d74/alpha-report-19074.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d80/alpha-report-16880.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d92/alpha-report-17492.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d98/alpha-report-11298.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d104/alpha-report-11104.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d105/alpha-report-10705.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d108/alpha-report-12708.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d116/alpha-report-13716.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d132/alpha-report-18732.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d136/alpha-report-13536.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d147/alpha-report-15347.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d150/alpha-report-14750.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d163/alpha-report-18563.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d177/alpha-report-12177.jpg",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d181/alpha-report-16981.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d188/alpha-report-12388.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970225,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d189/alpha-report-19989.pdf",
+          "size": 0
+        }
+      ]
+    }
+  },
+  {
+    "query": "Report 2026",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.6327010000000001,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/Alpha Report 2026.txt",
+          "size": 25
+        }
+      ]
+    }
+  },
+  {
+    "query": "\"Alpha Report\"",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.666295,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/Alpha Report 2026.txt",
+          "size": 25
+        }
+      ]
+    }
+  },
+  {
+    "query": "audit/Alpha",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.415492,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/Alpha Report 2026.txt",
+          "size": 25
+        }
+      ]
+    }
+  },
+  {
+    "query": "ext:gz in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.317712,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/invoice.tar.gz",
+          "size": 13
+        }
+      ]
+    }
+  },
+  {
+    "query": "*.tar.gz",
+    "code": 0,
+    "response": {
+      "elapsedMs": 1.212391,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/invoice.tar.gz",
+          "size": 13
+        }
+      ]
+    }
+  },
+  {
+    "query": "dir: in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.317014,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": true,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/directory",
+          "size": 0
+        }
+      ]
+    }
+  },
+  {
+    "query": "file: size:>1k in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.286702,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/audit-size.bin",
+          "size": 2048
+        }
+      ]
+    }
+  },
+  {
+    "query": "café",
+    "code": 0,
+    "response": {
+      "elapsedMs": 1.605323,
+      "matched": 2,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Downloads/café menu.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/café résumé.txt",
+          "size": 7
+        }
+      ]
+    }
+  },
+  {
+    "query": "cafe",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.710645,
+      "matched": 2,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Downloads/Cafe.txt",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Downloads/café menu.pdf",
+          "size": 0
+        }
+      ]
+    }
+  },
+  {
+    "query": "résumé",
+    "code": 0,
+    "response": {
+      "elapsedMs": 2.765473,
+      "matched": 2,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Downloads/résumé.pdf",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/café résumé.txt",
+          "size": 7
+        }
+      ]
+    }
+  },
+  {
+    "query": "日本",
+    "code": 0,
+    "response": {
+      "elapsedMs": 1.729434,
+      "matched": 2,
+      "ok": true,
+      "results": [
+        {
+          "isDir": true,
+          "modified": 1793970224,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/日本語",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/日本語メモ.txt",
+          "size": 10
+        }
+      ]
+    }
+  },
+  {
+    "query": "हिन्दी",
+    "code": 0,
+    "response": {
+      "elapsedMs": 2.43058,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/हिन्दी.txt",
+          "size": 8
+        }
+      ]
+    }
+  },
+  {
+    "query": "🧪",
+    "code": 0,
+    "response": {
+      "elapsedMs": 1.405645,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/emoji 🧪.txt",
+          "size": 6
+        }
+      ]
+    }
+  },
+  {
+    "query": "hidden:yes .hidden-audit",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.5701919999999999,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/.hidden-audit.txt",
+          "size": 13
+        }
+      ]
+    }
+  },
+  {
+    "query": "must-exclude",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.431206,
+      "matched": 0,
+      "ok": true,
+      "results": []
+    }
+  },
+  {
+    "query": "modified:today in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.29662,
+      "matched": 12,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/symdir",
+          "size": 124
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/zero.txt",
+          "size": 0
+        },
+        {
+          "isDir": true,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/directory",
+          "size": 0
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/audit-size.bin",
+          "size": 2048
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/invoice.tar.gz",
+          "size": 13
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/emoji 🧪.txt",
+          "size": 6
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/café résumé.txt",
+          "size": 7
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/日本語メモ.txt",
+          "size": 10
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/special; $x `ok`.txt",
+          "size": 5
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/Alpha Report 2026.txt",
+          "size": 25
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/हिन्दी.txt",
+          "size": 8
+        },
+        {
+          "isDir": false,
+          "modified": 1793972607,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/directory/child.txt",
+          "size": 13
+        }
+      ]
+    }
+  },
+  {
+    "query": "size:nope",
+    "code": 0,
+    "response": {
+      "error": "Can't read size “nope”; try size:>100mb",
+      "ok": false
+    }
+  },
+  {
+    "query": "\"unterminated",
+    "code": 0,
+    "response": {
+      "elapsedMs": 0.463683,
+      "matched": 0,
+      "ok": true,
+      "results": []
+    }
+  },
+  {
+    "query": "/needle_AUDIT",
+    "code": 0,
+    "response": {
+      "error": "Content search isn't available from the command line",
+      "ok": false
+    }
+  }
+]

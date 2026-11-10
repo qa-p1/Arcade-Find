@@ -1,0 +1,107 @@
+[
+  {
+    "query": "watch-new-qxyz",
+    "expected": 1,
+    "seconds": 0.16117531000054441,
+    "reply": {
+      "elapsedMs": 0.169158,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972811,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/watch-new-qxyz.txt",
+          "size": 5
+        }
+      ]
+    }
+  },
+  {
+    "query": "watch-new-qxyz",
+    "expected": 0,
+    "seconds": 0.16084642300120322,
+    "reply": {
+      "elapsedMs": 0.196397,
+      "matched": 0,
+      "ok": true,
+      "results": []
+    }
+  },
+  {
+    "query": "watch-renamed-qxyz",
+    "expected": 1,
+    "seconds": 0.03081615999872156,
+    "reply": {
+      "elapsedMs": 0.220981,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972811,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/watch-renamed-qxyz.txt",
+          "size": 5
+        }
+      ]
+    }
+  },
+  {
+    "query": "watch-renamed-qxyz",
+    "expected": 0,
+    "seconds": 0.15863479700055905,
+    "reply": {
+      "elapsedMs": 0.195139,
+      "matched": 0,
+      "ok": true,
+      "results": []
+    }
+  },
+  {
+    "query": "deep-child-qxyz",
+    "expected": 1,
+    "seconds": 0.15904435300035402,
+    "reply": {
+      "elapsedMs": 0.230829,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972811,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/watch-subtree-qxyz/nested/deep-child-qxyz.txt",
+          "size": 10
+        }
+      ]
+    }
+  },
+  {
+    "query": "in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/watch-subtree-qxyz deep-child-qxyz",
+    "expected": 0,
+    "seconds": 0.15999693100093282,
+    "reply": {
+      "elapsedMs": 0.258346,
+      "matched": 0,
+      "ok": true,
+      "results": []
+    }
+  },
+  {
+    "query": "in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/watch-moved-qxyz deep-child-qxyz",
+    "expected": 1,
+    "seconds": 0.030223548999856575,
+    "reply": {
+      "elapsedMs": 0.240537,
+      "matched": 1,
+      "ok": true,
+      "results": [
+        {
+          "isDir": false,
+          "modified": 1793972811,
+          "path": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/watch-moved-qxyz/nested/deep-child-qxyz.txt",
+          "size": 10
+        }
+      ]
+    }
+  }
+]

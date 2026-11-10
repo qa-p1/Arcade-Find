@@ -1,0 +1,93 @@
+{
+  "actions": [
+    {
+      "accepts": [
+        "text/plain"
+      ],
+      "available": true,
+      "effects": [],
+      "id": "find.search",
+      "interactive": false,
+      "platforms": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "privacy": "local",
+      "produces": [
+        "file/*[]",
+        "folder/reference"
+      ],
+      "title": "Find matching files",
+      "verb": "search",
+      "version": 1
+    },
+    {
+      "accepts": [
+        "text/plain",
+        "file/*",
+        "folder/reference"
+      ],
+      "available": true,
+      "effects": [
+        "opens-ui"
+      ],
+      "id": "find.show",
+      "interactive": true,
+      "platforms": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "privacy": "local",
+      "produces": [],
+      "title": "Search in Find",
+      "verb": "search",
+      "version": 1
+    }
+  ],
+  "docs": {
+    "version": "0.5.4"
+  },
+  "executable": "/home/harneet/Applications/Arcade/Arcade-Find.AppImage",
+  "id": "arcade.find",
+  "install": "appimage",
+  "launch": {
+    "background": [
+      "--background"
+    ],
+    "invoke": [
+      "--arcade-invoke"
+    ]
+  },
+  "link": {
+    "protocol": [
+      1
+    ]
+  },
+  "logs": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/home/.local/share/arcade/find/logs",
+  "menu": [
+    {
+      "effects": [
+        "persists"
+      ],
+      "enabled": true,
+      "id": "rescan",
+      "kind": "action",
+      "title": "Rescan index"
+    }
+  ],
+  "name": "Arcade Find",
+  "schema": 1,
+  "settings": {
+    "linkEnabled": true
+  },
+  "shortcuts": [
+    {
+      "accelerator": "Ctrl+Alt+F",
+      "id": "show"
+    }
+  ],
+  "version": "0.5.4",
+  "writtenAt": ""
+}

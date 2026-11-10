@@ -1,0 +1,838 @@
+{
+  "before": {
+    "activity": [],
+    "background": true,
+    "engine": {
+      "entries": 20815,
+      "generation": 577,
+      "indexBytes": 1656978,
+      "indexFile": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/home/.local/share/arcade/find/index.bin",
+      "lastError": null,
+      "lastFullScan": 1793972429,
+      "lastScan": {
+        "added": 0,
+        "changed": 2,
+        "dirs": 220,
+        "errors": 0,
+        "removed": 0
+      },
+      "lastScanMs": 250,
+      "loadMs": 1,
+      "loadedFromDisk": true,
+      "phase": "ready",
+      "progress": {
+        "added": 568,
+        "changed": 3,
+        "current": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find",
+        "dirs": 227,
+        "entries": 20811,
+        "errors": 0,
+        "removed": 5,
+        "running": false
+      },
+      "watch": {
+        "detail": "Watching 225 folders.",
+        "fixCommand": null,
+        "limit": 524288,
+        "mode": "full",
+        "unwatched": 0,
+        "watched": 225
+      }
+    },
+    "link": {
+      "lastError": null,
+      "listening": true
+    },
+    "ok": true,
+    "pid": 126407,
+    "running": true,
+    "shortcut": {
+      "accelerator": "Ctrl+Alt+Shift+K",
+      "mode": "native"
+    },
+    "tray": "own",
+    "ui": {
+      "actions": [],
+      "height": 360.0,
+      "mode": "results",
+      "query": "",
+      "rows": 4,
+      "selected": 0,
+      "selectedCount": 1,
+      "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Documents/Reports",
+      "toast": null,
+      "tooltip": null,
+      "visible": true
+    },
+    "version": "0.5.4"
+  },
+  "queries": [
+    {
+      "q": "report",
+      "ms": 31.702276999567403,
+      "engineMs": 0.94832,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.44162299920572,
+      "engineMs": 0.555666,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.06259400030831,
+      "engineMs": 1.653029,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 31.57635199931974,
+      "engineMs": 0.427505,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.878838999546133,
+      "engineMs": 1.185085,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.667772000015248,
+      "engineMs": 0.330913,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.154504000369343,
+      "engineMs": 1.068378,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.633061000116868,
+      "engineMs": 0.582555,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.29426100006094,
+      "engineMs": 1.627257,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 31.363472000521142,
+      "engineMs": 0.340272,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.157158000496565,
+      "engineMs": 1.272947,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 29.991209999934654,
+      "engineMs": 0.329167,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.071740999323083,
+      "engineMs": 0.902502,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.892664999555564,
+      "engineMs": 0.588143,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.88156200121739,
+      "engineMs": 1.685715,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.438200999924447,
+      "engineMs": 0.426457,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.36696399997163,
+      "engineMs": 1.061673,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 31.728258998555248,
+      "engineMs": 0.34558,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 32.48171799896227,
+      "engineMs": 0.858432,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 32.92270199926861,
+      "engineMs": 0.494973,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.54995300085284,
+      "engineMs": 1.602043,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.169448000378907,
+      "engineMs": 0.343275,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.252491999111953,
+      "engineMs": 1.206387,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.34880199993495,
+      "engineMs": 0.407809,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 30.76499300004798,
+      "engineMs": 0.876591,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.88016299989249,
+      "engineMs": 0.5055189999999999,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.780361001437996,
+      "engineMs": 1.787195,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.411591000301996,
+      "engineMs": 0.425829,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 30.744040001081885,
+      "engineMs": 1.045051,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.784339000092587,
+      "engineMs": 0.337339,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 30.502664998493856,
+      "engineMs": 1.003494,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.628242000602768,
+      "engineMs": 0.509989,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.23349799918651,
+      "engineMs": 1.608958,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.37988200048858,
+      "engineMs": 0.367161,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.53004600062559,
+      "engineMs": 1.046169,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 31.24138800012588,
+      "engineMs": 0.334545,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 30.781686000409536,
+      "engineMs": 0.911931,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.57432300010987,
+      "engineMs": 0.481074,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.82987900072476,
+      "engineMs": 1.6069330000000002,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 31.905449000987574,
+      "engineMs": 0.363879,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 30.954615000155172,
+      "engineMs": 1.035971,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 31.195012999887695,
+      "engineMs": 0.34152899999999997,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.258709001122043,
+      "engineMs": 0.8620639999999999,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.80592100013746,
+      "engineMs": 0.550008,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.767858999955934,
+      "engineMs": 1.666928,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 29.786083001454244,
+      "engineMs": 0.35891900000000004,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 30.3576719998091,
+      "engineMs": 1.046867,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 35.80481700009841,
+      "engineMs": 0.41193,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.68474700032675,
+      "engineMs": 0.844534,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 31.641863999539055,
+      "engineMs": 0.600854,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.44456100037496,
+      "engineMs": 1.825609,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.270019999079523,
+      "engineMs": 0.344113,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.238035000569653,
+      "engineMs": 1.051337,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 31.386171000121976,
+      "engineMs": 0.415423,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.52655399935611,
+      "engineMs": 1.032759,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.949167001381284,
+      "engineMs": 0.578155,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.76869700109819,
+      "engineMs": 1.852428,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.299563999506063,
+      "engineMs": 0.33929499999999996,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.50315600032627,
+      "engineMs": 1.036042,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 32.59856400109129,
+      "engineMs": 0.347256,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 32.91327399892907,
+      "engineMs": 0.966827,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 36.16052299912553,
+      "engineMs": 0.528567,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.66170099959709,
+      "engineMs": 1.752973,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.937434001316433,
+      "engineMs": 0.361573,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 32.27498500018555,
+      "engineMs": 1.201916,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.32044599967776,
+      "engineMs": 0.41214,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 32.0938839995506,
+      "engineMs": 0.8610859999999999,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 34.9429620000592,
+      "engineMs": 0.59366,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.41851100028725,
+      "engineMs": 1.610355,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 29.47165300065535,
+      "engineMs": 0.342018,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.43086999989464,
+      "engineMs": 1.064258,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.451261998678092,
+      "engineMs": 0.411232,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.10442700017302,
+      "engineMs": 0.978212,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.714706999788177,
+      "engineMs": 0.580529,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.903074001093046,
+      "engineMs": 1.740262,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.426606999753858,
+      "engineMs": 0.422057,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.055886000103783,
+      "engineMs": 1.19151,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.34649800065381,
+      "engineMs": 0.404318,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 30.611480000516167,
+      "engineMs": 0.933931,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.505738999636378,
+      "engineMs": 0.477093,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 31.697178999820608,
+      "engineMs": 1.706667,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.207231999156647,
+      "engineMs": 0.416819,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.052185000589816,
+      "engineMs": 1.178868,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.885471000146936,
+      "engineMs": 0.407041,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.00657799950568,
+      "engineMs": 0.988549,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.44567400138476,
+      "engineMs": 0.535481,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 32.24173899980087,
+      "engineMs": 1.82484,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.55351100010739,
+      "engineMs": 0.3781270000000001,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 38.24070800146728,
+      "engineMs": 1.049312,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 30.660508999062586,
+      "engineMs": 0.417727,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 31.561894000333268,
+      "engineMs": 0.938192,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 31.325338000897318,
+      "engineMs": 0.599666,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 33.33547100010037,
+      "engineMs": 1.7966950000000002,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.804454001554404,
+      "engineMs": 0.334544,
+      "ok": true,
+      "matched": 0
+    },
+    {
+      "q": "photo gamma",
+      "ms": 31.348734999482986,
+      "engineMs": 1.2614919999999998,
+      "ok": true,
+      "matched": 147
+    },
+    {
+      "q": "modified:today size:<1k",
+      "ms": 36.025657998834504,
+      "engineMs": 0.351167,
+      "ok": true,
+      "matched": 20585
+    },
+    {
+      "q": "report",
+      "ms": 32.304038999427576,
+      "engineMs": 0.892096,
+      "ok": true,
+      "matched": 2370
+    },
+    {
+      "q": "ext:pdf",
+      "ms": 30.693893999341526,
+      "engineMs": 0.551195,
+      "ok": true,
+      "matched": 3873
+    },
+    {
+      "q": "caf\u00e9",
+      "ms": 33.50511799908418,
+      "engineMs": 1.827215,
+      "ok": true,
+      "matched": 2
+    },
+    {
+      "q": "audit/child",
+      "ms": 30.54058999987319,
+      "engineMs": 0.337059,
+      "ok": true,
+      "matched": 0
+    }
+  ],
+  "after": {
+    "activity": [],
+    "background": true,
+    "engine": {
+      "entries": 20815,
+      "generation": 579,
+      "indexBytes": 1656978,
+      "indexFile": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/home/.local/share/arcade/find/index.bin",
+      "lastError": null,
+      "lastFullScan": 1793973584,
+      "lastScan": {
+        "added": 0,
+        "changed": 1,
+        "dirs": 225,
+        "errors": 0,
+        "removed": 0
+      },
+      "lastScanMs": 250,
+      "loadMs": 1,
+      "loadedFromDisk": true,
+      "phase": "ready",
+      "progress": {
+        "added": 0,
+        "changed": 1,
+        "current": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find",
+        "dirs": 225,
+        "entries": 20814,
+        "errors": 0,
+        "removed": 0,
+        "running": false
+      },
+      "watch": {
+        "detail": "Watching 225 folders.",
+        "fixCommand": null,
+        "limit": 524288,
+        "mode": "full",
+        "unwatched": 0,
+        "watched": 225
+      }
+    },
+    "link": {
+      "lastError": null,
+      "listening": true
+    },
+    "ok": true,
+    "pid": 126407,
+    "running": true,
+    "shortcut": {
+      "accelerator": "Ctrl+Alt+Shift+K",
+      "mode": "native"
+    },
+    "tray": "own",
+    "ui": {
+      "actions": [],
+      "height": 360.0,
+      "mode": "results",
+      "query": "",
+      "rows": 4,
+      "selected": 0,
+      "selectedCount": 1,
+      "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Documents/Reports",
+      "toast": null,
+      "tooltip": null,
+      "visible": true
+    },
+    "version": "0.5.4"
+  }
+}

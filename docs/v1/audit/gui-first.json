@@ -1,0 +1,67 @@
+{
+  "activity": [],
+  "background": true,
+  "engine": {
+    "entries": 20268,
+    "generation": 18,
+    "indexBytes": 1654066,
+    "indexFile": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/home/.local/share/arcade/find/index.bin",
+    "lastError": null,
+    "lastFullScan": 1793972429,
+    "lastScan": {
+      "added": 0,
+      "changed": 2,
+      "dirs": 220,
+      "errors": 0,
+      "removed": 0
+    },
+    "lastScanMs": 250,
+    "loadMs": 1,
+    "loadedFromDisk": true,
+    "phase": "ready",
+    "progress": {
+      "added": 14,
+      "changed": 2,
+      "current": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find",
+      "dirs": 222,
+      "entries": 20266,
+      "errors": 0,
+      "removed": 0,
+      "running": false
+    },
+    "watch": {
+      "detail": "Watching 222 folders.",
+      "fixCommand": null,
+      "limit": 524288,
+      "mode": "full",
+      "unwatched": 0,
+      "watched": 222
+    }
+  },
+  "link": {
+    "lastError": null,
+    "listening": true
+  },
+  "ok": true,
+  "pid": 126407,
+  "running": true,
+  "shortcut": {
+    "accelerator": "Ctrl+Alt+F",
+    "mode": "native"
+  },
+  "tray": "own",
+  "ui": {
+    "actions": [],
+    "height": 356.0,
+    "mode": "results",
+    "query": "report",
+    "rows": 200,
+    "selected": 3,
+    "selectedCount": 1,
+    "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/bulk/d35/report-beta-235.rs",
+    "toast": null,
+    "tooltip": null,
+    "visible": true
+  },
+  "version": "0.5.4"
+}
