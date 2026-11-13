@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Escape steps back: the first press clears the search text, the next closes the search. The footer says which (FD-7).
+- The search stays open when another window takes focus, on X11 and Wayland; Escape, a choice or the shortcut close it (FD-2).
+- The search fits the screen whatever row count is set; the rest of the list scrolls (FD-4).
+- Content search finds files whose names contain a line break (FD-3).
+- `--search` is safe for scripts: a failure exits 1 also with `--json`, a malformed filter is an error even next to valid terms, `--limit 0` is a usage error (exit 2), and limits above 1000 are honoured while Find runs (FD-1, FD-5, FD-6).
+- Settings: the Hyprland key-binding section shows only on Hyprland; a folder inside an indexed one is refused, a parent replaces the folders inside it, and indexing a whole disk asks first; other drives show their label; scans under a second show milliseconds; the Start at login text is accurate on Hyprland (FD-9, FD-10, RD-FIND-2/3/4).
+- After a rescan, a stale "Some folders can't be watched" message clears, and memory from a removed large folder is returned (FD-8).
+
 ## 0.5.4 — 2026-11-06
 
 - Sanitize inherited AppImage paths when restarting Find, starting it from Settings, or opening another Arcade app, preventing the old image's libraries from leaking into the new launcher.
