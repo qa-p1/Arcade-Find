@@ -229,11 +229,14 @@ mod linux {
             }
         }
 
-        /// Forget everything (before a full re-crawl re-adds watches).
+        /// Forget everything (before a full re-crawl re-adds watches),
+        /// including the last error, which the crawl reports again if it
+        /// still happens (FD-8: it outlived the removed location).
         pub fn reset_unwatched(&self) {
             self.unwatched.store(0, Ordering::Relaxed);
             let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
             st.full = false;
+            st.error = None;
         }
 
         pub fn status(&self) -> WatchStatus {
@@ -384,5 +387,43 @@ impl Pending {
 
     pub fn is_empty(&self) -> bool {
         self.count.load(Ordering::SeqCst) == 0 && !self.all.load(Ordering::SeqCst)
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod tests {
+    use super::*;
+    use std::os::unix::fs::PermissionsExt;
+
+    struct Nothing;
+    impl Sink for Nothing {
+        fn changed(&self, _: u32, _: Vec<u8>) {}
+        fn rescan_dir(&self, _: u32) {}
+        fn rescan_all(&self) {}
+    }
+
+    /// FD-8: a watch error is forgotten when the crawl starts over.
+    #[test]
+    fn a_rescan_clears_a_stale_watch_error() {
+        let dir = crate::test_dir("watch-error");
+        let locked = dir.join("locked");
+        std::fs::create_dir(&locked).unwrap();
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o000)).unwrap();
+        let w = Watcher::start(Arc::new(Nothing), Arc::new(RwLock::new(Index::new()))).unwrap();
+        w.add(1, &locked);
+        let before = w.status();
+        std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+        if before.unwatched == 0 {
+            // Root may watch anything: nothing to test here.
+            std::fs::remove_dir_all(dir).ok();
+            return;
+        }
+        assert!(before.detail.contains("can't be watched"), "{}", before.detail);
+        w.reset_unwatched();
+        let after = w.status();
+        w.stop();
+        std::fs::remove_dir_all(dir).ok();
+        assert_eq!(after.mode, WatchMode::Full);
+        assert!(!after.detail.contains("can't be watched"), "FD-8: stale detail {:?}", after.detail);
     }
 }

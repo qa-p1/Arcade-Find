@@ -424,6 +424,18 @@ impl Index {
     }
 
     /// Whether compaction is worth it.
+    /// Returns spare capacity after a crawl or a load (memory item FD1).
+    pub fn shrink_to_fit(&mut self) {
+        self.parent.shrink_to_fit();
+        self.name_off.shrink_to_fit();
+        self.name_len.shrink_to_fit();
+        self.flags.shrink_to_fit();
+        self.size.shrink_to_fit();
+        self.mtime.shrink_to_fit();
+        self.names.shrink_to_fit();
+        self.dirs.shrink_to_fit();
+    }
+
     pub fn needs_compaction(&self) -> bool {
         self.deleted > 50_000.max(self.len() / 4) || (self.deleted > 0 && self.deleted == self.len())
     }
@@ -544,6 +556,20 @@ impl Index {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn shrink_to_fit_returns_spare_capacity() {
+        let mut ix = Index::new();
+        let r = ix.add_root(Path::new("/r"), Meta { flags: flag::DIR, ..Meta::default() });
+        for i in 0..1000 {
+            ix.push(r, format!("file-{i}").as_bytes(), Meta::default(), 0);
+        }
+        let before = ix.heap_bytes();
+        ix.shrink_to_fit();
+        assert!(ix.heap_bytes() < before, "{} -> {}", before, ix.heap_bytes());
+        assert_eq!(ix.len(), 1001);
+        assert_eq!(ix.name(500), b"file-499");
+    }
 
     fn dir() -> Meta {
         Meta { size: 0, mtime: 1, flags: flag::DIR }

@@ -324,6 +324,14 @@ impl Engine {
             w.prune(&ix);
         }
         self.maybe_compact();
+        self.index.write().unwrap_or_else(|e| e.into_inner()).shrink_to_fit();
+        // Hand freed index memory back to the system (FD-8: a removed huge
+        // location kept the process at its peak).
+        #[cfg(all(target_os = "linux", target_env = "gnu"))]
+        // SAFETY: malloc_trim only releases free heap pages.
+        unsafe {
+            libc::malloc_trim(0);
+        }
         if !stats.cancelled {
             self.save();
         }
