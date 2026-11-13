@@ -46,6 +46,9 @@ Usage: arcade-find [OPTION]
   --arcade-manifest    Print the Arcade Link manifest
   --arcade-invoke      Serve one Arcade Link request from stdin
 
+Exit status: 0 success, 1 failure (also with --json, which prints the error),
+2 usage error, 3 from --status when Arcade Find isn't running.
+
 Environment: ARCADE_FIND_HOME (isolated data root), ARCADE_FIND_PROFILE,
 ARCADE_HOME (Arcade Link locations).";
 
@@ -76,7 +79,7 @@ fn parse_args() -> Result<Args, String> {
             "--remove-data" => a.remove_data = true,
             "--channel" => a.channel = Some(it.next().filter(|c| !c.is_empty() && !c.starts_with('-')).ok_or("--channel needs a channel name")?),
             "--size" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--size needs a number")?),
-            "--limit" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--limit needs a number")?),
+            "--limit" => a.limit = Some(it.next().and_then(|v| v.parse().ok()).filter(|n| *n > 0).ok_or("--limit needs a number of 1 or more")?),
             "--hidden" => a.hidden = true,
             "--json" => a.json = true,
             "--successor-of" => a.successor_of = Some(it.next().and_then(|v| v.parse().ok()).ok_or("--successor-of needs a process id")?),
@@ -125,11 +128,12 @@ fn out(s: impl std::fmt::Display) {
 }
 
 fn print_search(v: &serde_json::Value, json: bool) -> ExitCode {
+    let ok = v["ok"] == true;
     if json {
         out(serde_json::to_string_pretty(v).unwrap_or_default());
-        return ExitCode::SUCCESS;
+        return if ok { ExitCode::SUCCESS } else { ExitCode::FAILURE };
     }
-    if v["ok"] != true {
+    if !ok {
         eprintln!("arcade-find: {}", v["error"].as_str().unwrap_or("search failed"));
         return ExitCode::FAILURE;
     }
@@ -142,21 +146,17 @@ fn print_search(v: &serde_json::Value, json: bool) -> ExitCode {
 /// `--search` without a running instance: the saved index, read-only.
 fn search_offline(p: &AppPaths, query: &str, limit: usize, hidden: bool) -> serde_json::Value {
     use serde_json::json;
-    let q = find_core::Query::parse_local(query, find_core::now_secs());
-    if q.content.is_some() {
-        return json!({"ok": false, "error": "Content search isn't available from the command line"});
-    }
-    if q.is_empty() {
-        return json!({"ok": false, "error": q.errors.first().cloned().unwrap_or_else(|| "Empty query".into())});
-    }
+    let q = match arcade_find::service::cli_query(query) {
+        Ok(q) => q,
+        Err(e) => return json!({"ok": false, "error": e}),
+    };
     let Ok((index, _)) = find_core::persist::load(&p.index_file()) else {
         return json!({"ok": false, "error": "Arcade Find hasn't indexed your files yet. Run arcade-find once to start indexing."});
     };
     let engine = find_core::Engine::offline(index, settings_readonly(p));
-    let opts = find_core::SearchOptions { limit, show_hidden: hidden, now: find_core::now_secs(), ..Default::default() };
-    let (hits, r) = engine.search_hits(&q, &opts);
-    json!({ "ok": true, "matched": r.matched, "elapsedMs": r.elapsed.as_secs_f64() * 1000.0, "offline": true,
-            "results": hits.iter().map(|h| json!({"path": h.path.to_string_lossy(), "isDir": h.is_dir, "size": h.size, "modified": h.mtime})).collect::<Vec<_>>() })
+    let mut v = arcade_find::service::cli_search(&engine, &q, limit, hidden);
+    v["offline"] = json!(true);
+    v
 }
 
 /// Packaging: `--export-icon FILE` writes the app icon (`.svg`, `.ico`, or

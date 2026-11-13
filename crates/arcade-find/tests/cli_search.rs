@@ -132,36 +132,44 @@ fn version_and_help_exit_zero() {
 
 /// FD-1: a failed search says `ok:false` and must also exit nonzero.
 #[test]
-#[should_panic(expected = "KNOWN BUG FD-1")]
 fn json_failures_exit_nonzero() {
     let env = Env::new("fd1");
-    let o = env.run(&["--search", "size:nope", "--json"]);
+    for query in ["size:nope", "/needle"] {
+        let o = env.run(&["--search", query, "--json"]);
+        assert_eq!(json(&o)["ok"], false, "{query}");
+        assert_eq!(code(&o), 1, "FD-1: --json reported ok:false for {query} and exited {}", code(&o));
+    }
+    std::fs::remove_file(env.root.join("data/index.bin")).unwrap();
+    let o = env.run(&["--search", "alpha", "--json"]);
     assert_eq!(json(&o)["ok"], false);
-    assert_ne!(code(&o), 0, "KNOWN BUG FD-1: --json reported ok:false and exited 0");
+    assert_eq!(code(&o), 1);
 }
 
 /// FD-5: an invalid filter next to a valid term is an error, not a silent drop.
 #[test]
-#[should_panic(expected = "KNOWN BUG FD-5")]
 fn an_invalid_filter_next_to_a_valid_term_is_an_error() {
     let env = Env::new("fd5");
     let o = env.run(&["--search", "size:>1GBB ext:txt", "--json"]);
     let v = json(&o);
-    assert_eq!(v["ok"], false, "KNOWN BUG FD-5: the malformed size filter was dropped and the search succeeded: {v}");
+    assert_eq!(v["ok"], false, "FD-5: the malformed size filter was dropped and the search succeeded: {v}");
+    assert!(v["error"].as_str().unwrap().contains("1GBB"), "{v}");
     assert_ne!(code(&o), 0);
+    let plain = env.run(&["--search", "alpha modified:soon"]);
+    assert_eq!(code(&plain), 1);
+    assert!(String::from_utf8_lossy(&plain.stderr).contains("soon"));
 }
 
 /// FD-6: `--limit 0` is not a request for one result.
 #[test]
-#[should_panic(expected = "KNOWN BUG FD-6")]
 fn limit_zero_is_rejected() {
     let env = Env::new("fd6a");
     let o = env.run(&["--search", "alpha", "--limit", "0"]);
-    assert_eq!(code(&o), 2, "KNOWN BUG FD-6: --limit 0 exited {} and printed {:?}", code(&o), String::from_utf8_lossy(&o.stdout));
+    assert_eq!(code(&o), 2, "FD-6: --limit 0 exited {} and printed {:?}", code(&o), String::from_utf8_lossy(&o.stdout));
+    assert!(o.stdout.is_empty());
 }
 
-/// The offline search (no instance running) honours a limit above 1000; the
-/// silent 1000 cap of FD-6 is the running instance's, tested under the harness.
+/// A limit above 1000 is honoured. The running instance shares this code
+/// (`service::cli_search`), which no longer caps it (FD-6).
 #[test]
 fn an_offline_limit_above_a_thousand_is_honoured() {
     let names: Vec<String> = (0..1200).map(|i| format!("cap-{i}.txt")).collect();
