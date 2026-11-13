@@ -78,7 +78,6 @@ struct Shown {
     viewport: Option<wp_viewport::WpViewport>,
     fractional: Option<wp_fractional_scale_v1::WpFractionalScaleV1>,
     configured: bool,
-    shown_at: Option<Instant>,
     /// The logical size last requested.
     size: (u32, u32),
 }
@@ -137,8 +136,6 @@ struct Wl {
     qh: QueueHandle<Wl>,
     handle: LoopHandle<'static, Wl>,
     toast_timer: Option<RegistrationToken>,
-    /// A pending "focus left" check (transient leave/enter pairs are ignored).
-    leave_timer: Option<RegistrationToken>,
     exit: bool,
 }
 
@@ -216,7 +213,6 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>) -> Result<(), String> {
         qh: qh.clone(),
         handle: handle.clone(),
         toast_timer: None,
-        leave_timer: None,
         exit: false,
     };
     if let Some(m) = initial {
@@ -290,6 +286,11 @@ impl Wl {
         }
         self.overlay.visible = true;
         self.svc.set_visible(true);
+        // The compositor picks the output, so fit the shortest one (FD-4).
+        let screen = self.output_state.outputs().filter_map(|o| self.output_state.info(&o)?.logical_size.map(|(_, h)| h)).min();
+        if let Some(h) = screen {
+            self.overlay.set_max_height(h as f32 - 2.0 * metrics::SHADOW);
+        }
         let surface = self.compositor.create_surface(&self.qh);
         let fractional = self.fractional_mgr.as_ref().map(|m| m.get_fractional_scale(&surface, &self.qh, ()));
         let viewport = self.viewporter.as_ref().map(|v| v.get_viewport(&surface, &self.qh, ()));
@@ -299,7 +300,7 @@ impl Wl {
         let size = self.logical_size();
         layer.set_size(size.0, size.1);
         layer.commit();
-        self.shown = Some(Shown { layer, viewport, fractional, configured: false, shown_at: None, size });
+        self.shown = Some(Shown { layer, viewport, fractional, configured: false, size });
     }
 
     fn hide(&mut self) {
@@ -392,9 +393,6 @@ impl Wl {
             s.layer.commit();
             self.accessible.publish(&self.overlay, scale, metrics::SHADOW);
             self.accessibility.update_if_active(|| self.accessible.snapshot());
-            if let Some(s) = self.shown.as_mut() {
-                s.shown_at.get_or_insert(Instant::now());
-            }
         }
         self.svc.note_ui(&self.overlay);
     }
@@ -555,41 +553,17 @@ impl KeyboardHandler for Wl {
         if self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = true;
             self.accessibility.update_window_focus_state(true);
-            if let Some(t) = self.leave_timer.take() {
-                self.handle.remove(t);
-            }
         }
         crate::debug!("wayland keyboard enter (ours={})", self.has_focus);
     }
 
     fn leave(&mut self, _: &Connection, _: &QueueHandle<Self>, _: &wl_keyboard::WlKeyboard, surface: &wl_surface::WlSurface, _: u32) {
         crate::debug!("wayland keyboard leave");
-        // Focus moved elsewhere (another window or overlay took it): hide,
-        // unless it comes straight back (compositors re-enter when the
-        // keyboard device changes).
+        // Focus moving away never closes the popup (fleet rule, FD-2): only
+        // Escape, a choice or the shortcut do.
         if self.has_focus && self.shown.as_ref().is_some_and(|s| s.layer.wl_surface() == surface) {
             self.has_focus = false;
             self.accessibility.update_window_focus_state(false);
-            if self.drag.is_some() {
-                // Some compositors move keyboard focus while a drag is over
-                // another window; the overlay stays until the drag ends.
-                return;
-            }
-            if let Some(t) = self.leave_timer.take() {
-                self.handle.remove(t);
-            }
-            let Some(delay) = super::focus_loss_delay(self.shown.as_ref().and_then(|s| s.shown_at), Instant::now()) else { return };
-            let timer = Timer::from_duration(delay);
-            self.leave_timer = self
-                .handle
-                .insert_source(timer, |_, _, st: &mut Wl| {
-                    st.leave_timer = None;
-                    if !st.has_focus && st.shown.is_some() {
-                        st.hide();
-                    }
-                    TimeoutAction::Drop
-                })
-                .ok();
         }
     }
 

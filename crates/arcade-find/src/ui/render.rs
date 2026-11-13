@@ -121,14 +121,21 @@ pub fn key_label(key: &str) -> String {
 /// What the footer hint bar lists for the overlay's state: (keys, label).
 pub fn hints(o: &Overlay, previews: bool) -> Vec<(&'static [&'static str], &'static str)> {
     let primary = if previews { "Quick Look" } else { "Open" };
+    let escape = if o.anchor.is_some() {
+        "Clear selection"
+    } else if o.input.text.is_empty() {
+        "Close"
+    } else {
+        "Clear"
+    };
     match &o.mode {
         Mode::Actions { .. } => vec![(&["Enter"], "Run"), (&["Esc"], "Back")],
         Mode::Rename { .. } => vec![(&["Enter"], "Rename"), (&["Esc"], "Cancel")],
         Mode::ConfirmTrash { .. } => vec![(&["Enter"], "Move to Trash"), (&["Esc"], "Keep")],
         Mode::Details { .. } => vec![(&["Enter"], primary), (&["Esc"], "Back")],
-        Mode::Results if o.rows.is_empty() && o.offers_content_search() => vec![(&["Enter"], "Search inside files"), (&["Esc"], "Close")],
-        Mode::Results if o.rows.is_empty() => vec![(&["Esc"], "Close")],
-        Mode::Results => vec![(&["Enter"], primary), (&["Ctrl", "Enter"], "Show in folder"), (&["Tab"], "Actions"), (&["Esc"], "Close")],
+        Mode::Results if o.rows.is_empty() && o.offers_content_search() => vec![(&["Enter"], "Search inside files"), (&["Esc"], escape)],
+        Mode::Results if o.rows.is_empty() => vec![(&["Esc"], escape)],
+        Mode::Results => vec![(&["Enter"], primary), (&["Ctrl", "Enter"], "Show in folder"), (&["Tab"], "Actions"), (&["Esc"], escape)],
     }
 }
 
@@ -906,7 +913,7 @@ mod tests {
         o.show(Some("report"), None);
         o.set_results(o.seq, vec![row("report.pdf", vec![])], ResultsInfo { matched: 1, ..Default::default() });
         let labels: Vec<&str> = hints(&o, true).into_iter().map(|(_, l)| l).collect();
-        assert_eq!(labels, ["Quick Look", "Show in folder", "Actions", "Close"]);
+        assert_eq!(labels, ["Quick Look", "Show in folder", "Actions", "Clear"]);
         assert_eq!(hints(&o, false)[0], (&["Enter"][..], "Open"));
         assert_eq!(hints(&o, false)[1].0, ["Ctrl", "Enter"]);
         assert_eq!(key_label("Enter"), "↵");
