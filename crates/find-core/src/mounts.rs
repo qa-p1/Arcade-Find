@@ -184,6 +184,55 @@ impl MountTable {
     }
 }
 
+impl MountTable {
+    /// What to call a suggested drive: its volume label, else its device
+    /// ("sdb1"), else its folder (RD-FIND-3: not a bare UUID mount path).
+    pub fn drive_name(&self, path: &Path) -> String {
+        let source = self.mounts.iter().find(|m| m.path == path).map(|m| PathBuf::from(&m.source));
+        if let Some(source) = source.filter(|s| s.starts_with("/dev/")) {
+            if let Some(label) = label_in(Path::new("/dev/disk/by-label"), &source) {
+                return label;
+            }
+            if let Some(name) = source.file_name() {
+                return name.to_string_lossy().into_owned();
+            }
+        }
+        path.file_name().map_or_else(|| path.display().to_string(), |n| n.to_string_lossy().into_owned())
+    }
+}
+
+/// The udev label in `dir` whose link resolves to `device`.
+fn label_in(dir: &Path, device: &Path) -> Option<String> {
+    let device = std::fs::canonicalize(device).ok()?;
+    std::fs::read_dir(dir)
+        .ok()?
+        .flatten()
+        .find(|e| std::fs::canonicalize(e.path()).is_ok_and(|t| t == device))
+        .map(|e| unescape_udev(&e.file_name().to_string_lossy()))
+}
+
+/// udev escapes unsafe bytes in link names as `\xNN`.
+fn unescape_udev(s: &str) -> String {
+    let b = s.as_bytes();
+    let mut out = Vec::with_capacity(b.len());
+    let mut i = 0;
+    while i < b.len() {
+        let hex =
+            (b[i] == b'\\' && i + 3 < b.len() && b[i + 1] == b'x').then(|| u8::from_str_radix(std::str::from_utf8(&b[i + 2..i + 4]).ok()?, 16).ok()).flatten();
+        match hex {
+            Some(v) => {
+                out.push(v);
+                i += 4;
+            }
+            None => {
+                out.push(b[i]);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
+}
+
 /// mountinfo escapes space, tab, newline and backslash as octal.
 fn unescape(s: &str) -> String {
     let b = s.as_bytes();
@@ -259,6 +308,24 @@ mod tests {
             assert!(!t.is_network(Path::new("/home/u")));
             assert_eq!(t.suggested_drives(), vec![PathBuf::from("/mnt/Data")]);
         }
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn drives_are_named_by_label_then_device() {
+        let dir = crate::test_dir("drive-labels");
+        let labels = dir.join("by-label");
+        std::fs::create_dir_all(&labels).unwrap();
+        std::fs::write(dir.join("sdb1"), "").unwrap();
+        std::fs::write(dir.join("sdc1"), "").unwrap();
+        std::os::unix::fs::symlink(dir.join("sdb1"), labels.join("My\\x20Disk")).unwrap();
+        assert_eq!(label_in(&labels, &dir.join("sdb1")).as_deref(), Some("My Disk"));
+        assert_eq!(label_in(&labels, &dir.join("sdc1")), None);
+        let t = MountTable::parse_mountinfo("40 22 0:40 / /mnt/c18bd31c-8ecf-4eb1-9c8c-97e27314658f rw - ext4 /dev/sdz9 rw\n");
+        // No label for a device that doesn't exist: the device name, not the UUID path.
+        assert_eq!(t.drive_name(Path::new("/mnt/c18bd31c-8ecf-4eb1-9c8c-97e27314658f")), "sdz9");
+        assert_eq!(t.drive_name(Path::new("/mnt/Other")), "Other");
+        std::fs::remove_dir_all(dir).ok();
     }
 
     #[test]

@@ -24,7 +24,7 @@ use notify::Watcher;
 use serde_json::Value;
 
 use find_core::paths::{expand_tilde, tilde, AppPaths};
-use find_core::Settings;
+use find_core::{settings, Settings};
 
 use crate::instance::{self, Command};
 use crate::{autostart, hotkey, link, theme, VERSION};
@@ -101,11 +101,14 @@ struct SettingsApp {
     tx: Sender<Bg>,
     rx: Receiver<Bg>,
     new_root: String,
+    /// A whole-disk folder the user was warned about; adding it again confirms.
+    confirm_root: Option<PathBuf>,
     new_exclude: String,
     exclude_names: String,
     recorder: ShortcutRecorder,
     toast: Option<Toast>,
-    drives: Vec<PathBuf>,
+    /// Suggested drives and what to call them.
+    drives: Vec<(PathBuf, String)>,
     glyphs: Vec<(String, egui::TextureHandle)>,
     rescanning: bool,
     save_tx: Sender<Settings>,
@@ -291,11 +294,15 @@ impl SettingsApp {
             tx,
             rx,
             new_root: String::new(),
+            confirm_root: None,
             new_exclude: String::new(),
             exclude_names,
             recorder: ShortcutRecorder::default(),
             toast: None,
-            drives: find_core::mounts::MountTable::read().suggested_drives(),
+            drives: {
+                let table = find_core::mounts::MountTable::read();
+                table.suggested_drives().into_iter().map(|d| (d.clone(), table.drive_name(&d))).collect()
+            },
             glyphs,
             rescanning: false,
             save_tx,
@@ -595,6 +602,50 @@ fn path_valid(p: &Path) -> bool {
     p.is_absolute() && p.is_dir()
 }
 
+#[derive(Debug, PartialEq)]
+enum RootCheck {
+    /// New; it covers the roots at these indexes, which it replaces.
+    Add { replaces: Vec<usize> },
+    /// Already indexed as part of this root (shown as typed).
+    Inside(String),
+}
+
+/// Whether `new` adds anything to `roots` (FD-10: no nested duplicates).
+fn check_root(new: &Path, roots: &[String]) -> RootCheck {
+    let new = settings::normalize(new);
+    let expanded: Vec<PathBuf> = roots.iter().map(|r| settings::normalize(&expand_tilde(r))).collect();
+    if let Some(i) = expanded.iter().position(|r| new.starts_with(r)) {
+        return RootCheck::Inside(roots[i].clone());
+    }
+    RootCheck::Add { replaces: expanded.iter().enumerate().filter(|(_, r)| r.starts_with(&new)).map(|(i, _)| i).collect() }
+}
+
+fn add_root(roots: &mut Vec<String>, new: &Path, replaces: &[usize]) {
+    for &i in replaces.iter().rev() {
+        roots.remove(i);
+    }
+    roots.push(tilde(new));
+}
+
+/// `/` or a drive root such as `C:\`.
+fn is_whole_disk(p: &Path) -> bool {
+    p.parent().is_none()
+}
+
+/// "Took 500 ms." rather than "Took 0 s." (RD-FIND-4).
+fn scan_took(ms: u64) -> String {
+    if ms < 1000 {
+        return format!("{ms} ms");
+    }
+    arcade_link::design::format::format_duration((ms / 1000) as f64, arcade_link::design::format::DurationStyle::Job)
+}
+
+/// This session runs XDG autostart entries: we (or Tools, which started us)
+/// were started by one (systemd's `app-…@autostart.service`).
+fn started_by_autostart() -> bool {
+    std::fs::read_to_string("/proc/self/cgroup").is_ok_and(|c| c.contains("@autostart.service"))
+}
+
 fn folder_name(path: &Path) -> String {
     if path == find_core::paths::home_dir() {
         "Home".to_string()
@@ -819,8 +870,8 @@ impl SettingsApp {
             let mut login = self.login_state.unwrap_or(self.settings.start_at_login.unwrap_or(false));
             let description = if self.login_state.is_none() && !self.login_pending {
                 "Install Find to start it at login."
-            } else if cfg!(target_os = "linux") && hotkey::hyprland::active() {
-                "Hyprland doesn't run autostart entries itself: add exec-once = arcade-find --background to your Hyprland config."
+            } else if cfg!(target_os = "linux") && hotkey::hyprland::active() && !started_by_autostart() {
+                "Hyprland runs login entries only through a session manager such as uwsm. Without one, add exec-once = arcade-find --background to your Hyprland config."
             } else {
                 "Starts in the background, with the tray icon only."
             };
@@ -956,7 +1007,8 @@ impl SettingsApp {
                 }
             }
         }
-        if cfg!(target_os = "linux") {
+        // Only where Hyprland runs (FD-9).
+        if hotkey::hyprland::active() {
             kit.section_head(ui, "Hyprland");
             let line = hotkey::hyprland::config_line(&self.settings.shortcut, &hotkey::toggle_command());
             let mut copy = None;
@@ -1012,10 +1064,9 @@ impl SettingsApp {
         let mut changed = false;
         // Folders dropped on the window are added to the index.
         let dropped: Vec<PathBuf> = ctx.input(|i| i.raw.dropped_files.iter().filter_map(|f| f.path.clone()).collect());
-        for p in dropped.into_iter().filter(|p| path_valid(p)) {
-            let t = tilde(&p);
-            if !self.settings.roots.contains(&t) {
-                self.settings.roots.push(t);
+        for p in dropped.into_iter().filter(|p| path_valid(p) && !is_whole_disk(p)) {
+            if let RootCheck::Add { replaces } = check_root(&p, &self.settings.roots) {
+                add_root(&mut self.settings.roots, &p, &replaces);
                 changed = true;
             }
         }
@@ -1038,30 +1089,54 @@ impl SettingsApp {
             changed = true;
         }
         ui.add_space(10.0);
-        let p = expand_tilde(self.new_root.trim());
-        let invalid =
-            (!self.new_root.trim().is_empty() && !path_valid(&p)).then_some("Couldn't find that folder. Type a full path, such as /mnt/Data or ~/Projects.");
+        let p = settings::normalize(&expand_tilde(self.new_root.trim()));
+        let check = path_valid(&p).then(|| check_root(&p, &self.settings.roots));
+        let invalid = if self.new_root.trim().is_empty() {
+            None
+        } else {
+            match &check {
+                None => Some("Couldn't find that folder. Type a full path, such as /mnt/Data or ~/Projects.".to_string()),
+                Some(RootCheck::Inside(r)) => Some(format!("Already indexed: it's inside {r}.")),
+                Some(RootCheck::Add { .. }) if self.confirm_root.as_ref() == Some(&p) => {
+                    Some("This is a whole disk: indexing it can take minutes and 100 MB of memory. Add it again to confirm.".to_string())
+                }
+                Some(RootCheck::Add { replaces }) if !replaces.is_empty() => {
+                    Some(format!("Replaces {} folder{} inside it.", replaces.len(), if replaces.len() == 1 { "" } else { "s" }))
+                }
+                Some(RootCheck::Add { .. }) => None,
+            }
+        };
+        let can_add = matches!(check, Some(RootCheck::Add { .. }));
         let mut add = false;
         kit.list(ui, |ui| {
             kit.row(ui, "Add folder", "Type a path, or drop a folder on this window.", |ui| {
-                add = kit.button_state(ui, "Add folder", ButtonKind::Primary, path_valid(&p), false, true).clicked();
+                add = kit.button_state(ui, "Add folder", ButtonKind::Primary, can_add, false, true).clicked();
             });
-            let r = kit.text_input(ui, &mut self.new_root, "/mnt/Data or ~/Projects", invalid);
-            add |= r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && path_valid(&p);
+            let r = kit.text_input(ui, &mut self.new_root, "/mnt/Data or ~/Projects", invalid.as_deref());
+            add |= r.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) && can_add;
             ui.add_space(10.0);
         });
         if add {
-            self.settings.roots.push(tilde(&p));
-            self.new_root.clear();
-            changed = true;
+            if let Some(RootCheck::Add { replaces }) = check {
+                // FD-10: the whole disk takes a second, confirming Add.
+                if is_whole_disk(&p) && self.confirm_root.as_ref() != Some(&p) {
+                    self.confirm_root = Some(p);
+                } else {
+                    add_root(&mut self.settings.roots, &p, &replaces);
+                    self.new_root.clear();
+                    self.confirm_root = None;
+                    changed = true;
+                }
+            }
         }
-        let suggestions: Vec<PathBuf> = self.drives.iter().filter(|d| !self.settings.roots.iter().any(|r| expand_tilde(r) == **d)).cloned().collect();
+        let suggestions: Vec<(PathBuf, String)> =
+            self.drives.iter().filter(|(d, _)| !self.settings.roots.iter().any(|r| expand_tilde(r) == *d)).cloned().collect();
         if !suggestions.is_empty() {
             kit.section_head(ui, "Other drives");
             kit.list(ui, |ui| {
-                for d in suggestions {
+                for (d, name) in suggestions {
                     let shown = d.display().to_string();
-                    kit.row_with_glyph(ui, None, "monitor", &shown, "Not indexed unless you add it.", |ui| {
+                    kit.row_with_glyph(ui, None, "monitor", &name, &format!("{shown} · Not indexed unless you add it."), |ui| {
                         if kit.button_state(ui, "Add", ButtonKind::Default, true, false, true).clicked() {
                             self.settings.roots.push(shown.clone());
                             changed = true;
@@ -1196,11 +1271,7 @@ impl SettingsApp {
                 });
             }
             if let Some(t) = e["lastFullScan"].as_i64().filter(|t| *t > 0) {
-                let took = arcade_link::design::format::format_duration(
-                    (e["lastScanMs"].as_u64().unwrap_or(0) / 1000) as f64,
-                    arcade_link::design::format::DurationStyle::Job,
-                );
-                kit.row(ui, "Last full scan", &format!("Took {took}."), |ui| {
+                kit.row(ui, "Last full scan", &format!("Took {}.", scan_took(e["lastScanMs"].as_u64().unwrap_or(0))), |ui| {
                     ui.label(format_relative(t * 1000, now * 1000, offset));
                 });
             }
@@ -1543,6 +1614,37 @@ pub fn diagnostics(locations: &Locations, channel: Option<&str>, status: Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(unix)]
+    fn nested_roots_are_refused_and_parents_replace_children() {
+        let roots = vec!["/srv/a".to_string(), "/srv/b/c".to_string(), "/opt".to_string()];
+        assert_eq!(check_root(Path::new("/srv/a/sub"), &roots), RootCheck::Inside("/srv/a".into()));
+        assert_eq!(check_root(Path::new("/srv/a"), &roots), RootCheck::Inside("/srv/a".into()));
+        assert_eq!(check_root(Path::new("/srv"), &roots), RootCheck::Add { replaces: vec![0, 1] });
+        assert_eq!(check_root(Path::new("/srv/ab"), &roots), RootCheck::Add { replaces: vec![] });
+        let mut roots = roots;
+        add_root(&mut roots, Path::new("/srv"), &[0, 1]);
+        assert_eq!(roots, ["/opt", "/srv"]);
+        assert!(is_whole_disk(Path::new("/")));
+        assert!(!is_whole_disk(Path::new("/srv")));
+    }
+
+    /// FD-9: the Hyprland key-binding section shows only under Hyprland.
+    #[test]
+    fn the_hyprland_section_is_gated_on_hyprland() {
+        let source = include_str!("settings_ui.rs");
+        let head = source.find(concat!("section_head(ui, ", "\"Hyprland\")")).unwrap();
+        let guard = source[..head].rfind("if ").unwrap();
+        assert!(source[guard..head].contains("hotkey::hyprland::active()"), "FD-9: {}", &source[guard..head]);
+    }
+
+    #[test]
+    fn short_scans_show_milliseconds() {
+        assert_eq!(scan_took(500), "500 ms");
+        assert_eq!(scan_took(0), "0 ms");
+        assert!(!scan_took(4500).contains("ms"));
+    }
 
     #[test]
     fn invalid_peer_data_is_reported_and_retry_recovers() {
