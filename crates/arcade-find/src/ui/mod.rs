@@ -29,6 +29,16 @@ pub(crate) fn focus_loss_delay(shown: Option<std::time::Instant>, now: std::time
 mod lifecycle_tests {
     use super::*;
     use std::time::{Duration, Instant};
+    /// FD-2 / the fleet popup rule: nothing hides the popup because focus
+    /// left it. Only Escape, a choice, the shortcut or an outside click do.
+    #[test]
+    #[should_panic(expected = "KNOWN BUG FD-2")]
+    fn focus_loss_never_closes_the_popup() {
+        for (name, source) in [("desktop.rs", include_str!("desktop.rs")), ("wayland.rs", include_str!("wayland.rs"))] {
+            assert!(!source.contains("focus_loss_delay"), "KNOWN BUG FD-2: {name} hides the popup after focus is lost");
+        }
+    }
+
     #[test]
     fn mapping_focus_loss_is_ignored_for_four_hundred_milliseconds() {
         let shown = Instant::now();

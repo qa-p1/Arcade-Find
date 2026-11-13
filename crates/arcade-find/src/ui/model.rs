@@ -360,6 +360,9 @@ pub struct Overlay {
     /// Content search is on in Settings (offered when nothing matches).
     pub content_search: bool,
     pub rows_cfg: Rows,
+    /// The tallest the panel may be, in logical pixels (the monitor's work
+    /// area); 0 means the screen is unknown.
+    pub max_height: f32,
     /// Show recent items right away (setting).
     pub recent_on_open: bool,
     /// Showing the empty state because the user asked (Down on an empty query).
@@ -391,6 +394,7 @@ impl Default for Overlay {
             preedit: String::new(),
             content_search: true,
             rows_cfg: Rows::default(),
+            max_height: 0.0,
             recent_on_open: false,
             empty_open: false,
             want_select: None,
@@ -1535,10 +1539,64 @@ mod tests {
         assert!(o.nav);
     }
 
+    /// FD-4: 20 visible rows must not push the panel off a 1080p screen.
     #[test]
-    fn escape_hides() {
+    #[should_panic(expected = "KNOWN BUG FD-4")]
+    fn twenty_rows_fit_a_1080p_screen() {
+        let mut o = Overlay { rows_cfg: Rows { visible: 20, stretch: 30 }, max_height: 1080.0, ..Overlay::default() };
+        o.show(Some("report"), None);
+        results(&mut o, 200);
+        assert!(o.height() <= 1080.0, "KNOWN BUG FD-4: the panel is {} px tall on a 1080 px screen", o.height());
+        assert!(o.visible_rows() >= 1);
+    }
+
+    #[test]
+    fn escape_on_the_empty_top_view_hides() {
         let mut o = Overlay::default();
         o.show(None, None);
         assert_eq!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)), vec![Effect::Hide]);
+    }
+
+    /// FD-7 / RD-FIND-1: the first Escape with text typed clears the text and
+    /// keeps the popup; only the second one closes it.
+    #[test]
+    #[should_panic(expected = "KNOWN BUG FD-7")]
+    fn escape_ladder_clears_the_query_before_closing() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "abc", &Ctx(true));
+        results(&mut o, 3);
+        let first = o.key(&KeyEvent::new(Key::Escape), &Ctx(true));
+        assert!(!first.contains(&Effect::Hide), "KNOWN BUG FD-7: the first Escape closed the popup with text typed");
+        assert!(o.input.text.is_empty(), "KNOWN BUG FD-7: the first Escape left the text");
+        assert_eq!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)), vec![Effect::Hide]);
+    }
+
+    /// FD-7: the footer says what Escape really does.
+    #[test]
+    #[should_panic(expected = "KNOWN BUG FD-7")]
+    fn escape_hint_says_clear_while_text_is_typed() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "abc", &Ctx(true));
+        results(&mut o, 3);
+        let esc = |o: &Overlay| super::super::render::hints(o, true).into_iter().find(|(k, _)| *k == ["Esc"]).map(|(_, l)| l);
+        assert_eq!(esc(&o), Some("Clear"), "KNOWN BUG FD-7: the hint is {:?} while Escape should clear", esc(&o));
+    }
+
+    /// Escape in a sub-view goes back one step, then the query clears, then
+    /// the popup closes.
+    #[test]
+    fn escape_from_a_sub_view_returns_to_results_first() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "abc", &Ctx(true));
+        results(&mut o, 3);
+        let ctrl = Mods { ctrl: true, logo: cfg!(target_os = "macos"), ..Mods::default() };
+        o.key(&KeyEvent::ch('i').with(ctrl), &Ctx(true));
+        assert!(matches!(o.mode, Mode::Details { .. }));
+        assert!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)).is_empty());
+        assert!(matches!(o.mode, Mode::Results));
+        assert_eq!(o.input.text, "abc");
     }
 }

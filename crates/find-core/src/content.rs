@@ -314,6 +314,34 @@ mod tests {
         std::fs::remove_dir_all(dir).ok();
     }
 
+    /// FD-3: ripgrep prints one path per line, so a name with a newline in it
+    /// arrives as two bogus paths.
+    #[test]
+    #[should_panic(expected = "KNOWN BUG FD-3")]
+    fn finds_files_whose_name_has_a_newline() {
+        let Some(rg) = detect(&[]) else { panic!("KNOWN BUG FD-3 (no ripgrep here, so the test cannot run)") };
+        let dir = crate::test_dir("content-newline");
+        let odd = dir.join("line\nbreak.txt");
+        std::fs::write(&odd, "NEWLINE_NEEDLE").unwrap();
+        std::fs::write(dir.join("plain.txt"), "NEWLINE_NEEDLE").unwrap();
+        let req = ContentRequest {
+            pattern: "NEWLINE_NEEDLE".into(),
+            dirs: vec![dir.clone()],
+            exts: vec![],
+            exclude_names: vec![],
+            exclude_paths: vec![],
+            hidden: false,
+            limit: 10,
+            timeout: Duration::from_secs(10),
+        };
+        let mut found = Vec::new();
+        run(&rg, &req, &AtomicBool::new(false), |p| found.push(p));
+        found.sort();
+        std::fs::remove_dir_all(&dir).ok();
+        assert!(found.contains(&odd), "KNOWN BUG FD-3: the file with a newline in its name was not reported: {found:?}");
+        assert_eq!(found.len(), 2, "{found:?}");
+    }
+
     #[test]
     fn cancel_still_works() {
         let Some(rg) = detect(&[]) else { return };

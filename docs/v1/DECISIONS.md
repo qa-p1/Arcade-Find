@@ -11,9 +11,7 @@ Decisions the plan left open. Each one cites the part of the catalog `dev/v1/REA
 
 A behaviour-lock test for a known bug is `#[should_panic(expected = "KNOWN BUG <id>")]`, and the failing assertion
 names the finding. It passes while the bug is there. Once the fix lands the test stops panicking and fails, so the
-marker has to go in the same commit as the fix (PLAN.md step 1). Process-level tests that cannot use `should_panic`
-(CLI tests in `crates/arcade-find/tests/`) compare against the buggy value inside a `known_bug` helper that fails the
-test when the bug is gone, with the same effect.
+marker has to go in the same commit as the fix (PLAN.md step 1). The CLI tests in `crates/arcade-find/tests/` use the same marker.
 
 ## D3 - Commit trailers
 
