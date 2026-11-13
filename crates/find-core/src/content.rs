@@ -142,9 +142,10 @@ pub enum ContentEnd {
 }
 
 /// The arguments for `rg` (no shell; the pattern is passed after `--`).
+/// Paths end with NUL, so a name with a newline in it stays whole (FD-3).
 pub fn args(req: &ContentRequest) -> Vec<String> {
     let mut a: Vec<String> =
-        ["--files-with-matches", "--no-messages", "--smart-case", "--fixed-strings", "--max-filesize", "64M", "--no-config", "--no-ignore-vcs"]
+        ["--files-with-matches", "--null", "--no-messages", "--smart-case", "--fixed-strings", "--max-filesize", "64M", "--no-config", "--no-ignore-vcs"]
             .iter()
             .map(|s| s.to_string())
             .collect();
@@ -184,13 +185,13 @@ pub fn run(rg: &Ripgrep, req: &ContentRequest, cancel: &AtomicBool, mut on_file:
         let mut line = Vec::new();
         loop {
             line.clear();
-            match r.read_until(b'\n', &mut line) {
+            match r.read_until(0, &mut line) {
                 Ok(0) | Err(_) => break,
                 Ok(_) => {
-                    while line.last().is_some_and(|b| *b == b'\n' || *b == b'\r') {
+                    if line.last() == Some(&0) {
                         line.pop();
                     }
-                    if line.len() > 8192 {
+                    if line.is_empty() || line.len() > 8192 {
                         continue;
                     }
                     // SAFETY: rg prints paths as the OS gave them.
@@ -257,6 +258,7 @@ mod tests {
         assert!(a.contains(&"!.git".to_string()));
         assert!(a.contains(&"*.rs".to_string()));
         assert!(!a.contains(&"--hidden".to_string()));
+        assert!(a[..dash].contains(&"--null".to_string()));
     }
 
     #[test]
@@ -314,12 +316,11 @@ mod tests {
         std::fs::remove_dir_all(dir).ok();
     }
 
-    /// FD-3: ripgrep prints one path per line, so a name with a newline in it
-    /// arrives as two bogus paths.
+    /// FD-3: with one path per line, a name with a newline in it arrived as
+    /// two bogus paths.
     #[test]
-    #[should_panic(expected = "KNOWN BUG FD-3")]
     fn finds_files_whose_name_has_a_newline() {
-        let Some(rg) = detect(&[]) else { panic!("KNOWN BUG FD-3 (no ripgrep here, so the test cannot run)") };
+        let Some(rg) = detect(&[]) else { return };
         let dir = crate::test_dir("content-newline");
         let odd = dir.join("line\nbreak.txt");
         std::fs::write(&odd, "NEWLINE_NEEDLE").unwrap();
@@ -338,7 +339,7 @@ mod tests {
         run(&rg, &req, &AtomicBool::new(false), |p| found.push(p));
         found.sort();
         std::fs::remove_dir_all(&dir).ok();
-        assert!(found.contains(&odd), "KNOWN BUG FD-3: the file with a newline in its name was not reported: {found:?}");
+        assert!(found.contains(&odd), "FD-3: the file with a newline in its name was not reported: {found:?}");
         assert_eq!(found.len(), 2, "{found:?}");
     }
 
