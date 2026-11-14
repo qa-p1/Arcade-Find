@@ -431,6 +431,11 @@ fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_
     };
 
     let svc = Service::start(paths.clone(), background);
+    // Startup touches far more pages than the resident keeps (memory item W0).
+    std::thread::spawn(|| {
+        std::thread::sleep(Duration::from_secs(5));
+        arcade_link::runtime::trim();
+    });
     let handler_svc = Arc::downgrade(&svc);
     if let Err(e) = instance::serve(
         &paths,

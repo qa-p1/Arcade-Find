@@ -62,4 +62,4 @@ Hyprland never runs autostart entries.
 ## D10 - Memory after removing a large location (FD-8, memory FD1)
 
 After every full crawl the index returns spare capacity (`Index::shrink_to_fit`) and glibc's `malloc_trim(0)` hands
-freed pages back. When Find moves to Link >= 1.0.7 this call becomes `arcade_link::runtime::trim()` (W0).
+freed pages back. Since Find pins Link 1.0.7 this is `arcade_link::runtime::trim()`, which also drops clean file pages; the same call runs once 5 s after the resident starts (W0).
