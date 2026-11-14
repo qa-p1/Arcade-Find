@@ -360,6 +360,9 @@ pub struct Overlay {
     /// Content search is on in Settings (offered when nothing matches).
     pub content_search: bool,
     pub rows_cfg: Rows,
+    /// The tallest the panel may be, in logical pixels (the monitor's work
+    /// area); 0 means the screen is unknown.
+    pub max_height: f32,
     /// Show recent items right away (setting).
     pub recent_on_open: bool,
     /// Showing the empty state because the user asked (Down on an empty query).
@@ -391,6 +394,7 @@ impl Default for Overlay {
             preedit: String::new(),
             content_search: true,
             rows_cfg: Rows::default(),
+            max_height: 0.0,
             recent_on_open: false,
             empty_open: false,
             want_select: None,
@@ -500,13 +504,30 @@ impl Overlay {
     /// Rows the window shows now (drives the window height).
     pub fn visible_rows(&self) -> usize {
         match &self.mode {
-            Mode::Actions { items, .. } => self.rows_cfg.viewport(items.len()),
+            Mode::Actions { items, .. } => self.fit(self.rows_cfg.viewport(items.len())),
             Mode::Details { .. } => 4,
             _ => {
                 let n = self.list_len();
-                self.rows_cfg.viewport(n)
+                self.fit(self.rows_cfg.viewport(n))
             }
         }
+    }
+
+    /// At most the rows that keep the panel within `max_height` (FD-4); the
+    /// rest scroll. At least one row.
+    fn fit(&self, rows: usize) -> usize {
+        if self.max_height <= 0.0 {
+            return rows;
+        }
+        let chrome = metrics::BAR + 2.0 * metrics::LIST_PAD + metrics::FOOTER.max(metrics::TOAST) + self.sections() as f32 * metrics::SECTION;
+        let room = ((self.max_height - chrome) / metrics::ROW).floor().max(1.0) as usize;
+        rows.min(room)
+    }
+
+    /// The screen's usable height changed (shown on another monitor).
+    pub fn set_max_height(&mut self, height: f32) {
+        self.max_height = height;
+        self.ensure_visible();
     }
 
     /// Rows in the list, including the "no matches" line.
@@ -890,6 +911,7 @@ impl Overlay {
             _ => {}
         }
         // Mode-specific handling first.
+        let room = self.fit(usize::MAX);
         match &mut self.mode {
             Mode::Rename { row, input } => {
                 match ev.key {
@@ -937,7 +959,7 @@ impl Overlay {
                 return vec![];
             }
             Mode::Actions { items, sel, scroll, filter, targets, .. } => {
-                let vis = self.rows_cfg.viewport(items.len()).max(1);
+                let vis = self.rows_cfg.viewport(items.len()).min(room).max(1);
                 match ev.key {
                     Key::Escape | Key::Tab => self.mode = Mode::Results,
                     Key::Up => {
@@ -981,10 +1003,15 @@ impl Overlay {
 
         // Results mode.
         match ev.key {
+            // One step back: the range, then the query (FD-7), then close.
             Key::Escape => {
                 if self.anchor.is_some() {
                     self.anchor = None;
                     return vec![];
+                }
+                if !self.input.text.is_empty() {
+                    self.input.clear();
+                    return self.requery();
                 }
                 return vec![Effect::Hide];
             }
@@ -1535,10 +1562,80 @@ mod tests {
         assert!(o.nav);
     }
 
+    /// FD-4: 20 visible rows must not push the panel off a 1080p screen.
     #[test]
-    fn escape_hides() {
+    fn twenty_rows_fit_a_1080p_screen() {
+        let mut o = Overlay { rows_cfg: Rows { visible: 20, stretch: 30 }, ..Overlay::default() };
+        o.set_max_height(1080.0);
+        o.show(Some("report"), None);
+        results(&mut o, 200);
+        assert!(o.height() <= 1080.0, "FD-4: the panel is {} px tall on a 1080 px screen", o.height());
+        assert!(o.visible_rows() >= 1);
+        // The rest scrolls: the last row is reachable and stays inside.
+        o.key(&KeyEvent::new(Key::Down), &Ctx(true));
+        o.key(&KeyEvent::new(Key::End), &Ctx(true));
+        assert_eq!(o.sel, 199);
+        assert!(o.scroll + o.visible_rows() > 199 && o.scroll <= 199);
+        assert!(o.height() <= 1080.0);
+        // A tiny screen still shows one row.
+        o.set_max_height(100.0);
+        assert_eq!(o.visible_rows(), 1);
+        assert!(o.scroll + 1 > o.sel && o.scroll <= o.sel);
+        // Room enough: the setting decides.
+        o.set_max_height(4000.0);
+        assert_eq!(o.visible_rows(), 20);
+    }
+
+    #[test]
+    fn escape_on_the_empty_top_view_hides() {
         let mut o = Overlay::default();
         o.show(None, None);
         assert_eq!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)), vec![Effect::Hide]);
+    }
+
+    /// FD-7 / RD-FIND-1: the first Escape with text typed clears the text and
+    /// keeps the popup; only the second one closes it.
+    #[test]
+    fn escape_ladder_clears_the_query_before_closing() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "abc", &Ctx(true));
+        results(&mut o, 3);
+        let first = o.key(&KeyEvent::new(Key::Escape), &Ctx(true));
+        assert!(!first.contains(&Effect::Hide), "FD-7: the first Escape closed the popup with text typed");
+        assert!(o.input.text.is_empty(), "FD-7: the first Escape left the text");
+        assert!(o.rows.is_empty(), "the cleared query collapses the list");
+        assert_eq!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)), vec![Effect::Hide]);
+    }
+
+    /// FD-7: the footer says what Escape really does.
+    #[test]
+    fn escape_hint_says_clear_while_text_is_typed() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "abc", &Ctx(true));
+        results(&mut o, 3);
+        let esc = |o: &Overlay| super::super::render::hints(o, true).into_iter().find(|(k, _)| *k == ["Esc"]).map(|(_, l)| l);
+        assert_eq!(esc(&o), Some("Clear"), "FD-7: the hint is {:?} while Escape should clear", esc(&o));
+        o.key(&KeyEvent::new(Key::Escape), &Ctx(true));
+        o.empty_open = true;
+        results(&mut o, 2);
+        assert_eq!(esc(&o), Some("Close"));
+    }
+
+    /// Escape in a sub-view goes back one step, then the query clears, then
+    /// the popup closes.
+    #[test]
+    fn escape_from_a_sub_view_returns_to_results_first() {
+        let mut o = Overlay::default();
+        o.show(None, None);
+        typed(&mut o, "abc", &Ctx(true));
+        results(&mut o, 3);
+        let ctrl = Mods { ctrl: true, logo: cfg!(target_os = "macos"), ..Mods::default() };
+        o.key(&KeyEvent::ch('i').with(ctrl), &Ctx(true));
+        assert!(matches!(o.mode, Mode::Details { .. }));
+        assert!(o.key(&KeyEvent::new(Key::Escape), &Ctx(true)).is_empty());
+        assert!(matches!(o.mode, Mode::Results));
+        assert_eq!(o.input.text, "abc");
     }
 }

@@ -39,12 +39,6 @@ struct App {
     /// The drag source on Wayland (winit has none of its own).
     #[cfg(target_os = "linux")]
     wl_drag: Option<super::wl_drag::Dragger>,
-    /// The window had focus since it was shown (so losing it means "hide").
-    focused: bool,
-    /// Focus left at this moment's deadline; hide then unless it came back.
-    leave_at: Option<Instant>,
-    /// When the window was last shown: mapping it can cost focus briefly.
-    shown_at: Option<Instant>,
     /// The screen center the window stays centered on while shown.
     center: Option<PhysicalPosition<i32>>,
     on_start: Option<Box<dyn FnOnce()>>,
@@ -85,9 +79,6 @@ pub fn run(svc: Arc<Service>, initial: Option<UiMsg>, on_start: Option<Box<dyn F
         press: None,
         #[cfg(target_os = "linux")]
         wl_drag: None,
-        focused: false,
-        leave_at: None,
-        shown_at: None,
         center: None,
         on_start,
         initial,
@@ -178,10 +169,10 @@ impl App {
         if let Some(m) = monitor {
             let (pos, size) = (m.position(), m.size());
             self.center = Some(PhysicalPosition::new(pos.x + size.width as i32 / 2, pos.y + size.height as i32 / 2));
+            // Keep the whole panel on this screen; the list scrolls (FD-4).
+            self.overlay.set_max_height((size.height as f64 / m.scale_factor()) as f32 - 2.0 * metrics::SHADOW);
         }
         self.place(&w);
-        self.focused = false;
-        self.leave_at = None;
         // Present directly while hidden: a hidden redraw callback is not
         // guaranteed to run, and mapping before this paint causes a flash.
         if !self.draw() {
@@ -191,7 +182,6 @@ impl App {
             eprintln!("arcade-find: Couldn't show search. The first frame wasn't ready.");
             return;
         }
-        self.shown_at = Some(Instant::now());
         w.set_visible(true);
         // Input methods (fcitx5, IBus) compose into the search field.
         w.set_ime_allowed(true);
@@ -226,8 +216,6 @@ impl App {
         } else if let Some(window) = self.window() {
             window.set_visible(false);
         }
-        self.focused = false;
-        self.leave_at = None;
         return_focus();
     }
 
@@ -374,15 +362,7 @@ impl ApplicationHandler<UiMsg> for App {
 
     fn new_events(&mut self, _el: &ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
-            let now = Instant::now();
-            if self.leave_at.is_some_and(|t| t <= now) {
-                self.leave_at = None;
-                if self.overlay.visible && !self.dragging() {
-                    self.hide();
-                    return;
-                }
-            }
-            self.overlay.tick(now);
+            self.overlay.tick(Instant::now());
             if let Some(w) = self.window() {
                 w.request_redraw();
             }
@@ -436,16 +416,8 @@ impl ApplicationHandler<UiMsg> for App {
                 self.draw();
             }
             WindowEvent::CloseRequested => self.hide(),
-            WindowEvent::Focused(true) => {
-                self.focused = true;
-                self.leave_at = None;
-            }
-            WindowEvent::Focused(false) => {
-                let now = Instant::now();
-                if self.focused && self.overlay.visible && !self.dragging() {
-                    self.leave_at = super::focus_loss_delay(self.shown_at, now).map(|delay| now + delay);
-                }
-            }
+            // Focus moving away never closes the popup (fleet rule, FD-2):
+            // only Escape, a choice or the shortcut do.
             WindowEvent::ScaleFactorChanged { .. } => self.resize_and_redraw(),
             WindowEvent::ThemeChanged(theme) => {
                 #[cfg(any(windows, target_os = "macos"))]
@@ -548,7 +520,7 @@ impl ApplicationHandler<UiMsg> for App {
     }
 
     fn about_to_wait(&mut self, el: &ActiveEventLoop) {
-        match self.overlay.feedback_deadline().into_iter().chain(self.leave_at).min() {
+        match self.overlay.feedback_deadline() {
             Some(until) => el.set_control_flow(ControlFlow::WaitUntil(until)),
             None => el.set_control_flow(ControlFlow::Wait),
         }

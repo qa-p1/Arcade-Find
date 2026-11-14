@@ -165,6 +165,30 @@ impl Hub {
 
 /// The bar's index status: only while the index is not yet usable or complete.
 /// The index as the overlay shows it: loading, the first scan, the last error.
+/// A query from `--search`: content searches and malformed filters are
+/// errors, even next to valid terms (FD-5).
+pub fn cli_query(text: &str) -> Result<Query, String> {
+    let q = Query::parse_local(text, find_core::now_secs());
+    if q.content.is_some() {
+        return Err("Content search isn't available from the command line".into());
+    }
+    if let Some(e) = q.errors.first() {
+        return Err(e.clone());
+    }
+    if q.is_empty() {
+        return Err("Empty query".into());
+    }
+    Ok(q)
+}
+
+/// `--search` results as JSON. The limit is the caller's, uncapped (FD-6).
+pub fn cli_search(engine: &Engine, q: &Query, limit: usize, hidden: bool) -> Value {
+    let opts = SearchOptions { limit: limit.max(1), show_hidden: hidden, now: find_core::now_secs(), ..Default::default() };
+    let (hits, r) = engine.search_hits(q, &opts);
+    json!({ "ok": true, "matched": r.matched, "elapsedMs": r.elapsed.as_secs_f64() * 1000.0,
+            "results": hits.iter().map(|h| json!({"path": h.path.to_string_lossy(), "isDir": h.is_dir, "size": h.size, "modified": h.mtime})).collect::<Vec<_>>() })
+}
+
 pub fn index_state(engine: &Engine) -> IndexState {
     let st = engine.status();
     let indexing = (engine.phase() == Phase::Crawling).then(|| st.entries.max(st.progress.entries));
@@ -1027,24 +1051,10 @@ impl Service {
                 self.reload_settings();
                 json!({ "ok": true })
             }
-            Command::Search { query, limit, hidden } => {
-                let q = Query::parse_local(&query, find_core::now_secs());
-                if q.content.is_some() {
-                    return json!({ "ok": false, "error": "Content search isn't available from the command line" });
-                }
-                if q.is_empty() {
-                    return json!({ "ok": false, "error": q.errors.first().cloned().unwrap_or_else(|| "Empty query".into()) });
-                }
-                let opts = SearchOptions {
-                    limit: limit.unwrap_or(20).clamp(1, link::SEARCH_MAX),
-                    show_hidden: hidden.unwrap_or(false),
-                    now: find_core::now_secs(),
-                    ..Default::default()
-                };
-                let (hits, r) = self.engine.search_hits(&q, &opts);
-                json!({ "ok": true, "matched": r.matched, "elapsedMs": r.elapsed.as_secs_f64() * 1000.0,
-                        "results": hits.iter().map(|h| json!({"path": h.path.to_string_lossy(), "isDir": h.is_dir, "size": h.size, "modified": h.mtime})).collect::<Vec<_>>() })
-            }
+            Command::Search { query, limit, hidden } => match cli_query(&query) {
+                Ok(q) => cli_search(&self.engine, &q, limit.unwrap_or(20), hidden.unwrap_or(false)),
+                Err(e) => json!({ "ok": false, "error": e }),
+            },
         }
     }
 

@@ -1,0 +1,66 @@
+[
+  {
+    "query": "size:nope file:",
+    "result": {
+      "code": 0,
+      "stdout": "{\n  \"elapsedMs\": 0.30947199999999997,\n  \"matched\": 20587,\n  \"ok\": true,\n  \"results\": [\n    {\n      \"isDir\": false,\n      \"modified\": 1793970225,\n      \"path\": \"/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/linkdir\",\n      \"size\": 9\n    },\n    {\n      \"isDir\": false,\n      \"modified\": 1793970225,\n      \"path\": \"/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/brokenlink\",\n      \"size\": 7\n    }\n  ]\n}\n",
+      "stderr": ""
+    }
+  },
+  {
+    "query": "size:>1GBB ext:txt",
+    "result": {
+      "code": 0,
+      "stdout": "{\n  \"elapsedMs\": 0.604904,\n  \"matched\": 4515,\n  \"ok\": true,\n  \"results\": [\n    {\n      \"isDir\": false,\n      \"modified\": 1793972158,\n      \"path\": \"/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Documents/dupa.txt\",\n      \"size\": 4\n    },\n    {\n      \"isDir\": false,\n      \"modified\": 1793970224,\n      \"path\": \"/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Downloads/Cafe.txt\",\n      \"size\": 0\n    }\n  ]\n}\n",
+      "stderr": ""
+    }
+  },
+  {
+    "query": "/LIMIT_NEEDLE_AUDIT ext:bin",
+    "result": {
+      "actions": [],
+      "height": 148.0,
+      "mode": "results",
+      "query": "/LIMIT_NEEDLE_AUDIT ext:bin",
+      "rows": 1,
+      "selected": 0,
+      "selectedCount": 1,
+      "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/content-limit/z-wanted.bin",
+      "toast": null,
+      "tooltip": null,
+      "visible": true
+    }
+  },
+  {
+    "query": "/LIMIT_NEEDLE_AUDIT size:>1k in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/content-limit",
+    "result": {
+      "actions": [],
+      "height": 148.0,
+      "mode": "results",
+      "query": "/LIMIT_NEEDLE_AUDIT size:>1k in:/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/content-limit",
+      "rows": 1,
+      "selected": 0,
+      "selectedCount": 1,
+      "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/content-limit/z-wanted.bin",
+      "toast": null,
+      "tooltip": null,
+      "visible": true
+    }
+  },
+  {
+    "query": "/LIMIT_NEEDLE_AUDIT size:>1k",
+    "result": {
+      "actions": [],
+      "height": 148.0,
+      "mode": "results",
+      "query": "/LIMIT_NEEDLE_AUDIT size:>1k",
+      "rows": 1,
+      "selected": 0,
+      "selectedCount": 1,
+      "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/audit/content-limit/z-wanted.bin",
+      "toast": null,
+      "tooltip": null,
+      "visible": true
+    }
+  }
+]

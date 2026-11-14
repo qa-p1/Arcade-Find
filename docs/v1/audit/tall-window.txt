@@ -1,0 +1,8 @@
+WINDOW=6291458
+X=620
+Y=-28
+WIDTH=680
+HEIGHT=1136
+SCREEN=0
+
+{"actions": [], "height": 1136.0, "mode": "results", "query": "report", "rows": 200, "selected": 0, "selectedCount": 1, "selectedPath": "/tmp/claude-1000/-home-harneet-Work-Coding/c7347b9d-c34f-4fc8-b57d-de9a2d5591f6/scratchpad/audit-lfl/fx/find/Documents/Reports", "toast": null, "tooltip": null, "visible": true}

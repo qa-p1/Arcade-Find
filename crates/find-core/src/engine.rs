@@ -324,6 +324,10 @@ impl Engine {
             w.prune(&ix);
         }
         self.maybe_compact();
+        self.index.write().unwrap_or_else(|e| e.into_inner()).shrink_to_fit();
+        // Hand freed index memory back to the system (FD-8: a removed huge
+        // location kept the process at its peak).
+        arcade_link::runtime::trim();
         if !stats.cancelled {
             self.save();
         }

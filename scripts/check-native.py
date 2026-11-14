@@ -165,7 +165,7 @@ def main():
             xdo('windowfocus', '--sync', identifier)
             chord('ctrl', 'w')
             assert helper.wait(timeout=10) == 0
-            # Focus loss caused by mapping is ignored, later focus loss hides.
+            # Focus loss never hides the overlay (fleet popup rule, FD-2).
             focus_title = 'Find focus probe ' + str(os.getpid())
             other = subprocess.Popen(['xmessage', '-title', focus_title, '-buttons', 'OK:0', '-timeout', '20', 'Find focus check'], env=env, stdout=log, stderr=log)
             processes.append(other)
@@ -184,15 +184,22 @@ def main():
             xdo('windowfocus', '--sync', overlay)
             time.sleep(.45)
             xdo('windowfocus', '--sync', focus_target)
-            until(lambda: status().get('ui', {}).get('visible') is False, 'later focus loss did not hide')
+            time.sleep(.6)
+            assert status()['ui']['visible'], 'FD-2: a later focus loss closed the overlay'
+            assert status()['ui'].get('query') == 'report', 'FD-2: focus loss dropped the query'
+            xdo('windowfocus', '--sync', overlay)
             other.terminate(); other.wait(timeout=5)
             # A second launch must show the original process, not create another.
             command('--show', 'café')
             until(lambda: status().get('ui', {}).get('query') == 'café', 'Unicode query was lost')
             assert status()['pid'] == pid
             xdo('windowfocus', '--sync', until(lambda: window(pid, 'Search — Arcade Find'), 'second launch did not show'))
+            # Escape ladder (FD-7): the first clears the query, the second closes.
             xdo('key', 'Escape')
-            until(lambda: status().get('ui', {}).get('visible') is False, 'Esc did not close the overlay')
+            until(lambda: status().get('ui', {}).get('query') == '', 'the first Esc did not clear the query')
+            assert status()['ui']['visible'], 'FD-7: the first Esc closed the overlay with text typed'
+            xdo('key', 'Escape')
+            until(lambda: status().get('ui', {}).get('visible') is False, 'the second Esc did not close the overlay')
             assert status()['pid'] == pid
             print(f'Native UI: {len(report)} real screenshots; settings singleton, close/reopen, Unicode and second-launch lifecycle passed.')
             (OUT / 'results.json').write_text(json.dumps({'captures': report, 'residentPid': pid, 'residentRssKiB': memory}, indent=2))

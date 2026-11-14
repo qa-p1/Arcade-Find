@@ -328,12 +328,16 @@ overlay_checks() {
   sleep 0.4
   check "$name: action list (screenshot)" "$shot '$OUT/$name-actions.png'"
   check "$name: overlay visible with the action list" '[[ "$(status_field ui.mode)" == actions ]]'
+  # Escape steps back (FD-7): actions -> results, then the query clears, then the overlay closes.
   $typer Escape
   sleep 0.3
   $typer Escape
   sleep 0.4
+  check "$name: the second Esc clears the query and keeps the overlay" 'is_visible && [[ -z "$(status_field ui.query)" ]]'
+  $typer Escape
+  sleep 0.4
   $shot "$OUT/$name-hidden.png" || true
-  check "$name: Esc hides the overlay" '! is_visible'
+  check "$name: the third Esc hides the overlay" '! is_visible'
   af --quit
   for _ in $(seq 1 30); do "$BIN" --status >/dev/null 2>&1 || break; sleep 0.1; done
   check "$name: --quit stops the instance" '! "$BIN" --status >/dev/null 2>&1'
