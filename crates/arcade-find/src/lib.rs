@@ -31,6 +31,7 @@ mod notifications;
 pub mod os;
 pub mod portable_settings;
 pub mod service;
+pub mod session;
 pub mod settings_ui;
 pub mod snapshot;
 pub mod theme;

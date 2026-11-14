@@ -60,7 +60,7 @@ const DOUBLE_CLICK: Duration = Duration::from_millis(400);
 
 /// Whether this session can show a layer-shell overlay.
 pub fn available() -> bool {
-    if std::env::var_os("WAYLAND_DISPLAY").is_none() {
+    if !crate::session::wayland() {
         return false;
     }
     let Ok(conn) = Connection::connect_to_env() else { return false };

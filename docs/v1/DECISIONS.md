@@ -76,3 +76,11 @@ Fix: `identity.rs` holds the Link id, name, OS identifier, CLI name and tagline,
 The Link id itself is `find_core::paths::LINK_ID`, because `find-core` names Find's config and data folders after it
 and sits below the app; `identity::ID` re-exports it. Old ids (`legacy_desktop_ids`) stay literal: they are history,
 not identity.
+
+## D12 - Untangle (step 2): one answer to "which desktop session"
+
+Copies: "is this Wayland" was read from `WAYLAND_DISPLAY` in the shortcut (`hotkey`), window placement
+(`window_state`) and the overlay (`ui::wayland`); "is this Hyprland" lived in `hotkey::hyprland`, so window placement
+imported the shortcut module to ask it, and placement ran its own `hyprctl -j` beside the shortcut's. `session.rs` now
+answers `wayland()`, `hyprland()` and `hyprctl_json(query)` for all of them. Left as they are: the Hyprland socket path
+(needs the signature's value, not whether it is set) and `main`'s "no display at all" check, which asks something else.

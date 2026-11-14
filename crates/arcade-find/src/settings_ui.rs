@@ -872,7 +872,7 @@ impl SettingsApp {
             let mut login = self.login_state.unwrap_or(self.settings.start_at_login.unwrap_or(false));
             let description = if self.login_state.is_none() && !self.login_pending {
                 "Install Find to start it at login."
-            } else if cfg!(target_os = "linux") && hotkey::hyprland::active() && !started_by_autostart() {
+            } else if crate::session::hyprland() && !started_by_autostart() {
                 "Hyprland runs login entries only through a session manager such as uwsm. Without one, add exec-once = arcade-find --background to your Hyprland config."
             } else {
                 "Starts in the background, with the tray icon only."
@@ -1010,7 +1010,7 @@ impl SettingsApp {
             }
         }
         // Only where Hyprland runs (FD-9).
-        if hotkey::hyprland::active() {
+        if crate::session::hyprland() {
             kit.section_head(ui, "Hyprland");
             let line = hotkey::hyprland::config_line(&self.settings.shortcut, &hotkey::toggle_command());
             let mut copy = None;
@@ -1638,7 +1638,7 @@ mod tests {
         let source = include_str!("settings_ui.rs");
         let head = source.find(concat!("section_head(ui, ", "\"Hyprland\")")).unwrap();
         let guard = source[..head].rfind("if ").unwrap();
-        assert!(source[guard..head].contains("hotkey::hyprland::active()"), "FD-9: {}", &source[guard..head]);
+        assert!(source[guard..head].contains("crate::session::hyprland()"), "FD-9: {}", &source[guard..head]);
     }
 
     #[test]

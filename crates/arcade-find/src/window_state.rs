@@ -110,11 +110,8 @@ impl Drop for WindowState {
 
 #[cfg(target_os = "linux")]
 fn cursor_monitor() -> Option<Monitor> {
-    if crate::hotkey::hyprland::active() {
-        let query = |name| {
-            let output = std::process::Command::new("hyprctl").args(["-j", name]).output().ok()?;
-            output.status.success().then(|| serde_json::from_slice::<serde_json::Value>(&output.stdout).ok()).flatten()
-        };
+    if crate::session::hyprland() {
+        let query = crate::session::hyprctl_json;
         let cursor = query("cursorpos")?;
         let point = [cursor["x"].as_f64()? as f32, cursor["y"].as_f64()? as f32];
         for monitor in query("monitors")?.as_array()? {
@@ -129,7 +126,7 @@ fn cursor_monitor() -> Option<Monitor> {
     }
     // Wayland intentionally leaves placement to the compositor; querying an
     // Xwayland root here would choose the wrong physical monitor.
-    if std::env::var_os("WAYLAND_DISPLAY").is_some() {
+    if crate::session::wayland() {
         return None;
     }
     use x11rb::connection::Connection;
