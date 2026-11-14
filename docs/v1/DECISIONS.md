@@ -84,3 +84,10 @@ Copies: "is this Wayland" was read from `WAYLAND_DISPLAY` in the shortcut (`hotk
 imported the shortcut module to ask it, and placement ran its own `hyprctl -j` beside the shortcut's. `session.rs` now
 answers `wayland()`, `hyprland()` and `hyprctl_json(query)` for all of them. Left as they are: the Hyprland socket path
 (needs the signature's value, not whether it is set) and `main`'s "no display at all" check, which asks something else.
+
+## D13 - Untangle (step 2): two cycles kept on purpose
+
+- `installer` ↔ `autostart`: the login item is part of the install integration (the macOS install writes the login
+  plist; enabling start at login reuses the installer's launch path and Windows shortcut). They change together.
+- `hotkey` ↔ `service`: `hotkey` is the service's shortcut subsystem. A key press sends `Toggle` to the service and the
+  service hands it a new accelerator; a callback layer between them would change whenever both do.
