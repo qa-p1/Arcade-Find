@@ -98,7 +98,7 @@ fn attributes() -> WindowAttributes {
     #[cfg(all(unix, not(target_os = "macos")))]
     {
         use winit::platform::x11::{WindowAttributesExtX11, WindowType};
-        a = a.with_name(crate::os::APP_ID, crate::os::APP_ID).with_x11_window_type(vec![WindowType::Utility]);
+        a = a.with_name(crate::identity::DESKTOP_ID, crate::identity::DESKTOP_ID).with_x11_window_type(vec![WindowType::Utility]);
     }
     #[cfg(windows)]
     {

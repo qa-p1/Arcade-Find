@@ -30,7 +30,6 @@ use crate::instance::{self, Command};
 use crate::{autostart, hotkey, link, theme, VERSION};
 
 /// The one-line description under every app name (README, Tools, tray).
-pub const TAGLINE: &str = "Press a shortcut, type, and any file or folder shows up.";
 /// The user guide, shipped with the app and published here.
 pub const GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/tree/main/docs/user";
 const CONNECTED_GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/blob/main/docs/user/with-other-apps.md";
@@ -170,7 +169,7 @@ pub fn run(paths: AppPaths) -> ExitCode {
         viewport: window_state.viewport(
             egui::ViewportBuilder::default()
                 .with_title("Settings — Arcade Find")
-                .with_app_id(crate::os::APP_ID)
+                .with_app_id(crate::identity::DESKTOP_ID)
                 .with_inner_size([size::SETTINGS_WIDTH, size::SETTINGS_HEIGHT])
                 .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
                 .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
@@ -181,7 +180,7 @@ pub fn run(paths: AppPaths) -> ExitCode {
     let notify_close = Arc::new(AtomicBool::new(true));
     let close_notice = notify_close.clone();
     let r = eframe::run_native(
-        "Arcade Find",
+        crate::identity::NAME,
         options,
         Box::new(move |cc| {
             crate::debug!("settings: creating UI");
@@ -223,7 +222,7 @@ pub fn run(paths: AppPaths) -> ExitCode {
 /// the system theme on every Linux desktop.
 fn apply_theme(ctx: &egui::Context, t: find_core::settings::Theme) {
     let resolved = if theme::kit_theme(t).is_dark() { "dark" } else { "light" };
-    arcade_link::design::apply_egui(ctx, resolved, link::ME);
+    arcade_link::design::apply_egui(ctx, resolved, crate::identity::ID);
 }
 
 fn texture(ctx: &egui::Context, name: &str, rgba: Vec<u8>, px: u32) -> egui::TextureHandle {
@@ -266,7 +265,7 @@ impl SettingsApp {
         // The system theme changes live (the XDG portal on Linux).
         let theme_ctx = ctx.clone();
         theme::watch_system_theme(move || theme_ctx.request_repaint());
-        let mut glyphs = vec![("brand".to_string(), texture(&ctx, "brand", crate::ui::icons::glyph_mask_rgba(link::ME, 64), 64))];
+        let mut glyphs = vec![("brand".to_string(), texture(&ctx, "brand", crate::ui::icons::glyph_mask_rgba(crate::identity::ID, 64), 64))];
         for id in link::apps::known() {
             glyphs.push((id.to_string(), texture(&ctx, id, crate::ui::icons::glyph_mask_rgba(id, 64), 64)));
         }
@@ -323,7 +322,7 @@ impl SettingsApp {
             let mut hints = Vec::new();
             let mut channel = None;
             if let Ok(environment) = arcade_link::install::Environment::discover() {
-                if let Ok(status) = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default()) {
+                if let Ok(status) = arcade_link::install::integration_status(&environment, crate::identity::ID, &std::env::var("SHELL").unwrap_or_default()) {
                     if let Some(hint) = status.path_hint {
                         hints.push(hint);
                     }
@@ -333,7 +332,7 @@ impl SettingsApp {
                         if receipt.integration.cli.is_none() {
                             hints.push(arcade_link::install::platform::macos::cli_symlink_offer(
                                 &environment,
-                                crate::installer::CLI_NAME,
+                                crate::identity::CLI_NAME,
                                 &crate::installer::launch_path(&receipt),
                             ));
                         }
@@ -591,7 +590,7 @@ fn registry_read_error(path: &Path) -> Option<String> {
 fn app_ids(reg: &Registry) -> Vec<String> {
     let mut v: Vec<String> = link::apps::known().iter().map(|s| s.to_string()).collect();
     for m in reg.apps() {
-        if m.id != link::ME && m.id != ids::TOOLS && !v.contains(&m.id) && m.id.starts_with("arcade.") {
+        if m.id != crate::identity::ID && m.id != ids::TOOLS && !v.contains(&m.id) && m.id.starts_with("arcade.") {
             v.push(m.id.clone());
         }
     }
@@ -696,10 +695,13 @@ impl eframe::App for SettingsApp {
             ctx.request_repaint_after(Duration::from_secs(2));
         }
         self.keys(ctx);
-        let kit = Kit::for_theme(if ctx.style().visuals.dark_mode { arcade_link::design::Theme::Dark } else { arcade_link::design::Theme::Light }, link::ME);
+        let kit = Kit::for_theme(
+            if ctx.style().visuals.dark_mode { arcade_link::design::Theme::Dark } else { arcade_link::design::Theme::Light },
+            crate::identity::ID,
+        );
         let items: Vec<NavItem> = PAGES.iter().map(|&(_, label, icon)| NavItem { label, icon, count: None }).collect();
         let brand = self.glyph("brand");
-        if kit.sidebar_with_brand(ctx, "Arcade Find", VERSION, brand, &items, &mut self.page) {
+        if kit.sidebar_with_brand(ctx, crate::identity::NAME, VERSION, brand, &items, &mut self.page) {
             self.page_changed(ctx);
         }
         let (page, title, _) = PAGES[self.page];
@@ -812,7 +814,7 @@ impl SettingsApp {
     }
 
     fn welcome_page(&mut self, ui: &mut egui::Ui, kit: &Kit, ctx: &egui::Context) {
-        kit.welcome_head(ui, self.glyph("brand"), "search", "Arcade Find", TAGLINE);
+        kit.welcome_head(ui, self.glyph("brand"), "search", crate::identity::NAME, crate::identity::TAGLINE);
         kit.section_head(ui, "1. Choose your shortcut");
         let mut changed = false;
         let desktop_bindings = self.desktop_bindings.clone();
@@ -826,7 +828,7 @@ impl SettingsApp {
             changed |= self.recorder.row(ui, kit, &spec, &mut self.settings.shortcut, |accelerator| {
                 self.registry
                     .as_ref()
-                    .and_then(|registry| registry.shortcut_owner(link::ME, accelerator))
+                    .and_then(|registry| registry.shortcut_owner(crate::identity::ID, accelerator))
                     .or_else(|| desktop_bindings.conflict(accelerator))
                     .or_else(|| hotkey::known_conflict(accelerator).map(str::to_string))
             });
@@ -974,7 +976,7 @@ impl SettingsApp {
             changed |= self.recorder.row(ui, kit, &spec, &mut self.settings.shortcut, |accelerator| {
                 registry
                     .as_ref()
-                    .and_then(|r| r.shortcut_owner(link::ME, accelerator))
+                    .and_then(|r| r.shortcut_owner(crate::identity::ID, accelerator))
                     .or_else(|| desktop_bindings.conflict(accelerator))
                     .or_else(|| hotkey::known_conflict(accelerator).map(|what| format!("{what} (usually)")))
             });
@@ -1365,7 +1367,7 @@ impl SettingsApp {
                         _ => ("Not running", Tone::Neutral),
                     };
                     let glyph = self.glyph(id);
-                    kit.row_with_glyph(ui, glyph, "apps", &name, arcade_link::manifest::peer_description(link::ME, id), |ui| {
+                    kit.row_with_glyph(ui, glyph, "apps", &name, arcade_link::manifest::peer_description(crate::identity::ID, id), |ui| {
                         kit.badge(ui, badge, tone);
                         if installed {
                             let r = ui.add_enabled_ui(link_on, |ui| kit.switch(ui, &mut use_it, &format!("Use {name} with Arcade Find"))).inner;
@@ -1482,7 +1484,7 @@ impl SettingsApp {
         let brand = self.glyph("brand");
         let mut action = None;
         kit.list(ui, |ui| {
-            kit.row_with_glyph(ui, brand, "search", &format!("Version {VERSION}"), TAGLINE, |ui| {
+            kit.row_with_glyph(ui, brand, "search", &format!("Version {VERSION}"), crate::identity::TAGLINE, |ui| {
                 kit.badge(ui, channel, Tone::Neutral);
             });
             if tools {
@@ -1531,7 +1533,7 @@ impl SettingsApp {
         });
         match action {
             Some("tools") => self.open_app(ids::TOOLS),
-            Some("releases") => self.open_url(link::apps::releases_url(link::ME)),
+            Some("releases") => self.open_url(link::apps::releases_url(crate::identity::ID)),
             Some("guide") => self.open_url(GUIDE_URL),
             Some("logs") => {
                 let dir = self.paths.log_dir();
@@ -1588,7 +1590,7 @@ fn overlay_keys() -> Vec<(String, Vec<String>)> {
 /// "Copy diagnostics": Link's shared header, then Find's lines. No queries,
 /// file names or settings payloads.
 pub fn diagnostics(locations: &Locations, channel: Option<&str>, status: Option<Value>) -> String {
-    let mut header = arcade_link::diagnostics::Header::new(link::ME, VERSION, channel.unwrap_or("development"));
+    let mut header = arcade_link::diagnostics::Header::new(crate::identity::ID, VERSION, channel.unwrap_or("development"));
     header.peers_from(locations);
     let rg = find_core::content::detect(&[]);
     header.engine("ripgrep", &rg.map(|r| r.version.to_string()).unwrap_or_else(|| "not installed".into()));
@@ -1754,8 +1756,8 @@ mod tests {
     fn folder_rows_name_the_folder_once_and_keep_the_full_path() {
         let ctx = egui::Context::default();
         arcade_link::design::egui::install_inter(&ctx);
-        arcade_link::design::apply_egui(&ctx, "light", link::ME);
-        let kit = Kit::for_theme(arcade_link::design::Theme::Light, link::ME);
+        arcade_link::design::apply_egui(&ctx, "light", crate::identity::ID);
+        let kit = Kit::for_theme(arcade_link::design::Theme::Light, crate::identity::ID);
         let long = "a-long-folder-name-".repeat(7);
         let root = std::env::temp_dir().join(format!("find-folder-layout-{}", std::process::id()));
         let path = root.join(&long).display().to_string();
@@ -1803,7 +1805,7 @@ mod tests {
     #[test]
     fn diagnostics_have_the_shared_header_and_no_paths() {
         let d = diagnostics(&Locations::discover(), Some("stable"), None);
-        assert!(d.contains("arcade.find") || d.contains("Arcade Find"));
+        assert!(d.contains("arcade.find") || d.contains(crate::identity::NAME));
         assert!(d.contains(VERSION));
         assert!(d.contains("Running: no"));
     }

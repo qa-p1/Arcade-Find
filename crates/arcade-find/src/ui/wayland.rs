@@ -294,7 +294,7 @@ impl Wl {
         let surface = self.compositor.create_surface(&self.qh);
         let fractional = self.fractional_mgr.as_ref().map(|m| m.get_fractional_scale(&surface, &self.qh, ()));
         let viewport = self.viewporter.as_ref().map(|v| v.get_viewport(&surface, &self.qh, ()));
-        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some(crate::os::APP_ID), None);
+        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some(crate::identity::DESKTOP_ID), None);
         layer.set_keyboard_interactivity(KeyboardInteractivity::Exclusive);
         layer.set_exclusive_zone(-1);
         let size = self.logical_size();

@@ -23,7 +23,7 @@ fn main() {
         .receipts()
         .write(&arcade_link::receipt::Receipt {
             schema: 1,
-            id: arcade_find::link::ME.into(),
+            id: arcade_find::identity::ID.into(),
             version: arcade_find::VERSION.into(),
             channel: "stable".into(),
             method: arcade_link::receipt::InstallMethod::Appimage,
@@ -36,7 +36,7 @@ fn main() {
         })
         .unwrap();
     let runtime = Runtime { executable, appimage: Some(image), appdir: Some(appdir), dev_build: false };
-    assert_eq!(install::detect(&environment, arcade_find::link::ME, &runtime).unwrap().state, install::State::InstalledHere);
+    assert_eq!(install::detect(&environment, arcade_find::identity::ID, &runtime).unwrap().state, install::State::InstalledHere);
     measure("installed/receipt", &environment, &runtime);
 }
 
@@ -45,7 +45,7 @@ fn measure(case: &str, environment: &Environment, runtime: &Runtime) {
     for _ in 0..100 {
         let (tx, rx) = std::sync::mpsc::channel();
         let started = Instant::now();
-        let _ = install::detect(environment, arcade_find::link::ME, runtime).unwrap();
+        let _ = install::detect(environment, arcade_find::identity::ID, runtime).unwrap();
         let watcher = TrayHostWatcher::start(
             WatcherConfig { locations: environment.locations.clone(), app: arcade_find::link::me(), link_enabled: true, has_tray: true },
             move |s| {

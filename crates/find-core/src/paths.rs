@@ -42,13 +42,16 @@ fn valid_profile(p: &str) -> bool {
     !p.is_empty() && p.len() <= 64 && p.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
 }
 
+/// Find's Arcade Link id, which also names its config and data folders.
+pub const LINK_ID: &str = "arcade.find";
+
 impl AppPaths {
     pub fn discover() -> AppPaths {
         let profile = std::env::var("ARCADE_FIND_PROFILE").ok().filter(|p| valid_profile(p)).unwrap_or_default();
         if let Some(root) = env_path("ARCADE_FIND_HOME") {
             return AppPaths::under(&root, &profile);
         }
-        let dirs = arcade_link::paths::app_dirs("arcade.find");
+        let dirs = arcade_link::paths::app_dirs(LINK_ID);
         let config = dirs.config;
         let data = dirs.data;
         let runtime = arcade_link::paths::runtime_dir().join("find");
@@ -68,7 +71,7 @@ impl AppPaths {
         if self.isolated {
             return Ok(false);
         }
-        let report = arcade_link::paths::migrate_app_dirs("arcade.find");
+        let report = arcade_link::paths::migrate_app_dirs(LINK_ID);
         if !report.kept.is_empty() {
             return Err(std::io::Error::other(format!(
                 "Couldn't migrate Find's folders. The originals were kept. {}",

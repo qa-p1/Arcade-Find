@@ -43,8 +43,6 @@ pub mod apps {
     }
 }
 
-pub const ME: &str = "arcade.find";
-pub const NAME: &str = "Arcade Find";
 pub const LOOK: &str = "arcade.look";
 pub const BOX: &str = "arcade.box";
 
@@ -63,13 +61,13 @@ pub fn actions() -> Vec<Action> {
 }
 
 pub fn me() -> PeerInfo {
-    PeerInfo { id: ME.into(), version: crate::VERSION.into() }
+    PeerInfo { id: crate::identity::ID.into(), version: crate::VERSION.into() }
 }
 
 /// Find's manifest for these settings.
 pub fn manifest(settings: &Settings) -> Manifest {
-    let mut m = Manifest::new(ME, crate::VERSION, &arcade_link::manifest::current_executable());
-    m.name = NAME.into();
+    let mut m = Manifest::new(crate::identity::ID, crate::VERSION, &arcade_link::manifest::current_executable());
+    m.name = crate::identity::NAME.into();
     m.launch.background = vec!["--background".into()];
     m.launch.invoke = Some(vec![arcade_link::oneshot::FLAG.into()]);
     if !settings.shortcut.trim().is_empty() {
@@ -313,7 +311,7 @@ pub fn peer_offers(registry: &Registry, disabled: &[String], sel: &Selection, pi
     if sel.is_empty() {
         return out;
     }
-    for m in registry.peers(ME).filter(|m| !disabled.contains(&m.id) && m.settings.link_enabled) {
+    for m in registry.peers(crate::identity::ID).filter(|m| !disabled.contains(&m.id) && m.settings.link_enabled) {
         let mut featured = 0;
         for a in m.usable_actions() {
             // Look's preview is Find's own "Quick Look" entry.
@@ -388,7 +386,7 @@ pub fn look_previews(registry: &Registry, disabled: &[String], sel: &Selection) 
 /// A request for `action` (its `#preset` split off) with these inputs.
 pub fn request(action: &Action, inputs: Vec<Content>, options: Value) -> InvokeRequest {
     let base = action.id.split('#').next().unwrap_or(&action.id);
-    let mut r = InvokeRequest::new(base, ME).preset(action.preset.as_deref()).options(options);
+    let mut r = InvokeRequest::new(base, crate::identity::ID).preset(action.preset.as_deref()).options(options);
     r.version = Some(action.version);
     r.inputs = inputs;
     r
@@ -786,7 +784,7 @@ mod tests {
         assert_eq!(r.action, "box:arcade.image.convert");
         assert_eq!(r.preset.as_deref(), Some("webp"));
         assert_eq!(r.version, Some(3));
-        assert_eq!(r.context.source, ME);
+        assert_eq!(r.context.source, crate::identity::ID);
         assert!(r.context.interactive);
     }
 

@@ -184,14 +184,14 @@ pub fn app_icon_rgba(px: u32) -> Vec<u8> {
 /// panels or black for light ones and macOS template images.
 pub fn tray_icon_rgba(px: u32, white: bool) -> Vec<u8> {
     let colour =
-        if white { Rgba::hex(arcade_link::design::palette(arcade_link::design::Theme::Light, crate::link::ME).on_fill) } else { Palette::light().text };
+        if white { Rgba::hex(arcade_link::design::palette(arcade_link::design::Theme::Light, crate::identity::ID).on_fill) } else { Palette::light().text };
     straight(render_svg(FIND_GLYPH, px, colour), px)
 }
 
 /// An Arcade app's glyph as a white mask (straight RGBA), for kit glyph tiles.
 pub fn glyph_mask_rgba(app_id: &str, px: u32) -> Vec<u8> {
-    let svg = if app_id == crate::link::ME { FIND_GLYPH } else { app_svg(AppGlyph::of(app_id)) };
-    let mask = arcade_link::design::palette(arcade_link::design::Theme::Light, crate::link::ME).on_fill;
+    let svg = if app_id == crate::identity::ID { FIND_GLYPH } else { app_svg(AppGlyph::of(app_id)) };
+    let mask = arcade_link::design::palette(arcade_link::design::Theme::Light, crate::identity::ID).on_fill;
     straight(render_svg(svg, px, Rgba::hex(mask)), px)
 }
 

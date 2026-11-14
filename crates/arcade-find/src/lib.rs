@@ -22,6 +22,7 @@ pub mod autostart;
 pub mod diagnostics;
 pub mod hotkey;
 pub mod hub;
+pub mod identity;
 pub mod installer;
 pub mod installer_ui;
 pub mod instance;

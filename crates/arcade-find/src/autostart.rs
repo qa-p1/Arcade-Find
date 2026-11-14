@@ -14,14 +14,14 @@ pub const BACKGROUND_FLAG: &str = "--background";
 // Link v0.3.0's typed receipt omits extension fields on serialization. Retain
 // the original JSON when a login toggle updates an existing installation.
 fn read_receipt(environment: &arcade_link::install::Environment) -> Result<Option<(arcade_link::receipt::Receipt, serde_json::Value)>, String> {
-    let path = environment.receipts().path(crate::link::ME).map_err(|e| e.to_string())?;
+    let path = environment.receipts().path(crate::identity::ID).map_err(|e| e.to_string())?;
     let text = match std::fs::read_to_string(path) {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
         result => result.map_err(|e| e.to_string())?,
     };
     let receipt = arcade_link::receipt::Receipt::from_json(&text).map_err(|e| e.to_string())?;
     receipt.validate_native_paths().map_err(|e| e.to_string())?;
-    if receipt.id != crate::link::ME || receipt.method == arcade_link::receipt::InstallMethod::Dev {
+    if receipt.id != crate::identity::ID || receipt.method == arcade_link::receipt::InstallMethod::Dev {
         return Err("Not a Find installation receipt".into());
     }
     Ok(Some((receipt, serde_json::from_str(&text).map_err(|e| e.to_string())?)))
@@ -40,7 +40,7 @@ fn write_receipt(
     let store = environment.receipts();
     arcade_link::paths::ensure_private_dir(store.dir()).map_err(|e| e.to_string())?;
     let bytes = serde_json::to_vec_pretty(&document).map_err(|e| e.to_string())?;
-    arcade_link::paths::write_atomic(&store.path(crate::link::ME).map_err(|e| e.to_string())?, &bytes, true).map_err(|e| e.to_string())
+    arcade_link::paths::write_atomic(&store.path(crate::identity::ID).map_err(|e| e.to_string())?, &bytes, true).map_err(|e| e.to_string())
 }
 
 fn disable_in(environment: &arcade_link::install::Environment) -> Result<(), String> {
@@ -61,7 +61,7 @@ fn disable_in(environment: &arcade_link::install::Environment) -> Result<(), Str
 pub fn installed_executable() -> Option<String> {
     let environment = arcade_link::install::Environment::discover().ok()?;
     let runtime = arcade_link::install::Runtime::discover().ok()?;
-    let detection = arcade_link::install::detect(&environment, crate::link::ME, &runtime).ok()?;
+    let detection = arcade_link::install::detect(&environment, crate::identity::ID, &runtime).ok()?;
     if detection.state != arcade_link::install::State::InstalledHere {
         return None;
     }
@@ -139,7 +139,7 @@ fn disable() -> Result<(), String> {
 pub fn enabled() -> bool {
     arcade_link::install::Environment::discover()
         .ok()
-        .and_then(|e| e.receipts().read(crate::link::ME).ok().flatten())
+        .and_then(|e| e.receipts().read(crate::identity::ID).ok().flatten())
         .and_then(|r| r.integration.autostart)
         // An entry switched off in the desktop's startup settings won't run.
         .is_some_and(|p| arcade_link::install::autostart_enabled(&p))
@@ -190,7 +190,7 @@ fn disable() -> Result<(), String> {
 pub fn enabled() -> bool {
     arcade_link::install::Environment::discover()
         .ok()
-        .and_then(|e| e.receipts().read(crate::link::ME).ok().flatten())
+        .and_then(|e| e.receipts().read(crate::identity::ID).ok().flatten())
         .and_then(|r| r.integration.autostart)
         .is_some_and(|p| p.is_file())
 }
@@ -252,7 +252,7 @@ fn disable() -> Result<(), String> {
 pub fn enabled() -> bool {
     let startup = arcade_link::install::Environment::discover()
         .ok()
-        .and_then(|e| e.receipts().read(crate::link::ME).ok().flatten())
+        .and_then(|e| e.receipts().read(crate::identity::ID).ok().flatten())
         .and_then(|r| r.integration.autostart)
         .is_some_and(|p| p.is_file());
     startup || win::exists()
@@ -285,14 +285,14 @@ mod tests {
         let executable = environment.applications.join("Arcade-Find.AppImage");
         let startup = environment.config.join("autostart/arcade-find.desktop");
         let document = serde_json::json!({
-            "schema": 1, "id": crate::link::ME, "version": "0.3.0", "channel": "stable",
+            "schema": 1, "id": crate::identity::ID, "version": "0.3.0", "channel": "stable",
             "method": "appimage", "managedBy": "tools", "path": executable,
             "integration": {"icons": [], "autostart": startup, "futureIntegration": {"keep": true}},
             "toolsExtension": {"keep": true},
             "installedAt": arcade_link::manifest::now_rfc3339(), "updatedAt": arcade_link::manifest::now_rfc3339()
         });
         let store = environment.receipts();
-        arcade_link::paths::write_atomic(&store.path(crate::link::ME).unwrap(), &serde_json::to_vec(&document).unwrap(), true).unwrap();
+        arcade_link::paths::write_atomic(&store.path(crate::identity::ID).unwrap(), &serde_json::to_vec(&document).unwrap(), true).unwrap();
         for _ in 0..2 {
             arcade_link::paths::write_atomic(&startup, b"login fixture", true).unwrap();
             let (mut receipt, original) = read_receipt(&environment).unwrap().unwrap();
@@ -308,7 +308,7 @@ mod tests {
             #[cfg(unix)]
             {
                 use std::os::unix::fs::PermissionsExt;
-                assert_eq!(std::fs::metadata(store.path(crate::link::ME).unwrap()).unwrap().permissions().mode() & 0o777, 0o600);
+                assert_eq!(std::fs::metadata(store.path(crate::identity::ID).unwrap()).unwrap().permissions().mode() & 0o777, 0o600);
             }
         }
         #[cfg(target_os = "linux")]

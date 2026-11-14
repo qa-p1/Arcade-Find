@@ -63,3 +63,16 @@ Hyprland never runs autostart entries.
 
 After every full crawl the index returns spare capacity (`Index::shrink_to_fit`) and glibc's `malloc_trim(0)` hands
 freed pages back. Since Find pins Link 1.0.7 this is `arcade_link::runtime::trim()`, which also drops clean file pages; the same call runs once 5 s after the resident starts (W0).
+
+## D11 - Untangle (step 2): one place for Find's identity
+
+Hidden link: `"dev.arcade.Find"` was defined twice (`installer::DESKTOP_ID` for the desktop entry, `os::APP_ID` for the
+window, tray and notifications), and the desktop matches a window to its launcher only while the two agree; nothing
+said they had to. Needless link: the tagline lived in `settings_ui`, so the installer (which writes it as the desktop
+entry's `Comment`) and the tray imported the 1,800-line Settings window for one string. The Link id and display name
+lived in `link`, and "Arcade Find" was repeated as a literal in the tray, notifications and Settings.
+
+Fix: `identity.rs` holds the Link id, name, OS identifier, CLI name and tagline, and everything reads them there.
+The Link id itself is `find_core::paths::LINK_ID`, because `find-core` names Find's config and data folders after it
+and sits below the app; `identity::ID` re-exports it. Old ids (`legacy_desktop_ids`) stay literal: they are history,
+not identity.

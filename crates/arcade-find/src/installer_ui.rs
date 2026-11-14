@@ -156,7 +156,7 @@ struct Dialog {
 }
 
 fn format(s: &str, version: &str, from: &str) -> String {
-    strings::format(s, crate::link::NAME, version, from, crate::VERSION)
+    strings::format(s, crate::identity::NAME, version, from, crate::VERSION)
 }
 
 /// Shared contract strings with the standard's current button wording.
@@ -214,7 +214,7 @@ fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
         viewport: window_state.viewport(
             egui::ViewportBuilder::default()
                 .with_title(title)
-                .with_app_id(crate::os::APP_ID)
+                .with_app_id(crate::identity::DESKTOP_ID)
                 .with_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
                 .with_min_inner_size([size::WINDOW_MIN_WIDTH, size::WINDOW_MIN_HEIGHT])
                 .with_icon(egui::IconData { rgba: crate::ui::icons::app_icon_rgba(64), width: 64, height: 64 }),
@@ -228,7 +228,7 @@ fn run(paths: AppPaths, mode: Mode) -> Result<Outcome, String> {
             arcade_link::design::egui::install_inter(&cc.egui_ctx);
             let appearance = find_core::Settings::load(&paths.settings_file()).0.theme;
             let theme = crate::theme::kit_theme(appearance);
-            arcade_link::design::apply_egui(&cc.egui_ctx, if theme.is_dark() { "dark" } else { "light" }, crate::link::ME);
+            arcade_link::design::apply_egui(&cc.egui_ctx, if theme.is_dark() { "dark" } else { "light" }, crate::identity::ID);
             if let Ok(scale) = std::env::var("ARCADE_FIND_UI_SCALE") {
                 if let Ok(scale) = scale.parse::<f32>() {
                     if (1.0..=1.25).contains(&scale) {
@@ -278,9 +278,9 @@ impl Dialog {
                     let r = installer::install_copy(&environment, &runtime, &paths, &options).map_err(|e| e.to_string())?;
                     // The installed copy replaces an older one still running.
                     installer::stop_running_copy(&paths);
-                    let status =
-                        install::integration_status(&environment, crate::link::ME, &std::env::var("SHELL").unwrap_or_default()).map_err(|e| e.to_string())?;
-                    let hint = status.path_hint.map(|command| strings::format(&strings::get().path_hint, crate::link::NAME, crate::VERSION, "", &command));
+                    let status = install::integration_status(&environment, crate::identity::ID, &std::env::var("SHELL").unwrap_or_default())
+                        .map_err(|e| e.to_string())?;
+                    let hint = status.path_hint.map(|command| strings::format(&strings::get().path_hint, crate::identity::NAME, crate::VERSION, "", &command));
                     Ok(Completed { outcome: Outcome::Launch(installer::launch_path(&r)), hint })
                 }
                 Mode::Uninstall { environment, remove_data } => {
@@ -326,11 +326,11 @@ impl eframe::App for Dialog {
             .unwrap_or_default();
         let theme = crate::theme::kit_theme(appearance);
         if theme != self.theme {
-            arcade_link::design::apply_egui(ctx, if theme.is_dark() { "dark" } else { "light" }, crate::link::ME);
+            arcade_link::design::apply_egui(ctx, if theme.is_dark() { "dark" } else { "light" }, crate::identity::ID);
             self.theme = theme;
         }
         ctx.request_repaint_after(std::time::Duration::from_secs(1));
-        let kit = Kit::for_theme(theme, crate::link::ME);
+        let kit = Kit::for_theme(theme, crate::identity::ID);
         kit.page(ctx, |ui| {
             kit.glyph_tile(ui, None, "search");
             ui.add_space(16.0);
@@ -366,7 +366,11 @@ impl eframe::App for Dialog {
                             kit.checkbox(ui, &mut options.install_cli, "Add the arcade-find terminal command");
                             if !options.install_cli {
                                 let executable = environment.home.join("Applications/Arcade Find.app/Contents/MacOS/arcade-find");
-                                kit.notice(ui, &install::platform::macos::cli_symlink_offer(environment, installer::CLI_NAME, &executable), Tone::Neutral);
+                                kit.notice(
+                                    ui,
+                                    &install::platform::macos::cli_symlink_offer(environment, crate::identity::CLI_NAME, &executable),
+                                    Tone::Neutral,
+                                );
                             }
                         }
                     }
