@@ -27,6 +27,9 @@ jobs:
         run: rustup toolchain uninstall 1.88.0 || true
       - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
+          save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Read-only Tools 0.4.1 checkout
         if: inputs.beta == false
         run: git clone --depth 1 --branch v0.4.1 https://github.com/qa-p1/Arcade-tools "$RUNNER_TEMP/tools"
