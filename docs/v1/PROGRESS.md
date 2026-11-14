@@ -2,6 +2,13 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-14 (Link v1.0.7)
+
+- PR #18 CI fully green at e7d1403 (9 of 9 checks, incl. the headless sway + Xvfb end-to-end run, after its two
+  scripts were moved to the new Escape ladder and focus rule: 7cece31, e7d1403).
+- Find pins Arcade Link `v1.0.7` (Cargo, design kit via `scripts/sync-design.py`, the three runner clones in ci.yml,
+  THIRD_PARTY_NOTICES). It lists `arcade-find` in `legacy_desktop_ids`, so 1.0.7's installer retires that entry.
+
 ## 2026-11-13 (step 3: fixes, PR #18)
 
 Every FIND.md finding is fixed on `claude/tender-feynman-3vt7dg` ([PR #18](https://github.com/qa-p1/Arcade-Find/pull/18)),
