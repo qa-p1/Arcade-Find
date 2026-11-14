@@ -163,8 +163,6 @@ impl Hub {
     }
 }
 
-/// The bar's index status: only while the index is not yet usable or complete.
-/// The index as the overlay shows it: loading, the first scan, the last error.
 /// A query from `--search`: content searches and malformed filters are
 /// errors, even next to valid terms (FD-5).
 pub fn cli_query(text: &str) -> Result<Query, String> {
@@ -189,6 +187,8 @@ pub fn cli_search(engine: &Engine, q: &Query, limit: usize, hidden: bool) -> Val
             "results": hits.iter().map(|h| json!({"path": h.path.to_string_lossy(), "isDir": h.is_dir, "size": h.size, "modified": h.mtime})).collect::<Vec<_>>() })
 }
 
+/// The bar's index status: only while the index is not yet usable or complete.
+/// The index as the overlay shows it: loading, the first scan, the last error.
 pub fn index_state(engine: &Engine) -> IndexState {
     let st = engine.status();
     let indexing = (engine.phase() == Phase::Crawling).then(|| st.entries.max(st.progress.entries));
