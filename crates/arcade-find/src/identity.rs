@@ -8,3 +8,5 @@ pub const NAME: &str = "Arcade Find";
 pub const DESKTOP_ID: &str = "dev.arcade.Find";
 pub const CLI_NAME: &str = "arcade-find";
 pub const TAGLINE: &str = "Press a shortcut, type, and any file or folder shows up.";
+/// The user guide, opened from Settings and by the running service.
+pub const GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/tree/main/docs/user";

@@ -802,7 +802,7 @@ impl Service {
             }
             Effect::OpenGuide => {
                 self.worker("find-guide", move |_| {
-                    let _ = open::that(crate::settings_ui::GUIDE_URL);
+                    let _ = open::that(crate::identity::GUIDE_URL);
                 });
             }
             Effect::Quit => {

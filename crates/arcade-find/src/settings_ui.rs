@@ -31,7 +31,6 @@ use crate::{autostart, hotkey, link, theme, VERSION};
 
 /// The one-line description under every app name (README, Tools, tray).
 /// The user guide, shipped with the app and published here.
-pub const GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/tree/main/docs/user";
 const CONNECTED_GUIDE_URL: &str = "https://github.com/qa-p1/Arcade-Find/blob/main/docs/user/with-other-apps.md";
 const LICENCES_URL: &str = "https://github.com/qa-p1/Arcade-Find/blob/main/THIRD_PARTY_NOTICES.md";
 
@@ -791,7 +790,7 @@ impl SettingsApp {
             self.closing = true;
         }
         if f1 {
-            self.open_url(GUIDE_URL);
+            self.open_url(crate::identity::GUIDE_URL);
         }
         if settings {
             self.page = 0;
@@ -1534,7 +1533,7 @@ impl SettingsApp {
         match action {
             Some("tools") => self.open_app(ids::TOOLS),
             Some("releases") => self.open_url(link::apps::releases_url(crate::identity::ID)),
-            Some("guide") => self.open_url(GUIDE_URL),
+            Some("guide") => self.open_url(crate::identity::GUIDE_URL),
             Some("logs") => {
                 let dir = self.paths.log_dir();
                 self.open_path(&dir);

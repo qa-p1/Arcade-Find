@@ -98,9 +98,6 @@ impl AppPaths {
     pub fn pins_file(&self) -> PathBuf {
         self.data.join("pins.json")
     }
-    pub fn log_file(&self) -> PathBuf {
-        self.log_dir().join("arcade-find.log")
-    }
     pub fn log_dir(&self) -> PathBuf {
         self.data.join("logs")
     }

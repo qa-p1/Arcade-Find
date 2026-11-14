@@ -91,3 +91,13 @@ answers `wayland()`, `hyprland()` and `hyprctl_json(query)` for all of them. Lef
   plist; enabling start at login reuses the installer's launch path and Windows shortcut). They change together.
 - `hotkey` ↔ `service`: `hotkey` is the service's shortcut subsystem. A key press sends `Toggle` to the service and the
   service hands it a new accelerator; a callback layer between them would change whenever both do.
+
+## D14 - Untangle (step 2): the event log and the stderr log were one file
+
+Hidden link and bug: `diagnostics::event` appended to `<logs>/arcade-find.log` and rotated it at 1 MiB (`.1`, `.2`),
+while Link's `capture_stderr`, started by `main` with the CLI name, redirects stderr to the same file and rotates it
+its own way. An event rotation moved the live stderr log aside (stderr kept writing to the renamed file) and a later
+one deleted it; Link's start-up rotation overwrote the events' `.1`. Events now go to `events.log` in the same folder
+(test: `rotating_the_event_log_leaves_the_stderr_log_alone`, which fails on the old code). `find-core`'s unused
+`log_file()`, a third copy of the name, is gone. Also: the user-guide URL moved to `identity`, so the resident no longer
+imports the Settings window for it.
