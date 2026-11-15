@@ -90,7 +90,6 @@ pub type Listener = Arc<dyn Fn(EngineEvent) + Send + Sync>;
 struct Work {
     rescan_all: bool,
     settings: Option<Settings>,
-    save_now: bool,
     quit: bool,
 }
 
@@ -440,11 +439,6 @@ impl Engine {
                 self.full_scan();
                 continue;
             }
-            if std::mem::take(&mut work.save_now) {
-                drop(work);
-                self.save();
-                continue;
-            }
             let now = Instant::now();
             let mut sleep = Duration::from_secs(24 * 3600);
             if !self.pending.is_empty() {
@@ -510,12 +504,6 @@ impl Engine {
     pub fn request_rescan(&self) {
         let mut w = self.work.lock().unwrap_or_else(|e| e.into_inner());
         w.rescan_all = true;
-        self.wake.notify_all();
-    }
-
-    pub fn request_save(&self) {
-        let mut w = self.work.lock().unwrap_or_else(|e| e.into_inner());
-        w.save_now = true;
         self.wake.notify_all();
     }
 

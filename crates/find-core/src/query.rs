@@ -77,10 +77,6 @@ impl Query {
             && self.content.is_none()
     }
 
-    pub fn has_path_terms(&self) -> bool {
-        self.terms.iter().any(|t| t.kind == TermKind::Path)
-    }
-
     pub fn parse(input: &str) -> Query {
         Query::parse_local(input, crate::now_secs())
     }

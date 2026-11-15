@@ -217,14 +217,6 @@ impl Index {
         self.mtime[id as usize] as i64
     }
 
-    /// The root this entry belongs to.
-    pub fn root_of(&self, mut id: u32) -> Option<&Root> {
-        while self.parent[id as usize] != NONE {
-            id = self.parent[id as usize];
-        }
-        self.roots.iter().find(|r| r.id == id)
-    }
-
     /// Depth below its root (a root is 0).
     pub fn depth(&self, mut id: u32) -> u32 {
         let mut d = 0;

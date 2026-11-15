@@ -109,11 +109,6 @@ pub fn score_ascii_raw(name: &[u8], term: &[u8], fuzzy: bool) -> Option<i32> {
     fuzzy_ascii_raw(name, term)
 }
 
-/// Characters of `term` in order inside `name`, scored by gaps and word starts.
-pub fn fuzzy_ascii(name: &[u8], term: &[u8]) -> Option<i32> {
-    fuzzy_ascii_raw(name, term).filter(|&b| b >= FUZZY_MIN)
-}
-
 fn fuzzy_ascii_raw(name: &[u8], term: &[u8]) -> Option<i32> {
     let first = term[0];
     let mut s = name.iter().position(|&b| fold(b) == first)?;
