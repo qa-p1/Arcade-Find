@@ -17,7 +17,7 @@ Tested locally:
 - `cargo +1.88.0 fmt --all --check`: clean.
 - `cargo +1.88.0 clippy --workspace --all-targets --locked -- -D warnings`: clean.
 - `cargo +1.88.0 clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: clean.
-`xvfb-run -a dbus-run-session -- cargo +1.88.0 test --workspace --locked`: all pass (89 + 12 + 5 + 3 + 5 + 57 + 1 tests).
+- `xvfb-run -a dbus-run-session -- cargo +1.88.0 test --workspace --locked`: all pass (89 + 12 + 5 + 3 + 5 + 57 + 1 tests).
 
 macOS code compiles only in CI.
 
