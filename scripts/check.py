@@ -23,6 +23,7 @@ def main():
     if not args.native_only:
         run(sys.executable, 'scripts/check-docs.py')
         run(sys.executable, 'scripts/check-vendored.py')
+        run(sys.executable, 'scripts/notices.py', '--check')
         run(sys.executable, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py')
         run(sys.executable, 'scripts/check-design.py', '--source-only')
         run('cargo', 'fmt', '--all', '--', '--check')

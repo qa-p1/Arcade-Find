@@ -220,6 +220,22 @@ mod tests {
         std::fs::remove_dir_all(root).unwrap();
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn private_dirs_are_owner_only_and_never_symlinks() {
+        use std::os::unix::fs::PermissionsExt;
+        let root = std::env::temp_dir().join(format!("find-private-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        let dir = root.join("run");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        ensure_private_dir(&dir).unwrap();
+        assert_eq!(std::fs::metadata(&dir).unwrap().permissions().mode() & 0o777, 0o700);
+        std::os::unix::fs::symlink(&dir, root.join("link")).unwrap();
+        assert!(ensure_private_dir(&root.join("link")).is_err(), "a symlink is refused");
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
     #[test]
     fn tilde_roundtrip() {
         let h = home_dir();

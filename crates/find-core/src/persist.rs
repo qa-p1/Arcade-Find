@@ -125,7 +125,15 @@ pub fn save(path: &Path, index: &Index, fingerprint: u64, complete_at: i64) -> i
     }
     let tmp = path.with_extension(format!("tmp{}", std::process::id()));
     let result = (|| {
-        let file = File::create(&tmp)?;
+        // The index lists every file name under the indexed folders: readable only by the current user.
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create(true).truncate(true);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+        let file = options.open(&tmp)?;
         let mut w = CrcWriter { inner: BufWriter::with_capacity(256 * 1024, file), crc: crc32fast::Hasher::new() };
         let header = Header {
             roots: index.roots.iter().map(|r| (r.id, r.path.clone())).collect(),
@@ -260,6 +268,11 @@ mod tests {
         assert_eq!(back.dir_at(&root.join("Ünïcode dir")), Some(d));
         assert_eq!(back.lookup(&root.join("Ünïcode dir/file-999.txt")).map(|i| back.size(i)), Some(999));
         assert_eq!(read_header(&p).unwrap().entries, ix.len() as u64);
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            assert_eq!(std::fs::metadata(&p).unwrap().permissions().mode() & 0o777, 0o600, "the index is private to the user");
+        }
 
         // Flip one byte in the body: the checksum must catch it.
         let mut bytes = std::fs::read(&p).unwrap();

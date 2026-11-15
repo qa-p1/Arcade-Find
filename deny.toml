@@ -1,0 +1,45 @@
+# cargo deny check (CI): advisories, licences, bans and sources.
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+# Accepted advisories, each with its reason (also in SECURITY.md). None is a vulnerability Find can reach: two are
+# in crates no Find build compiles, one is in a function Find's dependency never calls, the rest are "unmaintained"
+# notices with no maintained replacement they can take yet. Revisit when those move.
+ignore = [
+  { id = "RUSTSEC-2024-0429", reason = "glib 0.18 (VariantStrIter): only tray-icon's GTK backend uses it, and Find depends on tray-icon on Windows and macOS only (Linux uses ksni), so no Find build compiles it" },
+  { id = "RUSTSEC-2024-0370", reason = "proc-macro-error: build-time macro of glib-macros 0.18, which only the GTK tray backend above pulls in; no Find build compiles it" },
+  { id = "RUSTSEC-2026-0186", reason = "memmap2 0.8.0 (advise_range/flush_range offsets): used only by xkbcommon 0.7, which calls MmapOptions::map on the compositor's keymap and none of the affected functions; the fix needs xkbcommon/smithay-client-toolkit to move to memmap2 0.9" },
+  { id = "RUSTSEC-2026-0192", reason = "ttf-parser: unmaintained (no known vulnerability); cosmic-text's fontdb and egui's ab_glyph parse fonts with it and have no maintained replacement yet" },
+  { id = "RUSTSEC-2026-0543", reason = "chrono: unmaintained (no known vulnerability); trash writes the DeletionDate of a trashed file with it on Linux, and without its chrono feature it leaves the date out, which file managers show; it moves when trash does" },
+  { id = "RUSTSEC-2026-0370", reason = "zvariant: merged into zbus 6; Find's zbus, ksni, notify-rust and accesskit_unix are all on zbus 5" },
+  { id = "RUSTSEC-2026-0371", reason = "zbus_names: merged into zbus 6; Find's zbus, ksni, notify-rust and accesskit_unix are all on zbus 5" },
+  { id = "RUSTSEC-2026-0372", reason = "zvariant_derive: merged into zbus 6; Find's zbus, ksni, notify-rust and accesskit_unix are all on zbus 5" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.9
+allow = [
+  "0BSD", "MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", "BSD-3-Clause", "ISC",
+  "Unicode-3.0", "Zlib", "CC0-1.0", "MPL-2.0", "OFL-1.1", "Unlicense", "BSL-1.0",
+  # The fonts egui ships (epaint_default_fonts: Ubuntu-Light under the Ubuntu Font Licence; texts in THIRD_PARTY_NOTICES.md).
+  "Ubuntu-font-1.0",
+]
+unused-allowed-license = "allow"
+# Find's own crates are MIT OR Apache-2.0 and never published.
+[licenses.private]
+ignore = true
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+# Arcade Link, pinned to a release tag.
+allow-git = ["https://github.com/qa-p1/Arcade-Link"]
