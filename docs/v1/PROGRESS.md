@@ -10,8 +10,8 @@ stable release); CI runs both. CI also runs the Tier 1 Hyprland test (`tests/des
 workflow ran before.
 
 Tested locally, in Link's isolated runner (`tools/e2e.py run`) on the real published AppImages: `check-upgrade.py`
-0.4.3 → 0.5.4 passes (folder migration checked), and 0.5.4 → 0.5.4 passes with the same-version guard removed for
-the run (the 0.5 data path; no newer build here). The workflow files parse. The Tier 1 test runs first in this PR's
+0.4.3 → 0.5.4 passes (folder migration checked), and 0.5.4 → 0.5.4 passes (the 0.5 data path; until the 1.0.0 bump CI's build
+is 0.5.4 too, so the same version is allowed). The workflow files parse. The Tier 1 test runs first in this PR's
 CI (it needs Hyprland).
 
 ## 2026-11-15 (cloud session) - step 4

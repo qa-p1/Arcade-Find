@@ -67,7 +67,8 @@ def main():
     with (output / 'upgrade.log').open('w') as log:
         old_receipt = command(previous, '--install', '--silent', '--no-launch', '--keep-download')
         old_version = old_receipt['version']
-        assert old_version != VERSION and old_version.split('-')[0].count('.') == 2, old_receipt
+        # The same version is allowed: before the release bump CI's build still carries the previous release's number.
+        assert old_version.split('-')[0].count('.') == 2, old_receipt
         installed = Path(old_receipt['path'])
         assert installed.is_relative_to(root)
         # 0.4.x kept its files in `arcade-find`; 0.5.0 moved them to `arcade/find` (migrating on install).
