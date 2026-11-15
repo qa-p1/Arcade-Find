@@ -140,3 +140,20 @@ from `<data>/arcade/runtime/find-<version>-<key>/` through Link's `runtime::rela
 running instance takes) never relaunch. The budget (background 42 PSS / 48 RSS) is measured on the published rc
 by the gates' budget job.
 
+
+## D17 - Release gates (step 7): Link's app gates on the published rc, the upgrade from the previous release
+
+`.github/workflows/gates.yml` runs PLAN's exit gates on the published files of an rc, never a local build, through
+Link's reusable `app-gates.yml@v1.0.9` (published files and SHA256SUMS, the rc's manifest, conformance, N-1,
+budgets, the delta through Tools' updater, the Windows and macOS smoke on the published installers) plus Find's
+own Linux checks on the published AppImage and the desktop suites (Tier 1 Hyprland, Tier 2 sway, KWin, Mutter,
+X11). "Promote" runs only after a green Gates run on the rc it promotes.
+- **Upgrade:** `scripts/check-upgrade.py` took only 0.4.3, whose folders (`arcade-find`) are migrated on install.
+  The previous stable release is 0.5.4, whose data is already in `arcade/find`, so the script now reads the old
+  version from its receipt, seeds the data where that version keeps it, and checks the migration only for 0.4.x.
+  CI and the gates run it from both 0.4.3 and 0.5.4.
+- **Tier 1:** `tests/desktop/find_desktop.py` (step 1) never ran anywhere: no workflow called it. CI now runs it on
+  every push through Link's `desktop-e2e.yml` on the AppImage the run built, and the gates on the published one.
+- The Linux checks are the ones CI already runs on its own build (`verify-appimage.py`, the upgrades, the tray's
+  lifecycle), now on the published file. The Windows and macOS checks are CI's `packaging/windows/verify.ps1` and
+  `packaging/macos/verify.sh` on the published installer.

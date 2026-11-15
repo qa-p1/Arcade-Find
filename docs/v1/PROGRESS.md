@@ -2,6 +2,18 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-15 (cloud session) - step 7: release gates
+
+D17: `gates.yml` on Link `app-gates.yml@v1.0.9` for the published rc, with Find's Linux checks and the desktop
+suites. `check-upgrade.py` now upgrades from any released Find (0.4.3 with its folder migration, 0.5.4 as the previous
+stable release); CI runs both. CI also runs the Tier 1 Hyprland test (`tests/desktop/find_desktop.py`), which no
+workflow ran before.
+
+Tested locally, in Link's isolated runner (`tools/e2e.py run`) on the real published AppImages: `check-upgrade.py`
+0.4.3 → 0.5.4 passes (folder migration checked), and 0.5.4 → 0.5.4 passes with the same-version guard removed for
+the run (the 0.5 data path; no newer build here). The workflow files parse. The Tier 1 test runs first in this PR's
+CI (it needs Hyprland).
+
 ## 2026-11-15 (cloud session) - step 4
 
 Dead code (D15). Beyond `cargo machete` (no unused dependency) and `clippy -D warnings` (clean), every `pub` item of
