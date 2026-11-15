@@ -334,6 +334,11 @@ fn main() -> ExitCode {
         Some(Command::Toggle) => Some(UiMsg::Show { query: None, reveal: None }),
         _ => None,
     };
+    // The resident runs from the unpacked copy of the AppImage, so no FUSE helper stays resident (Link RT-7,
+    // AUDIT/memory.md U1); this process exits at once and the copy takes the same command line.
+    if let Some(code) = arcade_link::runtime::relaunch_unpacked(arcade_find::identity::ID, VERSION, false) {
+        return ExitCode::from(u8::try_from(code).unwrap_or(1));
+    }
     let open_settings = matches!(cmd, Some(Command::Settings));
     let background = initial.is_none();
     run_resident(paths, background, initial, open_settings, args.successor_of)
