@@ -101,3 +101,31 @@ one deleted it; Link's start-up rotation overwrote the events' `.1`. Events now 
 (test: `rotating_the_event_log_leaves_the_stderr_log_alone`, which fails on the old code). `find-core`'s unused
 `log_file()`, a third copy of the name, is gone. Also: the user-guide URL moved to `identity`, so the resident no longer
 imports the Settings window for it.
+
+## D15 - Dead code (step 4)
+
+rustc and clippy never flag `pub` items of a library crate, so the search was done by hand: every `pub fn`, `struct`,
+`enum`, `const`, `static`, `trait`, `type` and `union` in `arcade-find` and `find-core` was looked up as a whole word
+with `git grep -w` over the entire repository (both crates with their tests, examples, benches and `build.rs`,
+`tests/`, `scripts/`, `tools/`, `packaging/`, workflows and docs). `git grep` reads the `cfg(windows)` and
+`cfg(target_os = "macos")` branches as text, so code only those platforms compile counted as a use.
+
+Removed (the only hit was the definition):
+
+- `link::apps::pitch`, `os::paste_text`, `theme::setting_name` (`arcade-find`).
+- `Engine::request_save`, `Index::root_of`, `matcher::fuzzy_ascii`, `Query::has_path_terms` (`find-core`). With
+  `request_save` gone nothing could set `Work::save_now`, so the field and its branch in the worker loop went too; the
+  periodic and shutdown saves call `Engine::save` directly.
+- `tools/release-notes.py`: no workflow, script or doc runs it (releases link to `CHANGELOG.md`).
+
+Kept on purpose:
+
+- `fmt::datetime`, `matcher::score_name`, `persist::read_header`: used only by their own unit tests. They are small,
+  tested API of `find-core`; removing them means rewriting tests for no gain.
+- `crates/arcade-find/examples/hub-startup.rs` and `crates/find-core/examples/typing.rs`: measurement tools that no
+  script names. Cargo builds them (clippy `--all-targets`), and their headers say how an isolated runner uses them.
+- `tests/desktop/*`, `tools/third_party_notices.py` (regenerates `THIRD_PARTY_NOTICES.md`, run by hand), and the
+  Cargo-discovered tests and benches.
+- Vendored files in `VENDORED.md`, the design-kit assets, and `scripts/verify-tools-update.rs`.
+- Feature flags: neither crate declares a `[features]` table, so none can be unused. The arcade-link features in
+  `arcade-find`'s Cargo.toml are Link's own and `cargo machete` reports no unused dependency.

@@ -2,6 +2,25 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-15 (cloud session) - step 4
+
+Dead code (D15). Beyond `cargo machete` (no unused dependency) and `clippy -D warnings` (clean), every `pub` item of
+both library crates was searched repository-wide with `git grep -w`, plus unreferenced files and feature flags.
+
+- Removed: `link::apps::pitch`, `os::paste_text`, `theme::setting_name`, `Engine::request_save` (and `Work::save_now`),
+  `Index::root_of`, `matcher::fuzzy_ascii`, `Query::has_path_terms`, `tools/release-notes.py`.
+- Kept on purpose: test-only `fmt::datetime`, `matcher::score_name`, `persist::read_header`; the two measurement
+  examples; vendored files. No feature flags to remove.
+
+Tested locally:
+
+- `cargo +1.88.0 fmt --all --check`: clean.
+- `cargo +1.88.0 clippy --workspace --all-targets --locked -- -D warnings`: clean.
+- `cargo +1.88.0 clippy --workspace --all-targets --target x86_64-pc-windows-gnu --locked -- -D warnings`: clean.
+- `xvfb-run -a dbus-run-session -- cargo +1.88.0 test --workspace --locked`: all pass (89 + 12 + 5 + 3 + 5 + 57 + 1 tests).
+
+macOS code compiles only in CI.
+
 ## 2026-11-14 (cloud session, branch `claude/sharp-cori-29w5eg`)
 
 - Step 6 (6e2fc47): rc-only releases through Link `app-publish` (Inno), `promote.yml`, `nightly.yml`; the stage job
@@ -10,7 +29,6 @@ Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
   (D11: `dev.arcade.Find` was defined twice; installer and tray imported Settings for the tagline), one `session`
   module (D12: three Wayland checks, two Hyprland detections, two `hyprctl -j` runners). Kept on purpose: two cycles
   (D13). Left: the Settings window (1,810 lines) and `ui::model`; then the comments and tests extras.
-- Step 4, dead code: `cargo machete` finds no unused dependency; `clippy -D warnings` (dead code included) is clean.
 - Tested: `cargo +1.88.0 clippy --workspace --all-targets -D warnings`, `cargo +1.88.0 test --workspace` (all pass).
 
 ## 2026-11-14 (Link v1.0.7)
