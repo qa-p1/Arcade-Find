@@ -35,9 +35,6 @@ pub mod apps {
     pub fn name(id: &str) -> &str {
         manifest::app_name(id)
     }
-    pub fn pitch(id: &str) -> &'static str {
-        manifest::app_pitch(id)
-    }
     pub fn releases_url(id: &str) -> &'static str {
         manifest::releases_url(id)
     }

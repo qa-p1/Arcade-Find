@@ -160,15 +160,6 @@ pub fn kit_theme(theme: Theme) -> KitTheme {
     }
 }
 
-/// The Appearance setting as the kit's egui `apply` takes it.
-pub fn setting_name(theme: Theme) -> &'static str {
-    match theme {
-        Theme::System => "system",
-        Theme::Light => "light",
-        Theme::Dark => "dark",
-    }
-}
-
 /// 0 unknown, 1 dark, 2 light — refreshed off the UI thread.
 static SYSTEM: AtomicU8 = AtomicU8::new(0);
 

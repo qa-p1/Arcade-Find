@@ -219,13 +219,6 @@ pub fn copy_files(paths: Vec<PathBuf>) -> Result<(), String> {
     rx.recv_timeout(std::time::Duration::from_secs(3)).map_err(|_| "The clipboard didn't respond.".to_string())?
 }
 
-pub fn paste_text() -> Option<String> {
-    match paste_value()? {
-        ClipboardValue::Text(text) => Some(text),
-        ClipboardValue::Files(_) => None,
-    }
-}
-
 pub(crate) fn paste_value() -> Option<ClipboardValue> {
     let (tx, rx) = mpsc::channel();
     clipboard().send(ClipReq::Get(tx)).ok()?;
