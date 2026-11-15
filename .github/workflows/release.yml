@@ -1,17 +1,11 @@
-# The beta rehearsal is draft-only. Stable publication requires a matching tag.
+# Builds every platform once from a release-candidate tag and publishes the three installers as a hidden prerelease
+# on the test channel (Link's reusable publish: arcade-release.json with the Inno installer's switches, and an
+# unsigned manifest.json). "Tag a release" starts it; it can also be run by hand on an rc tag. Every exit gate runs
+# against the published files; "Promote" then republishes the same bytes as stable with a signed manifest. Nothing
+# here publishes stable (PLAN.md rule zero).
 name: Release
 on:
   workflow_dispatch:
-    inputs:
-      channel:
-        description: Release channel
-        type: choice
-        options: [beta, stable]
-        default: beta
-      draft:
-        description: Keep the release as a private draft
-        type: boolean
-        default: true
 permissions:
   contents: read
 concurrency:
@@ -20,39 +14,28 @@ concurrency:
 jobs:
   prepare:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     outputs:
       tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Validate channel, version and publication intent
+      - name: The tag is this version's release candidate
         id: plan
-        env:
-          CHANNEL: ${{ inputs.channel }}
-          DRAFT: ${{ inputs.draft }}
         run: |
           version=$(python3 scripts/check-version.py)
-          if [ "$CHANNEL" = stable ]; then
-            [ "$GITHUB_REF" = "refs/tags/v$version" ] || { echo "Stable releases must run on v$version"; exit 1; }
-            tag="v$version"
-          else
-            [ "$DRAFT" = true ] || { echo "Beta verification is draft-only"; exit 1; }
-            tag="v$version-beta.${GITHUB_RUN_NUMBER}"
-          fi
+          tag="${GITHUB_REF#refs/tags/}"
+          [[ "$GITHUB_REF" == refs/tags/* && "$tag" =~ ^v${version//./\\.}-rc\.[1-9][0-9]*$ ]] \
+            || { echo "::error::run Release on a tag v$version-rc.N (got $GITHUB_REF)"; exit 1; }
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
   ci:
     needs: prepare
     uses: ./.github/workflows/ci.yml
-  publish:
+  stage:
     needs: [prepare, ci]
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
-      TAG: ${{ needs.prepare.outputs.tag }}
-      CHANNEL: ${{ inputs.channel }}
-      DRAFT: ${{ inputs.draft }}
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
@@ -60,16 +43,26 @@ jobs:
           pattern: package-*
           merge-multiple: true
           path: ${{ runner.temp }}/built
-      - name: Verify all installers and prepare metadata
-        run: python3 scripts/prepare-release.py "$RUNNER_TEMP/built" "$RUNNER_TEMP/release" --channel "$CHANNEL" --notes "https://github.com/$GH_REPO/releases/tag/$TAG"
-      - name: Publish the requested release
-        run: |
-          version=$(python3 scripts/check-version.py)
-          python3 tools/release-notes.py CHANGELOG.md "$version" > "$RUNNER_TEMP/notes.md"
-          if [ "$DRAFT" = true ]; then
-            flags=()
-            [ "$CHANNEL" = stable ] || flags+=(--prerelease)
-            gh release create "$TAG" "$RUNNER_TEMP"/release/* --draft "${flags[@]}" --target "$GITHUB_SHA" --title "Arcade Find $TAG" --notes-file "$RUNNER_TEMP/notes.md"
-          else
-            gh release create "$TAG" "$RUNNER_TEMP"/release/* --verify-tag --latest --title "Arcade Find $TAG" --notes-file "$RUNNER_TEMP/notes.md"
-          fi
+      - name: Verify the three installers (one AppImage, one Inno installer, one universal dmg)
+        run: python3 scripts/prepare-release.py "$RUNNER_TEMP/built" "$RUNNER_TEMP/release" --channel beta --notes "https://github.com/$GITHUB_REPOSITORY/releases/tag/${{ needs.prepare.outputs.tag }}"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-find
+          path: |
+            ${{ runner.temp }}/release/*.AppImage
+            ${{ runner.temp }}/release/*.exe
+            ${{ runner.temp }}/release/*.dmg
+          if-no-files-found: error
+  publish:
+    needs: [prepare, stage]
+    permissions:
+      contents: write
+    uses: qa-p1/Arcade-Link/.github/workflows/app-publish.yml@v1.0.8
+    with:
+      app: arcade.find
+      version: ${{ needs.prepare.outputs.version }}
+      tag: ${{ needs.prepare.outputs.tag }}
+      channel: test
+      artifacts: release-find
+      windows-installer: inno
+      link-ref: v1.0.8

@@ -101,7 +101,7 @@ fn every_optional_method_dispatches_and_validates_over_ipc() {
     let controls = Arc::new(Controls { paths: paths.clone(), locations: loc.clone(), calls: Mutex::new(Vec::new()) });
     let handler = Arc::new(link::FindHandler { host: controls.clone(), background: true });
     let _server = Server::start(ServerConfig { app: link::me(), locations: loc.clone() }, handler).unwrap();
-    let mut client = Client::connect(&loc, link::ME, &peer()).unwrap();
+    let mut client = Client::connect(&loc, arcade_find::identity::ID, &peer()).unwrap();
     for method in arcade_link::wire::method::OPTIONAL {
         assert!(client.describe_full().unwrap().supports(method));
     }
@@ -119,7 +119,7 @@ fn every_optional_method_dispatches_and_validates_over_ipc() {
     assert_eq!(result.via, arcade_link::app::ShortcutVia::Manual);
     assert!(result.hint.is_some());
     assert_eq!(Settings::load(&paths.settings_file()).0.shortcut, "Ctrl+Alt+G");
-    assert_eq!(arcade_link::Registry::load(&loc).get(link::ME).unwrap().shortcuts[0].accelerator, "Ctrl+Alt+G");
+    assert_eq!(arcade_link::Registry::load(&loc).get(arcade_find::identity::ID).unwrap().shortcuts[0].accelerator, "Ctrl+Alt+G");
     let outputs = client.settings_export().unwrap();
     assert_eq!(outputs[0].kind, "file/any");
     let exported = std::fs::read_to_string(outputs[0].path.as_ref().unwrap()).unwrap();
@@ -324,7 +324,7 @@ fn real_resident_rebinds_with_fake_hyprctl_and_persists_manifest_and_import() {
     let mut child = ChildGuard(command.spawn().unwrap());
     let until = Instant::now() + Duration::from_secs(8);
     let mut client = loop {
-        if let Ok(c) = Client::connect(&loc, link::ME, &peer()) {
+        if let Ok(c) = Client::connect(&loc, arcade_find::identity::ID, &peer()) {
             break c;
         }
         assert!(Instant::now() < until, "resident did not start: {:?}", child.0.try_wait());
@@ -334,7 +334,7 @@ fn real_resident_rebinds_with_fake_hyprctl_and_persists_manifest_and_import() {
     assert!(result.applied);
     assert_eq!(result.via, arcade_link::app::ShortcutVia::HyprlandRuntime);
     assert_eq!(Settings::load(&paths.settings_file()).0.shortcut, "Ctrl+Alt+G");
-    assert_eq!(arcade_link::Registry::load(&loc).get(link::ME).unwrap().shortcuts[0].accelerator, "Ctrl+Alt+G");
+    assert_eq!(arcade_link::Registry::load(&loc).get(arcade_find::identity::ID).unwrap().shortcuts[0].accelerator, "Ctrl+Alt+G");
     for key in ["Ctrl++", "Alt+Tab", "Ctrl+Alt+Delete"] {
         assert_eq!(client.shortcuts_set("show", key).unwrap_err().code, arcade_link::ErrorCode::Denied);
     }
@@ -350,7 +350,7 @@ fn real_resident_rebinds_with_fake_hyprctl_and_persists_manifest_and_import() {
     drop(client);
     let until = Instant::now() + Duration::from_secs(8);
     let mut successor = loop {
-        if let Ok(mut c) = Client::connect(&loc, link::ME, &peer()) {
+        if let Ok(mut c) = Client::connect(&loc, arcade_find::identity::ID, &peer()) {
             if c.status().unwrap()["pid"].as_u64().unwrap() != before {
                 break c;
             }
@@ -362,7 +362,7 @@ fn real_resident_rebinds_with_fake_hyprctl_and_persists_manifest_and_import() {
     child.0.wait().unwrap();
     // Successor teardown removes its endpoint; don't remove its profile early.
     let until = Instant::now() + Duration::from_secs(3);
-    while loc.endpoint(link::ME).exists() && Instant::now() < until {
+    while loc.endpoint(arcade_find::identity::ID).exists() && Instant::now() < until {
         std::thread::sleep(Duration::from_millis(10));
     }
     std::fs::remove_dir_all(root).unwrap();

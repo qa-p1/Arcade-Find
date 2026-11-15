@@ -60,7 +60,7 @@ const DOUBLE_CLICK: Duration = Duration::from_millis(400);
 
 /// Whether this session can show a layer-shell overlay.
 pub fn available() -> bool {
-    if std::env::var_os("WAYLAND_DISPLAY").is_none() {
+    if !crate::session::wayland() {
         return false;
     }
     let Ok(conn) = Connection::connect_to_env() else { return false };
@@ -294,7 +294,7 @@ impl Wl {
         let surface = self.compositor.create_surface(&self.qh);
         let fractional = self.fractional_mgr.as_ref().map(|m| m.get_fractional_scale(&surface, &self.qh, ()));
         let viewport = self.viewporter.as_ref().map(|v| v.get_viewport(&surface, &self.qh, ()));
-        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some(crate::os::APP_ID), None);
+        let layer = self.layer_shell.create_layer_surface(&self.qh, surface, Layer::Overlay, Some(crate::identity::DESKTOP_ID), None);
         layer.set_keyboard_interactivity(KeyboardInteractivity::Exclusive);
         layer.set_exclusive_zone(-1);
         let size = self.logical_size();

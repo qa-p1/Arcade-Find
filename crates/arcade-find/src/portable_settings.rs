@@ -114,7 +114,7 @@ impl PortableSettings {
     pub fn export(settings: &Settings, pins: &Pins, home: &Path) -> Self {
         Self {
             schema: 1,
-            app: crate::link::ME.into(),
+            app: crate::identity::ID.into(),
             version: crate::VERSION.into(),
             roots: settings.roots.iter().map(|p| PortablePath::from_setting(p, home)).collect(),
             exclude_names: settings.exclude_names.clone(),
@@ -134,7 +134,7 @@ impl PortableSettings {
 
     pub fn validate(&self) -> Result<(), LinkError> {
         if self.schema != 1
-            || self.app != crate::link::ME
+            || self.app != crate::identity::ID
             || !safe_text(&self.version)
             || self.roots.is_empty()
             || [self.roots.len(), self.exclude_names.len(), self.exclude_paths.len(), self.pins.len()].iter().any(|&n| n > MAX_ITEMS)
@@ -187,7 +187,7 @@ pub fn export_file(locations: &Locations, settings: &Settings, pins: &Pins, home
     if bytes.len() as u64 > MAX_BYTES {
         return Err(LinkError::denied("settings file exceeds 1 MiB"));
     }
-    let handoff = Handoff::create(locations, crate::link::ME).map_err(io_error)?;
+    let handoff = Handoff::create(locations, crate::identity::ID).map_err(io_error)?;
     let mut file = handoff.file("arcade-find-settings.json", &bytes).map_err(io_error)?;
     file.kind = "file/any".into();
     handoff.keep();

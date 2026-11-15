@@ -31,6 +31,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
+          # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
+          save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           cache-on-failure: true
       - name: Native dependencies
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev xvfb xdotool x11-utils imagemagick dbus
@@ -62,6 +64,9 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
+          save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev
@@ -82,6 +87,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
+          # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
+          save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           cache-on-failure: true
       - name: Session tools
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool xclip x11-utils imagemagick libvips-tools dbus python3-dbus python3-gi python3-pyatspi at-spi2-core ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 libxcb-xinerama0 libxcb-xkb1 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3
@@ -140,6 +147,9 @@ jobs:
         run: rustup toolchain uninstall 1.88.0 || true
       - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
+          save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Linux build dependencies
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev desktop-file-utils xvfb xdotool dbus

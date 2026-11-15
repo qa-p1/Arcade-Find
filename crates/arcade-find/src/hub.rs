@@ -19,7 +19,7 @@ impl Service {
         }
         // Presence's additive API returns (). Verify its write so an IPC caller
         // never receives success for a shortcut absent from the registry.
-        let text = std::fs::read_to_string(self.locations.manifest(link::ME)).map_err(portable_settings::io_error)?;
+        let text = std::fs::read_to_string(self.locations.manifest(crate::identity::ID)).map_err(portable_settings::io_error)?;
         let mut written = arcade_link::manifest::ManifestDocument::from_json(&text).map_err(LinkError::unavailable)?;
         written.manifest.written_at = doc.manifest.written_at.clone();
         if written != doc {

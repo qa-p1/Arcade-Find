@@ -146,10 +146,6 @@ fn install_native_handler(svc: &Arc<Service>, id: u32) {
 }
 static HYPR_BINDING: Mutex<Option<hyprland::Binding>> = Mutex::new(None);
 
-fn wayland_session() -> bool {
-    cfg!(target_os = "linux") && std::env::var_os("WAYLAND_DISPLAY").is_some()
-}
-
 /// Whether this process already holds `accel` as its native hotkey. On X11,
 /// global-hotkey only drops a grab when the old manager's X connection closes,
 /// after a new manager has tried to grab the same key, so registering it again
@@ -176,7 +172,7 @@ pub fn apply(svc: &Arc<Service>) -> State {
     let s = svc.settings();
     let accel = s.shortcut.trim().to_string();
     // Compositor IPC runs on a worker. Native APIs alone require the UI thread.
-    if wayland_session() || hyprland::active() {
+    if crate::session::wayland() || crate::session::hyprland() {
         clear();
         let svc = svc.clone();
         std::thread::spawn(move || {
@@ -206,7 +202,7 @@ pub fn apply(svc: &Arc<Service>) -> State {
 
 /// Live change on a Link worker, or marshal the native part to the UI thread.
 pub fn set_live(svc: &Arc<Service>, accelerator: &str) -> Result<State, arcade_link::LinkError> {
-    if wayland_session() || hyprland::active() {
+    if crate::session::wayland() || crate::session::hyprland() {
         return Ok(set_wayland(svc, accelerator, svc.settings().hyprland_runtime_bind));
     }
     let (tx, rx) = std::sync::mpsc::sync_channel(1);
@@ -232,7 +228,7 @@ pub fn replace_native(svc: &Arc<Service>, accelerator: &str) -> State {
 
 fn set_wayland(svc: &Arc<Service>, accelerator: &str, runtime_bind: bool) -> State {
     let mut active = HYPR_BINDING.lock().unwrap_or_else(|e| e.into_inner());
-    if hyprland::active() && runtime_bind {
+    if crate::session::hyprland() && runtime_bind {
         // Bind the successor first; a failed different chord keeps the old one.
         match hyprland::bind(accelerator, &toggle_command()) {
             Ok(binding) => {
@@ -325,10 +321,6 @@ pub mod hyprland {
 
     use global_hotkey::hotkey::{Code, Modifiers};
 
-    pub fn active() -> bool {
-        cfg!(target_os = "linux") && std::env::var_os("HYPRLAND_INSTANCE_SIGNATURE").is_some()
-    }
-
     /// A snapshot read on the Settings worker, never while recording a key.
     #[derive(Clone, Debug, Default)]
     pub struct DesktopBindings(Vec<(u32, String, String)>);
@@ -371,7 +363,7 @@ pub mod hyprland {
     }
 
     pub fn desktop_bindings() -> Result<DesktopBindings, String> {
-        if !active() {
+        if !crate::session::hyprland() {
             return Ok(DesktopBindings::default());
         }
         let out = Command::new("hyprctl")

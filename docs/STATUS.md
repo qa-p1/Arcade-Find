@@ -258,7 +258,7 @@ Done:
   - live System theme; Esc and Ctrl+W close it, F1 opens the guide.
   - It builds and its unit tests pass, but **it has not been screenshotted yet**.
 - Tray: monochrome glyph helper added; ksni id is now `dev.arcade.Find`. Window and app ids use
-  `dev.arcade.Find` (`os::APP_ID`).
+  `dev.arcade.Find` (`identity::DESKTOP_ID`).
 
 Still to do (see FIND.md):
 - Screenshot every settings page (light, dark, 720×520, 125 %) and fix what looks wrong.

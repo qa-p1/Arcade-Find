@@ -8,7 +8,7 @@ use arcade_link::design::{self, Theme as KitTheme};
 use find_core::kind::Kind;
 use find_core::settings::Theme;
 
-use crate::link::ME;
+use crate::identity::ID as ME;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Rgba {

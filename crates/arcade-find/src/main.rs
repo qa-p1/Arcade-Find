@@ -220,7 +220,7 @@ fn main() -> ExitCode {
             eprintln!("arcade-find: {error}");
             return ExitCode::FAILURE;
         }
-        if let Err(error) = arcade_link::logs::capture_stderr(&paths.log_dir(), "arcade-find") {
+        if let Err(error) = arcade_link::logs::capture_stderr(&paths.log_dir(), arcade_find::identity::CLI_NAME) {
             eprintln!("arcade-find: Couldn't open the log. {error}");
         }
     }
@@ -345,8 +345,8 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
         let runtime = arcade_link::install::Runtime::discover().map_err(|e| e.to_string())?;
         match args.action.as_deref().unwrap_or_default() {
             "--integration-status" => {
-                let status =
-                    arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default()).map_err(|e| e.to_string())?;
+                let status = arcade_link::install::integration_status(&environment, arcade_find::identity::ID, &std::env::var("SHELL").unwrap_or_default())
+                    .map_err(|e| e.to_string())?;
                 out(serde_json::to_string_pretty(&status).map_err(|e| e.to_string())?);
             }
             "--repair" => {
@@ -371,7 +371,7 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
                 }
                 let launch = if args.silent {
                     let receipt = installer::install_copy(&environment, &runtime, paths, &options).map_err(|e| e.to_string())?;
-                    let status = arcade_link::install::integration_status(&environment, link::ME, &std::env::var("SHELL").unwrap_or_default())
+                    let status = arcade_link::install::integration_status(&environment, arcade_find::identity::ID, &std::env::var("SHELL").unwrap_or_default())
                         .map_err(|e| e.to_string())?;
                     if let Some(hint) = status.path_hint {
                         eprintln!("arcade-find: {hint}");
@@ -379,7 +379,7 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
                     out(serde_json::to_string_pretty(&receipt).map_err(|e| e.to_string())?);
                     Some(installer::launch_path(&receipt))
                 } else {
-                    let detection = arcade_link::install::detect(&environment, link::ME, &runtime).map_err(|e| e.to_string())?;
+                    let detection = arcade_link::install::detect(&environment, arcade_find::identity::ID, &runtime).map_err(|e| e.to_string())?;
                     if detection.state == arcade_link::install::State::DevBuild {
                         return Err("Development builds cannot be installed".into());
                     }

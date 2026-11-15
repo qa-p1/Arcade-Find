@@ -423,7 +423,6 @@ impl Index {
         self.garbage += self.name_len[i] as usize;
     }
 
-    /// Whether compaction is worth it.
     /// Returns spare capacity after a crawl or a load (memory item FD1).
     pub fn shrink_to_fit(&mut self) {
         self.parent.shrink_to_fit();
@@ -436,6 +435,7 @@ impl Index {
         self.dirs.shrink_to_fit();
     }
 
+    /// Whether compaction is worth it.
     pub fn needs_compaction(&self) -> bool {
         self.deleted > 50_000.max(self.len() / 4) || (self.deleted > 0 && self.deleted == self.len())
     }

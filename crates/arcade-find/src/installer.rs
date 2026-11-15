@@ -14,19 +14,16 @@ use find_core::paths::AppPaths;
 use find_core::Settings;
 use serde::{Deserialize, Serialize};
 
-pub const CLI_NAME: &str = "arcade-find";
-pub const DESKTOP_ID: &str = "dev.arcade.Find";
-
 pub fn app_info() -> AppInfo {
     AppInfo {
-        id: crate::link::ME.into(),
-        name: crate::link::NAME.into(),
+        id: crate::identity::ID.into(),
+        name: crate::identity::NAME.into(),
         filename: "Arcade-Find.AppImage".into(),
-        desktop_id: DESKTOP_ID.into(),
-        cli_name: CLI_NAME.into(),
+        desktop_id: crate::identity::DESKTOP_ID.into(),
+        cli_name: crate::identity::CLI_NAME.into(),
         background_args: vec!["--background".into()],
         legacy_desktop_ids: vec!["arcade-find".into()],
-        autostart_id: DESKTOP_ID.into(),
+        autostart_id: crate::identity::DESKTOP_ID.into(),
     }
 }
 
@@ -36,7 +33,7 @@ pub fn app_info() -> AppInfo {
 pub(crate) fn finish_desktop_metadata(receipt: &Receipt) -> io::Result<()> {
     let Some(path) = &receipt.integration.desktop_entry else { return Ok(()) };
     let content = fs::read_to_string(path)?;
-    if !content.lines().any(|line| line == format!("X-Arcade-Id={}", crate::link::ME)) {
+    if !content.lines().any(|line| line == format!("X-Arcade-Id={}", crate::identity::ID)) {
         return Err(io::Error::other("Couldn't update the launcher. Its ownership marker changed."));
     }
     let mut section = "";
@@ -57,7 +54,8 @@ pub(crate) fn finish_desktop_metadata(receipt: &Receipt) -> io::Result<()> {
         result.push_str(line);
         result.push('\n');
         if section == "[Desktop Entry]" && line == "Name=Arcade Find" {
-            result += &format!("Comment={}\nKeywords=search;find;files;folders;locate;\nStartupWMClass={}\n", crate::settings_ui::TAGLINE, DESKTOP_ID);
+            result +=
+                &format!("Comment={}\nKeywords=search;find;files;folders;locate;\nStartupWMClass={}\n", crate::identity::TAGLINE, crate::identity::DESKTOP_ID);
         }
     }
     arcade_link::paths::write_atomic(path, result.as_bytes(), false)
@@ -72,12 +70,12 @@ pub fn migrate_integration(paths: &AppPaths) -> io::Result<()> {
     }
     let environment = Environment::discover()?;
     let runtime = Runtime::discover()?;
-    let detection = install::detect(&environment, crate::link::ME, &runtime)?;
+    let detection = install::detect(&environment, crate::identity::ID, &runtime)?;
     if detection.state != State::InstalledHere || !runtime.is_appimage() {
         return Ok(());
     }
     let Some(receipt) = detection.receipt else { return Ok(()) };
-    let current = format!("{DESKTOP_ID}.desktop");
+    let current = format!("{}.desktop", crate::identity::DESKTOP_ID);
     if receipt.integration.desktop_entry.as_ref().is_some_and(|p| p.file_name().is_some_and(|n| n == current.as_str())) {
         return Ok(());
     }
@@ -88,7 +86,7 @@ pub fn migrate_integration(paths: &AppPaths) -> io::Result<()> {
     let updated = install_copy(&environment, &runtime, paths, &options)?;
     if let Some(old) = receipt.integration.autostart.filter(|path| updated.integration.autostart.as_ref() != Some(path)) {
         let content = fs::read_to_string(&old).unwrap_or_default();
-        if content.lines().any(|line| line == format!("X-Arcade-Id={}", crate::link::ME)) {
+        if content.lines().any(|line| line == format!("X-Arcade-Id={}", crate::identity::ID)) {
             remove_file(&old)?;
         }
     }
@@ -96,7 +94,7 @@ pub fn migrate_integration(paths: &AppPaths) -> io::Result<()> {
 }
 
 pub fn method() -> InstallMethod {
-    let detection = Environment::discover().and_then(|e| Runtime::discover().and_then(|r| install::detect(&e, crate::link::ME, &r)));
+    let detection = Environment::discover().and_then(|e| Runtime::discover().and_then(|r| install::detect(&e, crate::identity::ID, &r)));
     match detection {
         Ok(d) if d.state == State::DevBuild => InstallMethod::Dev,
         Ok(d) => d
@@ -144,7 +142,7 @@ pub struct Options {
 impl Options {
     pub fn defaults(environment: &Environment, paths: &AppPaths) -> Self {
         let settings = fs::read(paths.settings_file()).ok().and_then(|b| serde_json::from_slice::<Settings>(&b).ok()).unwrap_or_default();
-        let receipt = environment.receipts().read(crate::link::ME).ok().flatten();
+        let receipt = environment.receipts().read(crate::identity::ID).ok().flatten();
         let start_at_login = receipt.as_ref().map_or(settings.start_at_login.unwrap_or(true), |r| r.integration.autostart.as_ref().is_some_and(|p| p.exists()));
         let install_cli = environment.path.as_ref().is_some_and(|p| std::env::split_paths(p).any(|p| p == environment.bin));
         Self { channel: "stable".into(), start_at_login, remove_download: true, install_cli }
@@ -234,7 +232,7 @@ pub fn automatic_prompt(paths: &AppPaths, args: &[String]) -> io::Result<Option<
             return Ok(None);
         }
         let environment = Environment::discover()?;
-        let detection = install::detect(&environment, crate::link::ME, &runtime)?;
+        let detection = install::detect(&environment, crate::identity::ID, &runtime)?;
         if detection.state == State::DevBuild {
             return Ok(None);
         }
@@ -275,7 +273,7 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
     if !runtime.is_appimage() {
         // A second install window, after the first one installed (and removed) this download.
         if runtime.appimage.as_ref().is_some_and(|p| !p.exists()) {
-            if let Some(receipt) = environment.receipts().read(crate::link::ME)?.filter(|r| r.version == crate::VERSION && r.path.is_file()) {
+            if let Some(receipt) = environment.receipts().read(crate::identity::ID)?.filter(|r| r.version == crate::VERSION && r.path.is_file()) {
                 return Ok(receipt);
             }
             return Err(io::Error::other(
@@ -303,7 +301,7 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
     let source = stage.0.join("icon.svg");
     fs::write(&source, crate::ui::icons::app_icon_svg())?;
     icons.push(install::Icon { source, size: install::IconSize::Scalable });
-    let existing = environment.receipts().read(crate::link::ME)?;
+    let existing = environment.receipts().read(crate::identity::ID)?;
     let managed_by = existing.as_ref().map_or(ManagedBy::SelfManaged, |r| r.managed_by);
     let mut receipt = install::install(
         environment,
@@ -341,7 +339,7 @@ pub fn install_copy(_e: &Environment, _r: &Runtime, _p: &AppPaths, _o: &Options)
 #[cfg(target_os = "macos")]
 pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPaths, options: &Options) -> io::Result<Receipt> {
     use install::platform::macos;
-    let d = install::detect(environment, crate::link::ME, runtime)?;
+    let d = install::detect(environment, crate::identity::ID, runtime)?;
     if d.state == State::DevBuild {
         return Err(io::Error::other("development builds cannot be installed"));
     }
@@ -392,7 +390,7 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
             }
         }
     }
-    let cli = if options.install_cli { Some(macos::install_cli(environment, CLI_NAME, &exe)?) } else { None };
+    let cli = if options.install_cli { Some(macos::install_cli(environment, crate::identity::CLI_NAME, &exe)?) } else { None };
     let autostart = if options.start_at_login {
         let path = environment.home.join("Library/LaunchAgents/dev.arcade.Find.plist");
         arcade_link::paths::write_atomic(&path, crate::autostart::plist(&exe.to_string_lossy()).as_bytes(), true)?;
@@ -413,11 +411,11 @@ pub fn install_copy(environment: &Environment, runtime: &Runtime, paths: &AppPat
 
 #[cfg(target_os = "macos")]
 fn macos_receipt(environment: &Environment, bundle: &Path, cli: Option<PathBuf>, autostart: Option<PathBuf>, options: &Options) -> io::Result<Receipt> {
-    let old = environment.receipts().read(crate::link::ME)?;
+    let old = environment.receipts().read(crate::identity::ID)?;
     let now = arcade_link::manifest::now_rfc3339();
     let receipt = Receipt {
         schema: 1,
-        id: crate::link::ME.into(),
+        id: crate::identity::ID.into(),
         version: crate::VERSION.into(),
         channel: options.channel.clone(),
         method: InstallMethod::MacosBundle,
@@ -440,7 +438,7 @@ pub fn launch_path(receipt: &Receipt) -> PathBuf {
 }
 
 pub fn repair(environment: &Environment, runtime: &Runtime) -> io::Result<Receipt> {
-    let d = install::detect(environment, crate::link::ME, runtime)?;
+    let d = install::detect(environment, crate::identity::ID, runtime)?;
     #[cfg(target_os = "linux")]
     {
         // An explicitly invoked --repair from a moved AppImage is consent to
@@ -461,7 +459,7 @@ pub fn repair(environment: &Environment, runtime: &Runtime) -> io::Result<Receip
             return Err(io::Error::other("installed executable is missing"));
         }
         if r.integration.cli.is_some() {
-            r.integration.cli = Some(install::platform::macos::install_cli(environment, CLI_NAME, &exe)?);
+            r.integration.cli = Some(install::platform::macos::install_cli(environment, crate::identity::CLI_NAME, &exe)?);
         }
         if let Some(p) = &r.integration.autostart {
             arcade_link::paths::write_atomic(p, crate::autostart::plist(&exe.to_string_lossy()).as_bytes(), true)?;
@@ -485,7 +483,7 @@ pub fn repair(environment: &Environment, runtime: &Runtime) -> io::Result<Receip
         if !r.path.is_file() {
             return Err(io::Error::other("installed executable is missing"));
         }
-        r.integration.cli = Some(install::platform::windows::write_shim(environment, CLI_NAME, &r.path)?);
+        r.integration.cli = Some(install::platform::windows::write_shim(environment, crate::identity::CLI_NAME, &r.path)?);
         if let Some(path) = &r.integration.desktop_entry {
             write_windows_shortcut(path, &r.path, "")?;
             let settings = path.parent().unwrap().join("Arcade Find Settings.lnk");
@@ -503,7 +501,7 @@ pub fn repair(environment: &Environment, runtime: &Runtime) -> io::Result<Receip
 }
 
 pub fn uninstall(environment: &Environment, paths: &AppPaths, silent: bool, remove_data: bool) -> io::Result<bool> {
-    if environment.receipts().read(crate::link::ME)?.is_none() {
+    if environment.receipts().read(crate::identity::ID)?.is_none() {
         return Ok(false);
     }
     // Stop only this isolated/profile instance before removing its receipt,
@@ -513,7 +511,7 @@ pub fn uninstall(environment: &Environment, paths: &AppPaths, silent: bool, remo
         stop_and_lock(paths, std::time::Duration::from_secs(15))?.ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "Arcade Find is still running"))?;
     #[cfg(windows)]
     {
-        let Some(r) = environment.receipts().read(crate::link::ME)? else { return Ok(false) };
+        let Some(r) = environment.receipts().read(crate::identity::ID)? else { return Ok(false) };
         let uninstaller = r.integration.uninstaller.ok_or_else(|| io::Error::other("receipt has no Windows uninstaller"))?;
         let mut cmd = std::process::Command::new(uninstaller);
         cmd.args(["/SUPPRESSMSGBOXES", "/NORESTART"]);
@@ -537,14 +535,14 @@ pub fn uninstall(environment: &Environment, paths: &AppPaths, silent: bool, remo
     {
         let _ = silent;
         #[cfg(target_os = "macos")]
-        if let Some(r) = environment.receipts().read(crate::link::ME)? {
+        if let Some(r) = environment.receipts().read(crate::identity::ID)? {
             if let Some(p) = &r.integration.cli {
                 if fs::read_link(p).is_ok_and(|p| p == launch_path(&r)) {
                     remove_file(p)?;
                 }
             }
         }
-        install::uninstall(environment, crate::link::ME, install::UninstallOptions { remove_data, data_folders: &paths.data_folders() })
+        install::uninstall(environment, crate::identity::ID, install::UninstallOptions { remove_data, data_folders: &paths.data_folders() })
     }
 }
 
@@ -614,7 +612,8 @@ pub fn handoff_to_tools(environment: &Environment) -> Result<(), arcade_link::Li
         .action("tools.install")
         .filter(|a| a.available)
         .ok_or_else(|| arcade_link::LinkError::unavailable("This version of Arcade Tools cannot install Find"))?;
-    let request = crate::link::request(action, vec![arcade_link::Content::text("text/plain", crate::link::ME)], serde_json::json!({"app": crate::link::ME}));
+    let request =
+        crate::link::request(action, vec![arcade_link::Content::text("text/plain", crate::identity::ID)], serde_json::json!({"app": crate::identity::ID}));
     crate::link::invoke(&environment.locations, tools, &request, None, None).map(|_| ())
 }
 
@@ -706,7 +705,7 @@ mod bundle_destination_tests {
         assert_eq!(bundle_destination(&environment, None, name).unwrap(), default);
         let mut receipt = Receipt {
             schema: 1,
-            id: "arcade.find".into(),
+            id: crate::identity::ID.into(),
             version: "0.2.0".into(),
             channel: "stable".into(),
             method: InstallMethod::MacosBundle,

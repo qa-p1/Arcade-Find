@@ -7,9 +7,9 @@ pub(crate) fn should_notify(enabled: bool, visible: bool, needs_attention: bool)
 pub(crate) fn attention() {
     std::thread::spawn(|| {
         let mut notification = notify_rust::Notification::new();
-        notification.appname("Arcade Find").summary("Arcade Find").body("Couldn't finish the action. Open Find for details.");
+        notification.appname(crate::identity::NAME).summary(crate::identity::NAME).body("Couldn't finish the action. Open Find for details.");
         #[cfg(windows)]
-        notification.app_id(crate::os::APP_ID);
+        notification.app_id(crate::identity::DESKTOP_ID);
         if let Err(error) = notification.show() {
             crate::debug!("system notification unavailable: {error}");
         }
@@ -30,9 +30,9 @@ pub(crate) fn background_once(paths: find_core::paths::AppPaths, enabled: bool) 
         let Ok(claim) = std::fs::OpenOptions::new().write(true).create_new(true).open(&marker) else { return };
         drop(claim);
         let mut notification = notify_rust::Notification::new();
-        notification.appname("Arcade Find").summary("Arcade Find").body("Arcade Find is still running. Quit it from the tray.");
+        notification.appname(crate::identity::NAME).summary(crate::identity::NAME).body("Arcade Find is still running. Quit it from the tray.");
         #[cfg(windows)]
-        notification.app_id(crate::os::APP_ID);
+        notification.app_id(crate::identity::DESKTOP_ID);
         if let Err(error) = notification.show() {
             let _ = std::fs::remove_file(marker);
             crate::debug!("background notification unavailable: {error}");

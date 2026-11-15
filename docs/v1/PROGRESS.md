@@ -2,6 +2,17 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-14 (cloud session, branch `claude/sharp-cori-29w5eg`)
+
+- Step 6 (6e2fc47): rc-only releases through Link `app-publish` (Inno), `promote.yml`, `nightly.yml`; the stage job
+  keeps Find's own installer checks. CI saves Rust caches only on main pushes (f7d2b38).
+- Step 2, untangle (in progress): module dependency graph scripted from `crate::` paths. Done: one `identity` module
+  (D11: `dev.arcade.Find` was defined twice; installer and tray imported Settings for the tagline), one `session`
+  module (D12: three Wayland checks, two Hyprland detections, two `hyprctl -j` runners). Kept on purpose: two cycles
+  (D13). Left: the Settings window (1,810 lines) and `ui::model`; then the comments and tests extras.
+- Step 4, dead code: `cargo machete` finds no unused dependency; `clippy -D warnings` (dead code included) is clean.
+- Tested: `cargo +1.88.0 clippy --workspace --all-targets -D warnings`, `cargo +1.88.0 test --workspace` (all pass).
+
 ## 2026-11-14 (Link v1.0.7)
 
 - PR #18 CI fully green at e7d1403 (9 of 9 checks, incl. the headless sway + Xvfb end-to-end run, after its two

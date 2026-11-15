@@ -777,7 +777,7 @@ impl Renderer {
 fn shadow(w: u32, h: u32, margin: f32, radius: f32, s: f32, dark: bool) -> Option<Pixmap> {
     let mut pm = Pixmap::new(w, h)?;
     let theme = if dark { arcade_link::design::Theme::Dark } else { arcade_link::design::Theme::Light };
-    let pop = arcade_link::design::egui::visuals(theme, crate::link::ME).popup_shadow;
+    let pop = arcade_link::design::egui::visuals(theme, crate::identity::ID).popup_shadow;
     let [r, g, b, alpha] = pop.color.to_srgba_unmultiplied();
     let colour = Rgba { r, g, b, a: alpha };
     let offset = f32::from(pop.offset[1]);

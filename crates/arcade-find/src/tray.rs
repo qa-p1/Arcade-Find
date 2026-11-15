@@ -48,10 +48,10 @@ mod imp {
 
     impl ksni::Tray for FindTray {
         fn id(&self) -> String {
-            crate::os::APP_ID.into()
+            crate::identity::DESKTOP_ID.into()
         }
         fn title(&self) -> String {
-            "Arcade Find".into()
+            crate::identity::NAME.into()
         }
         fn category(&self) -> ksni::Category {
             ksni::Category::ApplicationStatus
@@ -60,7 +60,7 @@ mod imp {
             self.icon.clone()
         }
         fn tool_tip(&self) -> ksni::ToolTip {
-            ksni::ToolTip { title: "Arcade Find".into(), description: crate::settings_ui::TAGLINE.into(), ..Default::default() }
+            ksni::ToolTip { title: crate::identity::NAME.into(), description: crate::identity::TAGLINE.into(), ..Default::default() }
         }
         fn activate(&mut self, _x: i32, _y: i32) {
             run(&self.svc, Item::Open);
@@ -165,7 +165,7 @@ mod imp {
         let icon = Icon::from_rgba(crate::ui::icons::tray_icon_rgba(px, crate::theme::system_dark()), px, px).map_err(|e| e.to_string())?;
         let tray = TrayIconBuilder::new()
             .with_menu(Box::new(menu))
-            .with_tooltip(crate::settings_ui::TAGLINE)
+            .with_tooltip(crate::identity::TAGLINE)
             .with_icon(icon)
             .with_menu_on_left_click(cfg!(target_os = "macos"));
         #[cfg(target_os = "macos")]

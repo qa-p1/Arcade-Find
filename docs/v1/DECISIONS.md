@@ -63,3 +63,41 @@ Hyprland never runs autostart entries.
 
 After every full crawl the index returns spare capacity (`Index::shrink_to_fit`) and glibc's `malloc_trim(0)` hands
 freed pages back. Since Find pins Link 1.0.7 this is `arcade_link::runtime::trim()`, which also drops clean file pages; the same call runs once 5 s after the resident starts (W0).
+
+## D11 - Untangle (step 2): one place for Find's identity
+
+Hidden link: `"dev.arcade.Find"` was defined twice (`installer::DESKTOP_ID` for the desktop entry, `os::APP_ID` for the
+window, tray and notifications), and the desktop matches a window to its launcher only while the two agree; nothing
+said they had to. Needless link: the tagline lived in `settings_ui`, so the installer (which writes it as the desktop
+entry's `Comment`) and the tray imported the 1,800-line Settings window for one string. The Link id and display name
+lived in `link`, and "Arcade Find" was repeated as a literal in the tray, notifications and Settings.
+
+Fix: `identity.rs` holds the Link id, name, OS identifier, CLI name and tagline, and everything reads them there.
+The Link id itself is `find_core::paths::LINK_ID`, because `find-core` names Find's config and data folders after it
+and sits below the app; `identity::ID` re-exports it. Old ids (`legacy_desktop_ids`) stay literal: they are history,
+not identity.
+
+## D12 - Untangle (step 2): one answer to "which desktop session"
+
+Copies: "is this Wayland" was read from `WAYLAND_DISPLAY` in the shortcut (`hotkey`), window placement
+(`window_state`) and the overlay (`ui::wayland`); "is this Hyprland" lived in `hotkey::hyprland`, so window placement
+imported the shortcut module to ask it, and placement ran its own `hyprctl -j` beside the shortcut's. `session.rs` now
+answers `wayland()`, `hyprland()` and `hyprctl_json(query)` for all of them. Left as they are: the Hyprland socket path
+(needs the signature's value, not whether it is set) and `main`'s "no display at all" check, which asks something else.
+
+## D13 - Untangle (step 2): two cycles kept on purpose
+
+- `installer` ↔ `autostart`: the login item is part of the install integration (the macOS install writes the login
+  plist; enabling start at login reuses the installer's launch path and Windows shortcut). They change together.
+- `hotkey` ↔ `service`: `hotkey` is the service's shortcut subsystem. A key press sends `Toggle` to the service and the
+  service hands it a new accelerator; a callback layer between them would change whenever both do.
+
+## D14 - Untangle (step 2): the event log and the stderr log were one file
+
+Hidden link and bug: `diagnostics::event` appended to `<logs>/arcade-find.log` and rotated it at 1 MiB (`.1`, `.2`),
+while Link's `capture_stderr`, started by `main` with the CLI name, redirects stderr to the same file and rotates it
+its own way. An event rotation moved the live stderr log aside (stderr kept writing to the renamed file) and a later
+one deleted it; Link's start-up rotation overwrote the events' `.1`. Events now go to `events.log` in the same folder
+(test: `rotating_the_event_log_leaves_the_stderr_log_alone`, which fails on the old code). `find-core`'s unused
+`log_file()`, a third copy of the name, is gone. Also: the user-guide URL moved to `identity`, so the resident no longer
+imports the Settings window for it.
