@@ -129,3 +129,14 @@ Kept on purpose:
 - Vendored files in `VENDORED.md`, the design-kit assets, and `scripts/verify-tools-update.rs`.
 - Feature flags: neither crate declares a `[features]` table, so none can be unused. The arcade-link features in
   `arcade-find`'s Cargo.toml are Link's own and `cargo machete` reports no unused dependency.
+
+## D16 - Memory (step 5): the resident runs from the unpacked copy
+
+AUDIT/memory.md lists three items for Find: W0 (trim after startup), FD1 (shrink the index after a load or
+rescan) and U1 (the unpacked runtime). W0 and FD1 landed with the fixes (06f86f8, 51c69a0); a removed location's
+index memory goes back to the system the same way (FD-8). U1 now too: a resident start in an AppImage relaunches
+from `<data>/arcade/runtime/find-<version>-<key>/` through Link's `runtime::relaunch_unpacked` and the launcher exits
+0, so no FUSE helper stays resident (RT-7). One-shot calls (`--search`, `--status`, `--quit`, and a command a
+running instance takes) never relaunch. The budget (background 42 PSS / 48 RSS) is measured on the published rc
+by the gates' budget job.
+
