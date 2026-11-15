@@ -75,6 +75,18 @@ jobs:
         shell: bash
         run: python3 scripts/check.py --core-only
 
+  # Advisories, licences, bans and sources (deny.toml). --workspace: every crate's dependencies, not only the first member's.
+  deny:
+    name: cargo deny (advisories, licences, bans, sources)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          arguments: --workspace --all-features
+          command: check
+
   e2e-linux:
     name: end-to-end (headless sway + Xvfb)
     needs: check
@@ -165,6 +177,9 @@ jobs:
           # Matches LSMinimumSystemVersion, whatever SDK the runner has.
           MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: python3 scripts/package.py
+      - name: AppImage bundles no library the notices lack
+        if: runner.os == 'Linux'
+        run: python3 scripts/notices.py --check-appimage dist/Arcade-Find-x86_64.AppImage
       - name: AppImage install, repair and uninstall (isolated)
         if: runner.os == 'Linux'
         run: |

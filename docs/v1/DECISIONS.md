@@ -124,7 +124,7 @@ Kept on purpose:
   tested API of `find-core`; removing them means rewriting tests for no gain.
 - `crates/arcade-find/examples/hub-startup.rs` and `crates/find-core/examples/typing.rs`: measurement tools that no
   script names. Cargo builds them (clippy `--all-targets`), and their headers say how an isolated runner uses them.
-- `tests/desktop/*`, `tools/third_party_notices.py` (regenerates `THIRD_PARTY_NOTICES.md`, run by hand), and the
+- `tests/desktop/*`, `scripts/notices.py` (regenerates `THIRD_PARTY_NOTICES.md`; `--check` runs in `scripts/check.py` and CI), and the
   Cargo-discovered tests and benches.
 - Vendored files in `VENDORED.md`, the design-kit assets, and `scripts/verify-tools-update.rs`.
 - Feature flags: neither crate declares a `[features]` table, so none can be unused. The arcade-link features in
@@ -140,3 +140,21 @@ from `<data>/arcade/runtime/find-<version>-<key>/` through Link's `runtime::rela
 running instance takes) never relaunch. The budget (background 42 PSS / 48 RSS) is measured on the published rc
 by the gates' budget job.
 
+## D17 - Security, licences and notices (step 5, round 5): accepted advisories
+
+`cargo deny check` is clean with these accepted entries (each with its reason in `deny.toml`). None is reachable:
+
+- RUSTSEC-2024-0429 (glib 0.18, unsound `VariantStrIter`) and RUSTSEC-2024-0370 (proc-macro-error): both come only from
+  `tray-icon`'s GTK backend. Find depends on `tray-icon` for Windows and macOS only (Linux uses ksni), and
+  `cargo tree -i glib -e normal,build --target <linux|windows|macos>` is empty for all three.
+- RUSTSEC-2026-0186 (memmap2 0.8.0): only xkbcommon 0.7 uses it, through `MmapOptions::map` on the compositor's keymap,
+  not the affected `advise_range`/`flush_range`. The fix is memmap2 0.9.11, which xkbcommon 0.7 and
+  smithay-client-toolkit 0.19 do not accept; revisit when winit/sctk move to xkbcommon 0.8.
+- RUSTSEC-2026-0192 (ttf-parser), RUSTSEC-2026-0370/0371/0372 (zvariant, zbus_names, zvariant_derive): "unmaintained",
+  no known vulnerability, no maintained replacement they can take (zbus 6 would need ksni, notify-rust and
+  accesskit_unix to move first).
+
+Fixed by `cargo update` instead of ignored: async-executor 1.14.1 and clipboard-win 5.4.3 (yanked), tokio 1.53.3
+(RUSTSEC-2026-0386) and rustix 1.1.6 (RUSTSEC-2026-0486). `Ubuntu-font-1.0` is on the licence allow list for the fonts
+egui ships. The Rust crates are `publish = false`, as `cargo deny`'s wildcard check needs for git dependencies.
+`index.bin` is now written 0600 (it was 0644 under the default umask): it lists every file name under the indexed folders.
