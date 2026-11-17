@@ -127,7 +127,7 @@ try:
     panel = shown()
     monitor = next(m for m in d.monitors() if m["name"] == panel["monitor"])
     top, bottom = panel["y"], panel["y"] + panel["h"]
-    check("KNOWN BUG FD-4: the panel stays inside the monitor", monitor["y"] <= top and bottom <= monitor["y"] + monitor["height"],
+    check("FD-4: the panel stays inside the monitor", monitor["y"] <= top and bottom <= monitor["y"] + monitor["height"],
           f"y={top}..{bottom} on a {monitor['height']} px monitor")
     d.escape(None)
     d.escape(None)
