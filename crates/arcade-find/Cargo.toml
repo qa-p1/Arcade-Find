@@ -51,7 +51,7 @@ smithay-client-toolkit = { version = "0.19", default-features = false, features 
 # "system": libwayland, so the winit window's connection can be shared
 # (dragging out on Wayland without layer shell).
 wayland-client = { version = "0.31", features = ["system"] }
-x11rb = { version = "0.13", features = ["randr"] }
+x11rb = { version = "0.14", features = ["randr"] }
 ksni = { version = "0.3", features = ["blocking"] }
 zbus = { version = "5", default-features = false, features = ["blocking-api", "async-io"] }
 
