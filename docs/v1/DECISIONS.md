@@ -179,3 +179,22 @@ Fixed by `cargo update` instead of ignored: async-executor 1.14.1 and clipboard-
 (RUSTSEC-2026-0386) and rustix 1.1.6 (RUSTSEC-2026-0486). `Ubuntu-font-1.0` is on the licence allow list for the fonts
 egui ships. The Rust crates are `publish = false`, as `cargo deny`'s wildcard check needs for git dependencies.
 `index.bin` is now written 0600 (it was 0644 under the default umask): it lists every file name under the indexed folders.
+
+## D19 - 1.0.0: Link conformance before rc.1
+
+Arcade Link's `arcade-link conformance` (Link 1.0.13 `crates/arcade-link-cli/src/conformance.rs`) was read rule by rule
+against the repository, since no CLI build fits here; the rc's gates run it for real. Four checks would have failed, as
+they did for Look (D21 there) and Box:
+- **ID-3:** no app icon or symbolic icon in the repository under the desktop id. `scripts/sync-design.py` now also copies
+  Link's `design/app-icons/find/icon.svg` to `packaging/linux/dev.arcade.Find.svg` and `design/glyphs/arcade.find.svg`
+  to `packaging/linux/dev.arcade.Find-symbolic.svg`, unchanged, and lists them in VENDORED.md. The AppImage already
+  carried `dev.arcade.Find.svg`/`.png`, exported from the binary.
+- **REPO-1:** `CHANGELOG.md` follows Keep a Changelog 1.1.0: `[Unreleased]`, `## [X.Y.Z] - date`, each release's bullets
+  grouped under Added, Changed, Fixed or Security by what they say (the wording is unchanged), and compare links.
+- **REPO-2:** `.github/dependabot.yml` (Cargo and GitHub Actions, weekly, grouped, no automatic rebase), as the other apps
+  have. The audit half is D18's `cargo deny` job.
+- **REL-1:** the four `apt-get` steps in `ci.yml` have `timeout-minutes: 20`. No command changed.
+
+CLI-1 to CLI-4 already held (`--status` one JSON line, an unknown option exits 2 with a hint, `--version`, the
+manifest). Version 1.0.0.
+

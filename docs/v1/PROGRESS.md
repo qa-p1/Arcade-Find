@@ -2,6 +2,13 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-17 (cloud session) - 1.0.0: conformance and release prep
+
+D19: Link's conformance rules read against the repository; ID-3 (identity icons, synced from Link), REPO-1 (Keep a
+Changelog), REPO-2 (Dependabot) and REL-1 (apt step timeouts) fixed. Version 1.0.0 with its changelog section. Tier 1
+in CI now turns off the install offer (`ARCADE_NO_INSTALL_PROMPT=1`), as Lens's and Look's desktop tests do: a
+downloaded AppImage offers to install itself on `--show`, and the test waited on that window.
+
 ## 2026-11-17 (cloud session) - round 5: security, licences, notices
 
 - `SECURITY.md` (what Find reads, stores, starts and sends, each row with its test), `deny.toml` and a `cargo deny`

@@ -35,6 +35,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           cache-on-failure: true
       - name: Native dependencies
+        timeout-minutes: 20
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev xvfb xdotool x11-utils imagemagick dbus
       - name: Build Find and the pinned isolation runner
         run: |
@@ -68,6 +69,7 @@ jobs:
           # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Linux build dependencies
+        timeout-minutes: 20
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev
       - name: Source, lint, documentation, design and isolated tests
@@ -103,6 +105,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           cache-on-failure: true
       - name: Session tools
+        timeout-minutes: 20
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool xclip x11-utils imagemagick libvips-tools dbus python3-dbus python3-gi python3-pyatspi at-spi2-core ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 libxcb-xinerama0 libxcb-xkb1 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3
       - name: Build the old backend for the lifecycle regression
         run: |
@@ -163,6 +166,7 @@ jobs:
           # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Linux build dependencies
+        timeout-minutes: 20
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev desktop-file-utils xvfb xdotool dbus
       - name: Inno Setup compiler
