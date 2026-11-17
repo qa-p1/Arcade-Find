@@ -2,6 +2,22 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-17 (cloud session) - 1.0.0 promoted
+
+`v1.0.0-rc.1` (08a90ca, Link 1.0.13) passed [Gates](https://github.com/qa-p1/Arcade-Find/actions/runs/44100470122)
+12/12 on its published files, both desktop suites included (Tier 1 Hyprland 7/7; Tier 2 sway, KWin, Mutter, X11), and
+[Promote](https://github.com/qa-p1/Arcade-Find/actions/runs/44102049971) made it
+[1.0.0](https://github.com/qa-p1/Arcade-Find/releases/tag/v1.0.0), now the latest release. The AppImage, dmg, setup.exe
+and SHA256SUMS have the same SHA-256 digests as rc.1; `manifest.json` and `arcade-release.json` differ only in the
+channel (`test` to `stable`), the tag and the notes link, and `manifest.json.sig` is new. Delta from v0.5.4: not worth
+it by Tools' rule, so the whole 10.9 MB file in one request, with the digest, tampered-chunk and signature checks.
+
+Fixed on the way (#22): `scripts/notices.py` read `cargo metadata` with the Windows code page, which garbled non-ASCII
+authors ("Döring") and failed `--check` on Windows; it now reads UTF-8. On Hyprland a result dragged out of the panel
+never reached the drop window: the layer's exclusive keyboard hold kept the pointer in it, so the drag now switches the
+panel to on-demand keyboard focus and takes the exclusive hold back when the drag ends. This was the first run of the
+drag-out acceptance check (SPEC); sway's end-to-end drag already passed.
+
 ## 2026-11-17 (cloud session) - 1.0.0: conformance and release prep
 
 D19: Link's conformance rules read against the repository; ID-3 (identity icons, synced from Link), REPO-1 (Keep a
