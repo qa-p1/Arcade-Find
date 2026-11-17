@@ -25,7 +25,7 @@ jobs:
     name: Settings screenshots (real eframe)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove the runner's incomplete pinned toolchain
         run: rustup toolchain uninstall 1.88.0 || true
       - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
@@ -57,7 +57,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           arguments: --workspace --all-features
@@ -94,7 +94,7 @@ jobs:
     needs: check
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
@@ -156,7 +156,7 @@ jobs:
           - { name: macos-universal, os: macos-15 }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
@@ -235,7 +235,7 @@ jobs:
     needs: package
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           pattern: package-*
