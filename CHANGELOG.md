@@ -18,6 +18,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Escape steps back: the first press clears the search text, the next closes the search. The footer says which (FD-7).
+- On Hyprland, a result dragged out of the search panel reaches the window it is dropped on. The panel gave up its
+  hold on the keyboard too late, so Hyprland kept the drag inside the panel.
 - The search stays open when another window takes focus, on X11 and Wayland; Escape, a choice or the shortcut close it (FD-2).
 - The search fits the screen whatever row count is set; the rest of the list scrolls (FD-4).
 - Content search finds files whose names contain a line break (FD-3).

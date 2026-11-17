@@ -437,6 +437,10 @@ impl Wl {
         let source = manager.create_drag_and_drop_source(&self.qh, [dnd::URI_LIST, dnd::TEXT, "text/plain", "UTF8_STRING"], DndAction::Copy);
         let icon = self.compositor.create_surface(&self.qh);
         source.start_drag(device, shown.layer.wl_surface(), Some(&icon), serial);
+        // Hyprland keeps the pointer on a layer that holds exclusive keyboard focus, so a drag could never reach
+        // another window there. Give up the exclusive hold while the drag runs; end_drag takes it back.
+        shown.layer.set_keyboard_interactivity(KeyboardInteractivity::OnDemand);
+        shown.layer.commit();
         self.paint_drag_icon(&icon, &rows);
         let paths = rows.into_iter().map(|r| r.path).collect();
         self.drag = Some(Drag { source, paths, icon: Some(icon) });
@@ -467,6 +471,10 @@ impl Wl {
     fn end_drag(&mut self, source: &wl_data_source::WlDataSource) {
         if self.drag.as_ref().is_some_and(|d| d.source.inner() == source) {
             self.drag = None;
+            if let Some(shown) = &self.shown {
+                shown.layer.set_keyboard_interactivity(KeyboardInteractivity::Exclusive);
+                shown.layer.commit();
+            }
         }
     }
 }
