@@ -35,11 +35,12 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           cache-on-failure: true
       - name: Native dependencies
+        timeout-minutes: 20
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev xvfb xdotool x11-utils imagemagick dbus
       - name: Build Find and the pinned isolation runner
         run: |
           cargo build --locked -p arcade-find --bin arcade-find
-          git clone --depth 1 --branch v1.0.7 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git clone --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
       - name: Capture settings matrix
         run: python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-settings-ui.py target/debug/arcade-find
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -68,12 +69,25 @@ jobs:
           # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Linux build dependencies
+        timeout-minutes: 20
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev
       - name: Source, lint, documentation, design and isolated tests
         timeout-minutes: 15
         shell: bash
         run: python3 scripts/check.py --core-only
+
+  # Advisories, licences, bans and sources (deny.toml). --workspace: every crate's dependencies, not only the first member's.
+  deny:
+    name: cargo deny (advisories, licences, bans, sources)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          arguments: --workspace --all-features
+          command: check
 
   e2e-linux:
     name: end-to-end (headless sway + Xvfb)
@@ -91,6 +105,7 @@ jobs:
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
           cache-on-failure: true
       - name: Session tools
+        timeout-minutes: 20
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev sway grim wtype xvfb xdotool xclip x11-utils imagemagick libvips-tools dbus python3-dbus python3-gi python3-pyatspi at-spi2-core ripgrep fonts-noto-cjk libopengl0 libegl1 libgl1 libgl1-mesa-dri libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0 libxcb-image0 libxcb-xinerama0 libxcb-xkb1 libwebkit2gtk-4.1-0 libayatana-appindicator3-1 libxdo3
       - name: Build the old backend for the lifecycle regression
         run: |
@@ -102,7 +117,7 @@ jobs:
       - name: Build Find and the pinned Link CLI
         run: |
           cargo build --locked -p arcade-find --bin arcade-find --example e2e-pointer
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.7 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           cargo build --locked --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
           echo "ARCADE_LINK_DIR=$RUNNER_TEMP/link" >> "$GITHUB_ENV"
           echo "ARCADE_LINK_CLI=$RUNNER_TEMP/link/target/debug/arcade-link" >> "$GITHUB_ENV"
@@ -151,6 +166,7 @@ jobs:
           # Saved only on main (Link spec §4): PR caches crowd main's out of the 10 GB cap.
           save-if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'push' }}
       - name: Linux build dependencies
+        timeout-minutes: 20
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libxkbcommon-x11-0 libwayland-dev desktop-file-utils xvfb xdotool dbus
       - name: Inno Setup compiler
@@ -165,25 +181,32 @@ jobs:
           # Matches LSMinimumSystemVersion, whatever SDK the runner has.
           MACOSX_DEPLOYMENT_TARGET: "11.0"
         run: python3 scripts/package.py
+      - name: AppImage bundles no library the notices lack
+        if: runner.os == 'Linux'
+        run: python3 scripts/notices.py --check-appimage dist/Arcade-Find-x86_64.AppImage
       - name: AppImage install, repair and uninstall (isolated)
         if: runner.os == 'Linux'
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.7 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/verify-appimage.py dist/Arcade-Find-x86_64.AppImage
-      - name: Upgrade the real previous AppImage without losing user state
+      - name: Upgrade the real previous AppImages without losing user state
         if: runner.os == 'Linux'
         env:
           GH_TOKEN: ${{ github.token }}
+        # 0.4.3 has the old folders (migrated on install); 0.5.4 is the previous stable release.
         run: |
-          python3 scripts/fetch-peer.py qa-p1/Arcade-Find "$RUNNER_TEMP/previous-find" v0.4.3
-          previous=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["file"])' "$RUNNER_TEMP/previous-find/source.json")
-          python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-upgrade.py "$RUNNER_TEMP/previous-find/$previous" dist/Arcade-Find-x86_64.AppImage
+          for tag in v0.4.3 v0.5.4; do
+            python3 scripts/fetch-peer.py qa-p1/Arcade-Find "$RUNNER_TEMP/previous-find-$tag" "$tag"
+            previous=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["file"])' "$RUNNER_TEMP/previous-find-$tag/source.json")
+            python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-upgrade.py "$RUNNER_TEMP/previous-find-$tag/$previous" dist/Arcade-Find-x86_64.AppImage
+            mv target/e2e/upgrade "target/e2e/upgrade-$tag"
+          done
       - name: Preserve upgrade verification evidence
         if: always() && runner.os == 'Linux'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: previous-release-upgrade
-          path: target/e2e/upgrade
+          path: target/e2e/upgrade-*
       - name: Windows silent install/uninstall (CI account only)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -231,3 +254,15 @@ jobs:
           path: |
             dist/arcade-release.json
             dist/SHA256SUMS.txt
+
+  # Tier 1 (headless Hyprland, Link's desktop harness) on the AppImage this run built: the popup rule, the Escape
+  # ladder, drag out and the window placement (tests/desktop/find_desktop.py). Gates runs the same on the published rc.
+  desktop:
+    needs: package
+    uses: qa-p1/Arcade-Link/.github/workflows/desktop-e2e.yml@v1.0.13
+    with:
+      name: find
+      test: tests/desktop/find_desktop.py
+      args: '"$APP"'
+      artifact: package-linux-x64
+      link-ref: v1.0.13

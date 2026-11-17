@@ -41,7 +41,9 @@ for name in ("report-alpha.txt", "report-beta.txt", "report-gamma.txt"):
 app = str(home / "Arcade-Find.AppImage")
 shutil.copy2(sys.argv[1], app)
 os.chmod(app, 0o755)
-env = {**os.environ, "HOME": str(home), "ARCADE_FIND_HOME": str(home)}
+# A downloaded AppImage offers to install itself on a normal launch (--show included); this test is about the
+# overlay, so it turns the offer off, as Lens's and Look's desktop tests and Link's harness do.
+env = {**os.environ, "HOME": str(home), "ARCADE_FIND_HOME": str(home), "ARCADE_NO_INSTALL_PROMPT": "1"}
 log = open(d.artifact("find.log"), "wb")
 results = []
 
@@ -125,7 +127,7 @@ try:
     panel = shown()
     monitor = next(m for m in d.monitors() if m["name"] == panel["monitor"])
     top, bottom = panel["y"], panel["y"] + panel["h"]
-    check("KNOWN BUG FD-4: the panel stays inside the monitor", monitor["y"] <= top and bottom <= monitor["y"] + monitor["height"],
+    check("FD-4: the panel stays inside the monitor", monitor["y"] <= top and bottom <= monitor["y"] + monitor["height"],
           f"y={top}..{bottom} on a {monitor['height']} px monitor")
     d.escape(None)
     d.escape(None)

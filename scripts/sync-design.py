@@ -35,6 +35,10 @@ FILES = [
     (ICONS + "find.ico", "assets/app-icon/arcade-find.ico"),
     (ICONS + "macos/icon.icns", "assets/app-icon/arcade-find.icns"),
     (ICONS + "png/", "assets/app-icon/png/"),
+    # The identity icons Link's conformance (ID-3) looks for in the repository: the app icon and the symbolic
+    # (tray) icon, under the desktop id. The AppImage exports its own from the binary (--export-icon).
+    (ICONS + "icon.svg", "packaging/linux/dev.arcade.Find.svg"),
+    ("design/glyphs/arcade.find.svg", "packaging/linux/dev.arcade.Find-symbolic.svg"),
 ]
 # Folders that hold only synced files, emptied first so removed files go too.
 OWNED = ["assets/glyphs", "assets/app-icon", "assets/design-licenses"]

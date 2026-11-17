@@ -6,6 +6,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
+publish.workspace = true
 build = "build.rs"
 
 [lib]
@@ -23,7 +24,7 @@ serde_json.workspace = true
 semver = "1"
 notify = "8"
 fs2 = "0.4"
-arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v1.0.7", features = ["watch", "install", "trayhost", "design", "design-egui"] }
+arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v1.0.13", features = ["watch", "install", "trayhost", "design", "design-egui"] }
 interprocess = "2.4"
 getrandom = "0.4"
 # Overlay rendering (software; no GPU context is created for the overlay).

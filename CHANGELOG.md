@@ -1,51 +1,86 @@
 # Changelog
 
-## Unreleased
+All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+## [1.0.0] - 2026-11-17
+
+### Added
+- A security policy (`SECURITY.md`): what Find reads, stores, starts and sends, each with the test that covers it.
+- Third-party notices generated from the build, shipped beside the program and shown from Settings.
+
+### Changed
+- In the background, Find runs from an unpacked copy of its AppImage, so the AppImage's mount and its runtime process
+  no longer stay running alongside it.
+- Built against Arcade Link 1.0.13.
+
+### Fixed
 - Escape steps back: the first press clears the search text, the next closes the search. The footer says which (FD-7).
+- On Hyprland, a result dragged out of the search panel reaches the window it is dropped on. The panel kept its
+  exclusive hold on the keyboard during the drag, and Hyprland then keeps the pointer inside the panel.
 - The search stays open when another window takes focus, on X11 and Wayland; Escape, a choice or the shortcut close it (FD-2).
 - The search fits the screen whatever row count is set; the rest of the list scrolls (FD-4).
 - Content search finds files whose names contain a line break (FD-3).
 - `--search` is safe for scripts: a failure exits 1 also with `--json`, a malformed filter is an error even next to valid terms, `--limit 0` is a usage error (exit 2), and limits above 1000 are honoured while Find runs (FD-1, FD-5, FD-6).
 - Settings: the Hyprland key-binding section shows only on Hyprland; a folder inside an indexed one is refused, a parent replaces the folders inside it, and indexing a whole disk asks first; other drives show their label; scans under a second show milliseconds; the Start at login text is accurate on Hyprland (FD-9, FD-10, RD-FIND-2/3/4).
 - After a rescan, a stale "Some folders can't be watched" message clears, and memory from a removed large folder is returned (FD-8).
+- Restarting Find could hang where the desktop portal does not answer (seen on headless desktops): the restarted copy
+  inherited paths into the AppImage mount the old one had just released (Arcade Link 1.0.13).
 
-## 0.5.4 — 2026-11-06
+### Security
+- The search index (`index.bin`), which lists every file name under the indexed folders, is readable only by you; it
+  was readable by other users of the computer.
 
+## [0.5.4] - 2026-11-06
+
+### Fixed
 - Sanitize inherited AppImage paths when restarting Find, starting it from Settings, or opening another Arcade app, preventing the old image's libraries from leaking into the new launcher.
 - Keep Move to Trash confirmation open when modifiers, Tab, arrows, text or the search-focus shortcut are pressed. Enter/Delete confirm the same pending targets, and Escape cancels explicitly.
+
+### Added
 - Add model regressions for unrelated keys followed by Enter, explicit cancellation and Delete confirmation. These tests inspect effects without performing file operations.
 
-## 0.5.3 — 2026-11-01
+## [0.5.3] - 2026-11-01
 
+### Fixed
 - The fix in 0.5.2 (the first search request after Find starts is no longer lost), released. 0.5.2 was tagged but not released: its end-to-end run tripped over a test that didn't wait for the previous Arcade Shelf to exit. That test is fixed and also recognises Arcade Shelf 0.4's window. Find itself is unchanged since 0.5.2.
 
-## 0.5.2 — 2026-11-01
+## [0.5.2] - 2026-11-01
 
+### Fixed
 - Fixed: the first search request after Find starts (the shortcut, **Open** in Arcade Tools, or `arcade-find --show`) could do nothing when it arrived while the window system was still starting. Requests that arrive early now wait and open search as soon as it is ready.
 - Includes everything in 0.5.1, which was tagged but not released.
 
-## 0.5.1 — 2026-11-01
+## [0.5.1] - 2026-11-01
 
+### Changed
 - Built against Arcade Link 0.4.14. Settings pages scroll across the whole window, so the scroll bar sits at the window edge instead of on the cards' right border. The install prompt's second button reads **Just run it** from the shared copy (Find no longer rewrites it locally).
 - README and user-guide screenshots show the 0.5 look: the search overlay with results and Settings' General page, in light and dark (`scripts/docs-screenshots.py` retakes them).
 
-## 0.5.0 — 2026-10-31
+## [0.5.0] - 2026-10-31
 
+### Added
+- Composed input is supported through winit IME and Wayland text-input-v3.
+- Native screen-reader search and result announcements, full-name tooltips, Quit in About and a one-time background reminder. Settings waits for resident commands before it exits.
+
+### Changed
 - New lime accent, Inter and the shared Arcade kit across search, Settings and the install prompt.
 - Settings uses the standard page order, fixed headings, readable folder rows, a single helper window and ordered saves that finish before close.
-- Composed input is supported through winit IME and Wayland text-input-v3.
 - Standard application identifiers and verified migration of existing folders, desktop and login entries. Existing shortcuts and preferences stay.
 - Monochrome tray glyph, left-click search, standard menu wording and shared Copied feedback.
 - Welcome and notification preferences, standard keyboard commands, per-monitor window geometry and pair-specific Connected apps copy.
-- Fixed Settings file-watch feedback, concurrent saves and the Wayland fallback's actual Show/Hide lifecycle without leaking drag workers.
-- File-list paste restores copied file references and preserves multi-selection; shortcut recording checks the running Hyprland bindings as well as Arcade's registry.
-- Native screen-reader search and result announcements, full-name tooltips, Quit in About and a one-time background reminder. Settings waits for resident commands before it exits.
 - Shared developer entry points, pinned Rust, lowercase developer docs and manual release preparation.
 - Updating from 0.4.x replaces the old `arcade-find` launcher and login entry instead of leaving a second menu entry and a second login item (Arcade Link 0.4.12). File details use the kit's exact timestamp format. Equivalent keys share one row in Settings' key list.
 
-## 0.4.3 — 2026-10-19
+### Fixed
+- Fixed Settings file-watch feedback, concurrent saves and the Wayland fallback's actual Show/Hide lifecycle without leaking drag workers.
+- File-list paste restores copied file references and preserves multi-selection; shortcut recording checks the running Hyprland bindings as well as Arcade's registry.
 
+## [0.4.3] - 2026-10-19
+
+### Fixed
 - A helper an app starts from its own image (such as a settings window) keeps
   working after the app quits: the previous release stopped passing the AppImage
   runtime's keep-alive pipe to every program, its own helpers included, so
@@ -54,27 +89,32 @@
   file) drop it, so installing from Downloads still leaves nothing behind.
 - Restarting no longer keeps the previous image mounted.
 
-## 0.4.2 — 2026-10-19
+## [0.4.2] - 2026-10-19
 
+### Fixed
 - Installing or updating from your Downloads folder no longer leaves the
   downloaded AppImage mounted and its runtime running. The previous release
   stopped passing on the handle on the AppImage's mount, but the runtime also
   waits on a pipe the app inherits, and the installed copy still inherited that;
   now no inherited handle is passed on.
 
-## 0.4.1 — 2026-10-18
+## [0.4.1] - 2026-10-18
 
+### Fixed
 - Updating or installing from your Downloads folder, restarting into the
   background and starting other Arcade apps no longer leave the old AppImage
   mounted and its runtime (about 20 MB) running. A program the app started
   inherited an open handle on its AppImage mount and kept it busy.
 
-## 0.4.0 — 2026-10-18
+## [0.4.0] - 2026-10-18
 
+### Fixed
 - Changing Find's shortcut over Arcade Link (for example from Tools) takes effect
   right away; before, the new chord did nothing until Find was restarted.
 - Date filters stay correct across daylight-saving changes, and content search
   keeps to the folders you chose.
+
+### Changed
 - Installer: updating replaces the running copy, uninstalling right after start
   works, and the install prompt matches the other Arcade apps (centred, Install
   on the right, closing it installs nothing, Start at login ticked). Upgrading
@@ -82,16 +122,18 @@
   over its menu and login entries.
 - Built against Arcade Link commit `2fc7c91`.
 
-## 0.3.1 — 2026-10-16
+## [0.3.1] - 2026-10-16
 
+### Fixed
 - On X11, restoring a Tools backup (or saving Settings) with the global
   shortcut Find already holds no longer fails with "Ctrl+Alt+F is already
   used by another application". Find keeps its existing registration instead
   of grabbing the same key again from a new hotkey manager while the old one
   is still releasing it. Found by the Arcade Link real-fleet backup check.
 
-## 0.3.0 — 2026-10-14
+## [0.3.0] - 2026-10-14
 
+### Added
 - Arcade Tools can open Settings, restart Find (with busy/force handling),
   rescan from its hosted menu, change the global shortcut live, and export
   or import portable settings. Imports validate and back up settings/pins;
@@ -109,8 +151,9 @@
 - Checksum-pinned shared packaging/release/shortcut tools, generated shortcut
   docs, local doc-link checks and isolated tests on the Rust 1.88 CI matrix.
 
-## 0.2.1 — 2026-10-10
+## [0.2.1] - 2026-10-10
 
+### Fixed
 - Dragging out works on GNOME Wayland (and any Wayland session without
   layer shell, where Find uses its winit window): Find runs a second client
   on winit's own Wayland connection, with its own pointer for the press
@@ -118,13 +161,16 @@
 - The winit window no longer hides when focus drops and returns within
   150 ms (a keyboard device change, a grab); it still hides when another
   window keeps focus. Same rule as the layer-shell overlay.
+
+### Added
 - `scripts/e2e-linux.sh` adds a `wayland-winit` session (headless Sway,
   `ARCADE_FIND_BACKEND=winit`, the window floating as on GNOME): a result
   dragged onto the real Shelf lands by reference. Waits for Shelf's start
   and stop and for `--quit` poll instead of sleeping.
 
-## 0.2.0 — 2026-10-10
+## [0.2.0] - 2026-10-10
 
+### Added
 - Drag results out of the overlay: one row, or the whole multi-selection
   when the drag starts inside it, into file managers, editors or Arcade
   Shelf. Wayland (layer shell) and X11 show a drag image with the first
@@ -136,10 +182,11 @@
   drag checks in `scripts/e2e-linux.sh`: with the real Shelf, two results
   dragged onto its window land there by reference, on Wayland and X11.
 
-## 0.1.0 — 2026-10-10
+## [0.1.0] - 2026-10-10
 
 First version.
 
+### Added
 - Search overlay on a global shortcut (Ctrl+Alt+F): a compact bar at the
   screen center that grows with results; every keystroke searches.
 - Enter previews in Arcade Look (default app without Look); Shift+Enter
@@ -171,3 +218,20 @@ First version.
   Arcade Tools and Find's Settings can both switch it.
 - Tray menu, start at login (installed copies only), single instance,
   standard command line.
+
+[Unreleased]: https://github.com/qa-p1/Arcade-Find/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.4...v1.0.0
+[0.5.4]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.3...v0.5.4
+[0.5.3]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.2...v0.5.3
+[0.5.2]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/qa-p1/Arcade-Find/compare/v0.4.3...v0.5.0
+[0.4.3]: https://github.com/qa-p1/Arcade-Find/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/qa-p1/Arcade-Find/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/qa-p1/Arcade-Find/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/qa-p1/Arcade-Find/compare/v0.3.1...v0.4.0
+[0.3.1]: https://github.com/qa-p1/Arcade-Find/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/qa-p1/Arcade-Find/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/qa-p1/Arcade-Find/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/qa-p1/Arcade-Find/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/qa-p1/Arcade-Find/releases/tag/v0.1.0

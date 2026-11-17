@@ -12,7 +12,7 @@ import sys
 import gi
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 GLib.set_prgname("arcade-drop-target")
 result = sys.argv[1]
@@ -21,7 +21,7 @@ window.set_default_size(900, 600)
 label = Gtk.Label(label="Drop files here")
 window.add(label)
 targets = [Gtk.TargetEntry.new("text/uri-list", 0, 0), Gtk.TargetEntry.new("text/plain;charset=utf-8", 0, 1)]
-window.drag_dest_set(Gtk.DestDefaults.ALL, targets, 1 | 2)  # copy | move
+window.drag_dest_set(Gtk.DestDefaults.ALL, targets, Gdk.DragAction.COPY | Gdk.DragAction.MOVE)
 received = {"uris": [], "text": ""}
 
 

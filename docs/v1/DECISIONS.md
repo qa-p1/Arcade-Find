@@ -124,7 +124,7 @@ Kept on purpose:
   tested API of `find-core`; removing them means rewriting tests for no gain.
 - `crates/arcade-find/examples/hub-startup.rs` and `crates/find-core/examples/typing.rs`: measurement tools that no
   script names. Cargo builds them (clippy `--all-targets`), and their headers say how an isolated runner uses them.
-- `tests/desktop/*`, `tools/third_party_notices.py` (regenerates `THIRD_PARTY_NOTICES.md`, run by hand), and the
+- `tests/desktop/*`, `scripts/notices.py` (regenerates `THIRD_PARTY_NOTICES.md`; `--check` runs in `scripts/check.py` and CI), and the
   Cargo-discovered tests and benches.
 - Vendored files in `VENDORED.md`, the design-kit assets, and `scripts/verify-tools-update.rs`.
 - Feature flags: neither crate declares a `[features]` table, so none can be unused. The arcade-link features in
@@ -139,4 +139,62 @@ from `<data>/arcade/runtime/find-<version>-<key>/` through Link's `runtime::rela
 0, so no FUSE helper stays resident (RT-7). One-shot calls (`--search`, `--status`, `--quit`, and a command a
 running instance takes) never relaunch. The budget (background 42 PSS / 48 RSS) is measured on the published rc
 by the gates' budget job.
+
+
+## D17 - Release gates (step 7): Link's app gates on the published rc, the upgrade from the previous release
+
+`.github/workflows/gates.yml` runs PLAN's exit gates on the published files of an rc, never a local build, through
+Link's reusable `app-gates.yml@v1.0.9` (published files and SHA256SUMS, the rc's manifest, conformance, N-1,
+budgets, the delta through Tools' updater, the Windows and macOS smoke on the published installers) plus Find's
+own Linux checks on the published AppImage and the desktop suites (Tier 1 Hyprland, Tier 2 sway, KWin, Mutter,
+X11). "Promote" runs only after a green Gates run on the rc it promotes.
+- **Upgrade:** `scripts/check-upgrade.py` took only 0.4.3, whose folders (`arcade-find`) are migrated on install.
+  The previous stable release is 0.5.4, whose data is already in `arcade/find`, so the script now reads the old
+  version from its receipt, seeds the data where that version keeps it, and checks the migration only for 0.4.x.
+  CI and the gates run it from both 0.4.3 and 0.5.4.
+- **Tier 1:** `tests/desktop/find_desktop.py` (step 1) never ran anywhere: no workflow called it. CI now runs it on
+  every push through Link's `desktop-e2e.yml` on the AppImage the run built, and the gates on the published one.
+- The Linux checks are the ones CI already runs on its own build (`verify-appimage.py`, the upgrades, the tray's
+  lifecycle), now on the published file. The Windows and macOS checks are CI's `packaging/windows/verify.ps1` and
+  `packaging/macos/verify.sh` on the published installer.
+
+## D18 - Security, licences and notices (round 5): accepted advisories
+
+`cargo deny check` is clean with these accepted entries (each with its reason in `deny.toml`). None is reachable:
+
+- RUSTSEC-2024-0429 (glib 0.18, unsound `VariantStrIter`) and RUSTSEC-2024-0370 (proc-macro-error): both come only from
+  `tray-icon`'s GTK backend. Find depends on `tray-icon` for Windows and macOS only (Linux uses ksni), and
+  `cargo tree -i glib -e normal,build --target <linux|windows|macos>` is empty for all three.
+- RUSTSEC-2026-0186 (memmap2 0.8.0): only xkbcommon 0.7 uses it, through `MmapOptions::map` on the compositor's keymap,
+  not the affected `advise_range`/`flush_range`. The fix is memmap2 0.9.11, which xkbcommon 0.7 and
+  smithay-client-toolkit 0.19 do not accept; revisit when winit/sctk move to xkbcommon 0.8.
+- RUSTSEC-2026-0543 (chrono, published 2026-11-17): "unmaintained", no known vulnerability. Only `trash` uses it, on
+  Linux, to write the `DeletionDate` of each file it moves to the Trash; turning `trash`'s `chrono` feature off would
+  leave the date out of the `.trashinfo` file, which file managers show and sort by. It moves when `trash` does.
+- RUSTSEC-2026-0192 (ttf-parser), RUSTSEC-2026-0370/0371/0372 (zvariant, zbus_names, zvariant_derive): "unmaintained",
+  no known vulnerability, no maintained replacement they can take (zbus 6 would need ksni, notify-rust and
+  accesskit_unix to move first).
+
+Fixed by `cargo update` instead of ignored: async-executor 1.14.1 and clipboard-win 5.4.3 (yanked), tokio 1.53.3
+(RUSTSEC-2026-0386) and rustix 1.1.6 (RUSTSEC-2026-0486). `Ubuntu-font-1.0` is on the licence allow list for the fonts
+egui ships. The Rust crates are `publish = false`, as `cargo deny`'s wildcard check needs for git dependencies.
+`index.bin` is now written 0600 (it was 0644 under the default umask): it lists every file name under the indexed folders.
+
+## D19 - 1.0.0: Link conformance before rc.1
+
+Arcade Link's `arcade-link conformance` (Link 1.0.13 `crates/arcade-link-cli/src/conformance.rs`) was read rule by rule
+against the repository, since no CLI build fits here; the rc's gates run it for real. Four checks would have failed, as
+they did for Look (D21 there) and Box:
+- **ID-3:** no app icon or symbolic icon in the repository under the desktop id. `scripts/sync-design.py` now also copies
+  Link's `design/app-icons/find/icon.svg` to `packaging/linux/dev.arcade.Find.svg` and `design/glyphs/arcade.find.svg`
+  to `packaging/linux/dev.arcade.Find-symbolic.svg`, unchanged, and lists them in VENDORED.md. The AppImage already
+  carried `dev.arcade.Find.svg`/`.png`, exported from the binary.
+- **REPO-1:** `CHANGELOG.md` follows Keep a Changelog 1.1.0: `[Unreleased]`, `## [X.Y.Z] - date`, each release's bullets
+  grouped under Added, Changed, Fixed or Security by what they say (the wording is unchanged), and compare links.
+- **REPO-2:** `.github/dependabot.yml` (Cargo and GitHub Actions, weekly, grouped, no automatic rebase), as the other apps
+  have. The audit half is D18's `cargo deny` job.
+- **REL-1:** the four `apt-get` steps in `ci.yml` have `timeout-minutes: 20`. No command changed.
+
+CLI-1 to CLI-4 already held (`--status` one JSON line, an unknown option exits 2 with a hint, `--version`, the
+manifest). Version 1.0.0.
 

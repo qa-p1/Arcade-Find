@@ -33,8 +33,8 @@ fe152028ff674fdacdef4aed8970bb0a7afeb2dd67d2a3af075d7d95683bf96b  packaging/wind
 
 ## Arcade design kit
 
-Copied unchanged from [Arcade Link](https://github.com/qa-p1/Arcade-Link/tree/v1.0.7) tag `v1.0.7` (commit
-`40ec0279095f7a5082b0fbe2912d1a869b98f55d`) by `scripts/sync-design`; never edit these files here.
+Copied unchanged from [Arcade Link](https://github.com/qa-p1/Arcade-Link/tree/v1.0.13) tag `v1.0.13` (commit
+`a24146fd87ff77ed362f518a414eaf266512f839`) by `scripts/sync-design`; never edit these files here.
 License: MIT OR Apache-2.0.
 
 ```text
@@ -59,4 +59,6 @@ b854d4a9e62afc78e488ad67d8f6196bbab1e4c11019775ee2597e228b0f3a64  assets/app-ico
 b5fdbe1be7abfaa4ce6011cf995ca494726bc1e3d0f528ef491fa71e1f677f52  assets/app-icon/png/48.png
 4a749e4ed78522093fb9b69d8f61e09d53b8e833946c728eb8b93d862235221a  assets/app-icon/png/512.png
 decbb63db71a2a2a5a516c7089fb48bacea1e094d2805bd8d723584d4f4b6e70  assets/app-icon/png/64.png
+65f265bb6fffa0e770976d69f7e7324bc27009c70a08c5dc31c7b04deed5d83a  packaging/linux/dev.arcade.Find.svg
+54c0b3e869912313a7b543175ad6bda5853b0bc8118d753e2c67de6dfdd07df9  packaging/linux/dev.arcade.Find-symbolic.svg
 ```

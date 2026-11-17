@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Install real 0.4.3, retain its configured data, then install and use this package."""
+"""Install a real released Find, retain its configured data, then install and use this package.
+
+  check-upgrade.py PREVIOUS.AppImage CURRENT.AppImage
+
+CI runs it from 0.4.3 (its folders, `arcade-find`, are migrated to `arcade/find` on install); the release gates run it
+from the previous stable release as well, whose data already lives in `arcade/find`."""
 import json
 import os
 import hashlib
@@ -61,32 +66,37 @@ def main():
 
     with (output / 'upgrade.log').open('w') as log:
         old_receipt = command(previous, '--install', '--silent', '--no-launch', '--keep-download')
-        assert old_receipt['version'] == '0.4.3', old_receipt
+        old_version = old_receipt['version']
+        # The same version is allowed: before the release bump CI's build still carries the previous release's number.
+        assert old_version.split('-')[0].count('.') == 2, old_receipt
         installed = Path(old_receipt['path'])
         assert installed.is_relative_to(root)
-        legacy_config = Path(env['XDG_CONFIG_HOME']) / 'arcade-find'
-        legacy_data = Path(env['XDG_DATA_HOME']) / 'arcade-find'
-        legacy_config.mkdir(parents=True, exist_ok=True)
-        legacy_data.mkdir(parents=True, exist_ok=True)
+        # 0.4.x kept its files in `arcade-find`; 0.5.0 moved them to `arcade/find` (migrating on install).
+        legacy = old_version.startswith('0.4.')
+        folder = 'arcade-find' if legacy else 'arcade/find'
+        old_config = Path(env['XDG_CONFIG_HOME']) / folder
+        old_data = Path(env['XDG_DATA_HOME']) / folder
+        old_config.mkdir(parents=True, exist_ok=True)
+        old_data.mkdir(parents=True, exist_ok=True)
         settings = {'schema': 1, 'roots': [str(files)], 'theme': 'light', 'shortcut': 'Ctrl+Alt+J',
                     'showRecentOnOpen': True, 'showHidden': True, 'contentSearch': True}
-        (legacy_config / 'settings.json').write_text(json.dumps(settings))
-        (legacy_data / 'pins.json').write_text(json.dumps({'items': [str(pinned)]}))
-        (legacy_data / 'frecency.json').write_text(json.dumps({
+        (old_config / 'settings.json').write_text(json.dumps(settings))
+        (old_data / 'pins.json').write_text(json.dumps({'items': [str(pinned)]}))
+        (old_data / 'frecency.json').write_text(json.dumps({
             'schema': 1, 'items': {str(recent): {'count': 3, 'times': [int(time.time())]}},
         }))
         old = subprocess.Popen([str(installed), '--background'], env=env, stdout=log, stderr=log)
         try:
-            until(lambda: status(installed).get('engine', {}).get('phase') == 'ready', 'released 0.4.3 did not index the configured root')
+            until(lambda: status(installed).get('engine', {}).get('phase') == 'ready', f'released {old_version} did not index the configured root')
             command(installed, '--show')
-            until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, '0.4.3 did not load the configured pins and history')
+            until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, f'{old_version} did not load the configured pins and history')
             command(installed, '--quit')
             assert old.wait(timeout=15) == 0
         finally:
             if old.poll() is None:
                 old.terminate(); old.wait(timeout=10)
         kept = {name: (directory / name).read_bytes() for directory, name in (
-            (legacy_config, 'settings.json'), (legacy_data, 'pins.json'), (legacy_data, 'frecency.json'),
+            (old_config, 'settings.json'), (old_data, 'pins.json'), (old_data, 'frecency.json'),
         )}
         new_receipt = command(current, '--install', '--silent', '--no-launch', '--keep-download')
         assert new_receipt['version'] == VERSION, new_receipt
@@ -104,7 +114,8 @@ def main():
             assert key in after_settings and after_settings[key] == value, (key, value, after_settings.get(key))
         for name in ('pins.json', 'frecency.json'):
             assert (new_data / name).read_bytes() == kept[name], name + ' was not preserved'
-        assert not legacy_config.exists() and not legacy_data.exists(), 'verified migration left the legacy folders'
+        if legacy:
+            assert not old_config.exists() and not old_data.exists(), 'verified migration left the 0.4 folders'
         # The launcher carries Find's identity (icon, window class); the login
         # entry is Link's: it starts this copy in the background and is ours.
         expected = {
@@ -140,10 +151,11 @@ def main():
         assert all((new_data / name).read_bytes() == kept[name] for name in ('pins.json', 'frecency.json'))
         assert (new_config / 'settings.json').exists() and pinned.exists() and recent.exists()
         assert not installed.exists()
-        (output / 'result.json').write_text(json.dumps({'from': '0.4.3', 'to': VERSION,
+        (output / 'result.json').write_text(json.dumps({'from': old_version, 'to': VERSION,
             'shortcut': 'Ctrl+Alt+J', 'settings': True, 'pins': True, 'history': True,
             'desktopEntry': 'dev.arcade.Find.desktop', 'uninstallKeptData': True}, indent=2) + '\n')
-    print(f'Real AppImage upgrade 0.4.3 → {VERSION}: settings, shortcut, pins/history, verified folder migration, desktop/login entries and data-preserving uninstall passed.')
+    migration = 'verified folder migration, ' if legacy else ''
+    print(f'Real AppImage upgrade {old_version} → {VERSION}: settings, shortcut, pins/history, {migration}desktop/login entries and data-preserving uninstall passed.')
 
 
 if __name__ == '__main__':

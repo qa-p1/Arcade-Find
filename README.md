@@ -193,7 +193,7 @@ desktop test environment; that does not count as native verification.
 - [Shelf integration](docs/dev/shelf.md): selection handoff details
 - [Status](docs/STATUS.md): verification and known limits
 - [Changelog](CHANGELOG.md)
-- [Third-party notices](THIRD_PARTY_NOTICES.md) and [vendored files](VENDORED.md)
+- [Security policy](SECURITY.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [vendored files](VENDORED.md)
 
 ## License
 

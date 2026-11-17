@@ -261,6 +261,22 @@ mod tests {
         assert!(a[..dash].contains(&"--null".to_string()));
     }
 
+    #[cfg(unix)]
+    #[test]
+    fn a_program_named_rg_that_is_not_ripgrep_is_not_used() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = crate::test_dir("content-fake-rg");
+        let fake = dir.join("rg");
+        std::fs::write(&fake, "#!/bin/sh\necho 'not ripgrep 14.1.0'\n").unwrap();
+        std::fs::set_permissions(&fake, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(identify(&fake), None);
+        std::fs::write(&fake, "#!/bin/sh\necho 'ripgrep 14.1.0'\n").unwrap();
+        assert_eq!(identify(&fake).as_deref(), Some("14.1.0"));
+        std::fs::write(&fake, "#!/bin/sh\necho 'ripgrep 0.10.0'\n").unwrap();
+        assert_eq!(identify(&fake), None, "ripgrep older than 11 is refused");
+        std::fs::remove_dir_all(dir).ok();
+    }
+
     #[test]
     fn runs_when_installed() {
         let Some(rg) = detect(&[]) else { return };
