@@ -46,7 +46,7 @@ notify-rust = "=4.17.0"
 libc.workspace = true
 
 [target.'cfg(target_os = "linux")'.dependencies]
-accesskit_unix = "0.17.2"
+accesskit_unix = "0.24.1"
 smithay-client-toolkit = { version = "0.19", default-features = false, features = ["calloop", "xkbcommon"] }
 # "system": libwayland, so the winit window's connection can be shared
 # (dragging out on Wayland without layer shell).
