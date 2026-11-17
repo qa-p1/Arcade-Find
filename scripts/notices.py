@@ -43,18 +43,24 @@ def normalized(text):
     return "\n".join(lines)
 
 
+def by_name(path):
+    """Sort files by their exact name. Path ordering ignores case on Windows, which put egui's
+    `emoji-icon-font-mit-license.txt` first there and last on Linux and macOS, so --check failed on Windows."""
+    return path.name
+
+
 def licence_texts(folder, declared=None):
     files = []
     if declared:
         files.append(folder / declared)
     if folder.is_dir():
-        files += sorted(p for p in folder.iterdir() if p.is_file() and LICENCE_FILE.match(p.name))
+        files += sorted((p for p in folder.iterdir() if p.is_file() and LICENCE_FILE.match(p.name)), key=by_name)
         for sub in ("LICENSES", "licenses"):
             if (folder / sub).is_dir():
-                files += sorted(p for p in (folder / sub).iterdir() if p.is_file())
+                files += sorted((p for p in (folder / sub).iterdir() if p.is_file()), key=by_name)
         # epaint_default_fonts keeps the licence of every font next to it (Hack, Ubuntu, Noto Emoji, emoji-icon-font).
         if (folder / "fonts").is_dir():
-            files += sorted(p for p in (folder / "fonts").iterdir() if p.is_file() and p.suffix == ".txt")
+            files += sorted((p for p in (folder / "fonts").iterdir() if p.is_file() and p.suffix == ".txt"), key=by_name)
     seen, texts = set(), []
     for path in files:
         if path.resolve() in seen or not path.is_file():
