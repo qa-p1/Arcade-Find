@@ -45,7 +45,7 @@ jobs:
           path: ${{ runner.temp }}/built
       - name: Verify the three installers (one AppImage, one Inno installer, one universal dmg)
         run: python3 scripts/prepare-release.py "$RUNNER_TEMP/built" "$RUNNER_TEMP/release" --channel beta --notes "https://github.com/$GITHUB_REPOSITORY/releases/tag/${{ needs.prepare.outputs.tag }}"
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-find
           path: |

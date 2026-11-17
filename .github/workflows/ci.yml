@@ -43,7 +43,7 @@ jobs:
           git clone --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
       - name: Capture settings matrix
         run: python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-settings-ui.py target/debug/arcade-find
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: settings-screenshots
@@ -138,7 +138,7 @@ jobs:
       - name: Native lifecycle, real tray, layer-shell, fallback and real Shelf drag checks
         timeout-minutes: 20
         run: python3 scripts/check.py --native-only --binary target/debug/arcade-find
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: e2e-screenshots
@@ -203,7 +203,7 @@ jobs:
           done
       - name: Preserve upgrade verification evidence
         if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: previous-release-upgrade
           path: target/e2e/upgrade-*
@@ -225,7 +225,7 @@ jobs:
         run: |
           target/release/arcade-find --version
           target/release/arcade-find --arcade-manifest | python3 -c 'import json,sys; m=json.load(sys.stdin); assert m["id"]=="arcade.find" and any(a["id"]=="find.search" for a in m["actions"])'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-${{ matrix.name }}
           path: dist/*
@@ -248,7 +248,7 @@ jobs:
             --notes "https://github.com/qa-p1/Arcade-Find/blob/${GITHUB_SHA}/CHANGELOG.md" --windows-installer inno dist
           python3 -c 'import json; m=json.load(open("dist/arcade-release.json")); assert all(a["installArgs"] == ["--install", "--silent"] for a in m["assets"] if a["kind"] == "appimage")'
           cat dist/arcade-release.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-manifest
           path: |
