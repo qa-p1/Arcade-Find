@@ -7,3 +7,5 @@ packaging/windows/arcade-integration.ps1 -text
 assets/glyphs/*.svg -text
 assets/app-icon/** -text
 assets/design-licenses/** -text
+packaging/linux/dev.arcade.Find.svg -text
+packaging/linux/dev.arcade.Find-symbolic.svg -text
