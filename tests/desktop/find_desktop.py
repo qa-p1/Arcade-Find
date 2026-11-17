@@ -41,7 +41,9 @@ for name in ("report-alpha.txt", "report-beta.txt", "report-gamma.txt"):
 app = str(home / "Arcade-Find.AppImage")
 shutil.copy2(sys.argv[1], app)
 os.chmod(app, 0o755)
-env = {**os.environ, "HOME": str(home), "ARCADE_FIND_HOME": str(home)}
+# A downloaded AppImage offers to install itself on a normal launch (--show included); this test is about the
+# overlay, so it turns the offer off, as Lens's and Look's desktop tests and Link's harness do.
+env = {**os.environ, "HOME": str(home), "ARCADE_FIND_HOME": str(home), "ARCADE_NO_INSTALL_PROMPT": "1"}
 log = open(d.artifact("find.log"), "wb")
 results = []
 
