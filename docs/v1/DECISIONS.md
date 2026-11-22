@@ -198,3 +198,16 @@ they did for Look (D21 there) and Box:
 CLI-1 to CLI-4 already held (`--status` one JSON line, an unknown option exits 2 with a hint, `--version`, the
 manifest). Version 1.0.0.
 
+## D20 - 1.0.1: System appearance without a portal; Link 1.0.15
+
+- **Found in the owner's real-user run of Tools 1.0.1 (openbox, no XDG desktop portal):** with Appearance set to
+  System, Find was dark while Arcade Tools, Clipboard and Shelf next to it were light. Without a portal answer
+  `detect_dark` fell back to `GTK_THEME` (unset) and then to dark.
+- **Decision:** the portal decides when it has a preference (1 dark, 2 light); otherwise Link 1.0.15's
+  `design::linux_prefers_dark_without_portal` reads the desktop as GTK does (GNOME's `color-scheme`, the GTK theme
+  names, GTK 3's `settings.ini`) and is light unless the desktop asks for dark. The first frame waits up to 300 ms for
+  that first reading, so a light desktop sees no dark flash. Test: `the_portal_decides_only_when_it_has_a_preference`.
+- **Also reported, not a Find bug:** "without a compositor Find's bar sits in a black box". Checked on the same X11
+  desktop without a compositor: the X11 window is already the opaque fallback (square corners, no shadow margin), and
+  the bar and its results show no box. The box in that run was Shelf's capsule.
+- Link 1.0.15 (from 1.0.13); workflows call Link's reusable workflows at v1.0.15.
