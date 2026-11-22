@@ -11,7 +11,7 @@ The Rust crates are those of every platform's build (each build includes only it
 
 ## Arcade Link and Arcade Lens files in this repository
 
-- `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.13` (commit `a24146f`)) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-Link
+- `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.15` (commit `09d52ee`)) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-Link
 - `crates/arcade-find/src/hotkey.rs` (`hyprland` module) (from Arcade Lens `crates/lens-platform/src/hyprland.rs`, branch `arcade/link`, commit `26b3532`) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-lens
 - `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-Link
 
@@ -32,7 +32,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - android-properties 0.2.2 (MIT) — https://github.com/miklelappo/android-properties
 - android_system_properties 0.1.6 (MIT OR Apache-2.0) — https://github.com/nical/android_system_properties
 - arboard 3.6.1 (MIT OR Apache-2.0) — https://github.com/1Password/arboard
-- arcade-link 1.0.13 (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-link
+- arcade-link 1.0.15 (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-link
 - arrayref 0.3.9 (BSD-2-Clause) — https://github.com/droundy/arrayref
 - arrayvec 0.7.8 (MIT OR Apache-2.0) — https://github.com/bluss/arrayvec
 - as-raw-xcb-connection 1.0.1 (MIT OR Apache-2.0) — https://github.com/psychon/as-raw-xcb-connection
@@ -544,7 +544,7 @@ another program or library. Windows and macOS packages hold only Find's own prog
 
 ## Licence texts
 
-### 1. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.13` (commit `a24146f`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.0.13, async-trait 0.1.92, itoa 1.0.18, libc 0.2.190, litrs 1.0.0, num_enum 0.7.6, num_enum_derive 0.7.6, pastey 0.2.3, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 2.1.3, rustversion 1.0.23, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.152, serde_repr 0.1.21, syn 2.0.119, syn 3.0.7, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.26
+### 1. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.15` (commit `09d52ee`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.0.15, async-trait 0.1.92, itoa 1.0.18, libc 0.2.190, litrs 1.0.0, num_enum 0.7.6, num_enum_derive 0.7.6, pastey 0.2.3, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 2.1.3, rustversion 1.0.23, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.152, serde_repr 0.1.21, syn 2.0.119, syn 3.0.7, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.26
 
 ```text
                               Apache License
@@ -725,7 +725,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 END OF TERMS AND CONDITIONS
 ```
 
-### 2. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.13` (commit `a24146f`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.0.13
+### 2. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.15` (commit `09d52ee`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.0.15
 
 ```text
 MIT License
