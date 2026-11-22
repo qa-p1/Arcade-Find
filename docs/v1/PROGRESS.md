@@ -2,6 +2,11 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-22 (cloud session) - 1.0.1
+
+- D20: System appearance follows the desktop without a portal (light on openbox, as Tools is); Link 1.0.15. The
+  reported no-compositor box does not happen in Find on X11 (checked on the real-user desktop).
+
 ## 2026-11-17 (cloud session) - 1.0.0 promoted
 
 `v1.0.0-rc.1` (08a90ca, Link 1.0.13) passed [Gates](https://github.com/qa-p1/Arcade-Find/actions/runs/44100470122)

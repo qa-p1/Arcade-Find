@@ -5,6 +5,18 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-22
+
+### Changed
+- Built against Arcade Link 1.0.15.
+
+### Fixed
+- With Appearance set to System, Find was dark on Linux desktops without the XDG desktop portal (openbox, i3 and
+  other X11 sessions) even when the desktop was light, so it didn't match Arcade Tools and other GTK apps next to it.
+  When the portal gives no answer, Find now reads the desktop's setting as GTK does (GNOME's `color-scheme`, then the
+  GTK theme's name) and is light unless the desktop asks for dark. At startup it waits a moment for that answer, so a
+  light desktop no longer sees a dark search flash first.
+
 ## [1.0.0] - 2026-11-17
 
 ### Added
@@ -219,7 +231,8 @@ First version.
 - Tray menu, start at login (installed copies only), single instance,
   standard command line.
 
-[Unreleased]: https://github.com/qa-p1/Arcade-Find/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/qa-p1/Arcade-Find/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/qa-p1/Arcade-Find/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.4...v1.0.0
 [0.5.4]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/qa-p1/Arcade-Find/compare/v0.5.2...v0.5.3

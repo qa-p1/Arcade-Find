@@ -2,7 +2,8 @@
 //! accent), Find's file-kind content palette, and the system light/dark
 //! preference. No other module defines a colour.
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
+use std::time::{Duration, Instant};
 
 use arcade_link::design::{self, Theme as KitTheme};
 use find_core::kind::Kind;
@@ -162,11 +163,19 @@ pub fn kit_theme(theme: Theme) -> KitTheme {
 
 /// 0 unknown, 1 dark, 2 light — refreshed off the UI thread.
 static SYSTEM: AtomicU8 = AtomicU8::new(0);
+/// The first read of the OS preference has finished (whatever it found).
+static FIRST_READ_DONE: AtomicBool = AtomicBool::new(false);
+/// Something already waited for that first read: wait at most once.
+static WAITED_FOR_FIRST_READ: AtomicBool = AtomicBool::new(false);
+/// How long the first frame waits for the first read (a portal call and a
+/// `gsettings` run on Linux), so a light desktop doesn't see a dark bar flash.
+const FIRST_READ_WAIT: Duration = Duration::from_millis(300);
 
 /// Native events keep System appearance live on Windows/macOS. Linux uses
 /// its portal signal because the native widget theme can differ.
 pub fn native_system_theme(dark: bool) {
     SYSTEM.store(if dark { 1 } else { 2 }, Ordering::Relaxed);
+    FIRST_READ_DONE.store(true, Ordering::Release);
 }
 
 pub fn follow_native_theme(ctx: &eframe::egui::Context) {
@@ -179,10 +188,23 @@ pub fn follow_native_theme(ctx: &eframe::egui::Context) {
 }
 
 pub fn system_dark() -> bool {
+    await_first_read();
     match SYSTEM.load(Ordering::Relaxed) {
         1 => true,
         2 => false,
-        _ => true, // until detected: dark is the overlay's default look
+        _ => true, // not detected: dark is the overlay's default look
+    }
+}
+
+/// Before the first read of the OS preference finishes, waits for it once,
+/// briefly (it runs on a worker thread from startup).
+fn await_first_read() {
+    if FIRST_READ_DONE.load(Ordering::Acquire) || WAITED_FOR_FIRST_READ.swap(true, Ordering::Relaxed) {
+        return;
+    }
+    let until = Instant::now() + FIRST_READ_WAIT;
+    while !FIRST_READ_DONE.load(Ordering::Acquire) && Instant::now() < until {
+        std::thread::sleep(Duration::from_millis(5));
     }
 }
 
@@ -194,24 +216,29 @@ pub fn refresh_system_theme() -> bool {
         Some(false) => 2,
         None => 0,
     };
-    SYSTEM.swap(v, Ordering::Relaxed) != v
+    let changed = SYSTEM.swap(v, Ordering::Relaxed) != v;
+    FIRST_READ_DONE.store(true, Ordering::Release);
+    changed
 }
 
 #[cfg(target_os = "linux")]
 fn detect_dark() -> Option<bool> {
     // The XDG Settings portal: org.freedesktop.appearance color-scheme (1 dark, 2 light).
-    if let Some(v) = portal_color_scheme() {
-        if v == 1 {
-            return Some(true);
-        }
-        if v == 2 {
-            return Some(false);
-        }
+    // Without a portal (openbox, i3, other X11 sessions), or when it has no
+    // preference (0), GNOME's settings and the GTK theme decide, as they do
+    // for GTK and WebKit apps on the same desktop (Arcade Tools).
+    Some(portal_preference(portal_color_scheme()).unwrap_or_else(design::linux_prefers_dark_without_portal))
+}
+
+/// The portal's `color-scheme` as a preference: 1 dark, 2 light, anything
+/// else (0 "no preference", or no portal) none.
+#[cfg(target_os = "linux")]
+fn portal_preference(color_scheme: Option<u32>) -> Option<bool> {
+    match color_scheme {
+        Some(1) => Some(true),
+        Some(2) => Some(false),
+        _ => None,
     }
-    if let Ok(t) = std::env::var("GTK_THEME") {
-        return Some(t.to_lowercase().contains("dark"));
-    }
-    None
 }
 
 #[cfg(target_os = "linux")]
@@ -309,6 +336,17 @@ mod tests {
     fn ratio(a: Rgba, b: Rgba) -> f32 {
         let (x, y) = (lum(a), lum(b));
         (x.max(y) + 0.05) / (x.min(y) + 0.05)
+    }
+
+    /// Without a portal answer, Link's reading of the desktop decides (light on
+    /// the real-user run's openbox desktop), not a dark default.
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn the_portal_decides_only_when_it_has_a_preference() {
+        assert_eq!(portal_preference(Some(1)), Some(true));
+        assert_eq!(portal_preference(Some(2)), Some(false));
+        assert_eq!(portal_preference(Some(0)), None, "no preference");
+        assert_eq!(portal_preference(None), None, "no portal");
     }
 
     #[test]

@@ -40,7 +40,7 @@ jobs:
       - name: Build Find and the pinned isolation runner
         run: |
           cargo build --locked -p arcade-find --bin arcade-find
-          git clone --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git clone --depth 1 --branch v1.0.15 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
       - name: Capture settings matrix
         run: python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-settings-ui.py target/debug/arcade-find
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -117,7 +117,7 @@ jobs:
       - name: Build Find and the pinned Link CLI
         run: |
           cargo build --locked -p arcade-find --bin arcade-find --example e2e-pointer
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.15 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           cargo build --locked --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
           echo "ARCADE_LINK_DIR=$RUNNER_TEMP/link" >> "$GITHUB_ENV"
           echo "ARCADE_LINK_CLI=$RUNNER_TEMP/link/target/debug/arcade-link" >> "$GITHUB_ENV"
@@ -187,7 +187,7 @@ jobs:
       - name: AppImage install, repair and uninstall (isolated)
         if: runner.os == 'Linux'
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.13 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.15 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/verify-appimage.py dist/Arcade-Find-x86_64.AppImage
       - name: Upgrade the real previous AppImages without losing user state
         if: runner.os == 'Linux'
@@ -259,10 +259,10 @@ jobs:
   # ladder, drag out and the window placement (tests/desktop/find_desktop.py). Gates runs the same on the published rc.
   desktop:
     needs: package
-    uses: qa-p1/Arcade-Link/.github/workflows/desktop-e2e.yml@v1.0.13
+    uses: qa-p1/Arcade-Link/.github/workflows/desktop-e2e.yml@v1.0.15
     with:
       name: find
       test: tests/desktop/find_desktop.py
       args: '"$APP"'
       artifact: package-linux-x64
-      link-ref: v1.0.13
+      link-ref: v1.0.15

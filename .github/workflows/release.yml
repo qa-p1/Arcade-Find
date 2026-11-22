@@ -57,7 +57,7 @@ jobs:
     needs: [prepare, stage]
     permissions:
       contents: write
-    uses: qa-p1/Arcade-Link/.github/workflows/app-publish.yml@v1.0.13
+    uses: qa-p1/Arcade-Link/.github/workflows/app-publish.yml@v1.0.15
     with:
       app: arcade.find
       version: ${{ needs.prepare.outputs.version }}
@@ -65,4 +65,4 @@ jobs:
       channel: test
       artifacts: release-find
       windows-installer: inno
-      link-ref: v1.0.13
+      link-ref: v1.0.15
