@@ -27,6 +27,23 @@ def until(fn, message, seconds=20):
     raise AssertionError(message)
 
 
+def finds_running(root):
+    """Find processes started from this test's root. `--quit` returns once the request is delivered, and the process
+    started here is only the launcher: since Link's relaunch, the app runs as an unpacked copy (under the test's data
+    folder) that saves its files as it exits. Data must be compared only once that copy is gone."""
+    running = []
+    for proc in Path('/proc').iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            exe = os.readlink(proc / 'exe').removesuffix(' (deleted)')
+        except OSError:
+            continue
+        if exe.startswith(str(root) + '/') and Path(exe).name == 'arcade-find':
+            running.append(int(proc.name))
+    return running
+
+
 def main():
     root = Path(os.environ.get('ARCADE_E2E_ROOT', '/')).resolve()
     assert os.environ.get('ARCADE_E2E_INNER') == '1' and root != Path('/')
@@ -92,6 +109,9 @@ def main():
             until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, f'{old_version} did not load the configured pins and history')
             command(installed, '--quit')
             assert old.wait(timeout=15) == 0
+            # 1.0.0 rewrites frecency.json in its own format as it exits (2026-11-22, v1.0.1-rc.1 gates): keep the
+            # bytes it leaves, not the ones it had not saved yet.
+            until(lambda: not finds_running(root), f'{old_version} was still running after --quit')
         finally:
             if old.poll() is None:
                 old.terminate(); old.wait(timeout=10)
@@ -144,6 +164,7 @@ def main():
             assert status(installed)['ui']['selectedPath'] == str(pinned)
             command(installed, '--quit')
             assert new.wait(timeout=15) == 0
+            until(lambda: not finds_running(root), f'{VERSION} was still running after --quit')
         finally:
             if new.poll() is None:
                 new.terminate(); new.wait(timeout=10)

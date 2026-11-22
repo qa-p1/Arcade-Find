@@ -138,7 +138,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - foreign-types 0.5.0 (MIT/Apache-2.0) — https://github.com/sfackler/foreign-types
 - foreign-types-macros 0.2.4 (MIT/Apache-2.0) — https://github.com/sfackler/foreign-types
 - foreign-types-shared 0.3.1 (MIT/Apache-2.0) — https://github.com/sfackler/foreign-types
-- form_urlencoded 1.2.2 (MIT OR Apache-2.0) — https://github.com/servo/rust-url
+- form_urlencoded 1.2.3 (MIT OR Apache-2.0) — https://github.com/servo/rust-url
 - fs2 0.4.3 (MIT/Apache-2.0) — https://github.com/danburkert/fs2-rs
 - fsevent-sys 4.1.0 (MIT) — https://github.com/octplane/fsevent-rust/tree/master/fsevent-sys
 - futures-channel 0.3.34 (MIT OR Apache-2.0) — https://github.com/rust-lang/futures-rs
@@ -409,7 +409,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - unicode-script 0.5.8 (MIT OR Apache-2.0) — https://github.com/unicode-rs/unicode-script
 - unicode-segmentation 1.13.3 (MIT OR Apache-2.0) — https://github.com/unicode-rs/unicode-segmentation
 - unicode-width 0.2.2 (MIT OR Apache-2.0) — https://github.com/unicode-rs/unicode-width
-- url 2.5.8 (MIT OR Apache-2.0) — https://github.com/servo/rust-url
+- url 2.5.9 (MIT OR Apache-2.0) — https://github.com/servo/rust-url
 - urlencoding 2.1.3 (MIT) — https://github.com/kornelski/rust_urlencoding
 - usvg 0.45.1 (Apache-2.0 OR MIT) — https://github.com/linebender/resvg
 - utf8_iter 1.0.4 (Apache-2.0 OR MIT) — https://github.com/hsivonen/utf8_iter
@@ -1442,7 +1442,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 15. Used by ahash 0.8.12, arrayvec 0.7.8, async-channel 2.5.0, async-executor 1.14.1, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-recursion 1.2.0, async-signal 0.2.14, async-task 4.7.1, atomic-waker 1.1.2, base64 0.22.1, bitflags 1.3.2, bitflags 2.13.2, blocking 1.7.0, bumpalo 3.20.3, cfg-if 1.0.5, cgl 0.3.2, concurrent-queue 2.5.0, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, crossbeam-channel 0.5.17, crossbeam-utils 0.8.23, data-url 0.3.2, displaydoc 0.2.7, equivalent 1.0.2, errno 0.3.14, euclid 0.22.14, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, fixedbitset 0.5.7, flate2 1.1.10, form_urlencoded 1.2.2, fs2 0.4.3, futures-lite 2.6.1, gethostname 1.1.0, global-hotkey 0.8.0, glow 0.16.0, hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.4.1, hermit-abi 0.5.3, idna 1.1.0, idna_adapter 1.2.2, indexmap 2.14.2, js-sys 0.3.106, keyboard-types 0.7.0, libappindicator 0.9.0, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, lock_api 0.4.14, log 0.4.34, muda 0.19.3, num-traits 0.2.19, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, parking_lot 0.12.5, parking_lot_core 0.9.12, percent-encoding 2.3.2, petgraph 0.8.3, piper 0.2.5, plain 0.2.3, png 0.17.16, png 0.18.1, polling 3.11.0, renderdoc-sys 1.1.0, roxmltree 0.20.0, rustc-hash 1.1.0, rustix 0.38.44, rustix 1.1.6, scoped-tls 1.0.1, scopeguard 1.2.0, signal-hook-registry 1.4.8, simd_cesu8 1.2.0, simplecss 0.2.2, smallvec 1.16.3, smol_str 0.2.2, socket2 0.6.5, stable_deref_trait 1.2.1, svgtypes 0.15.3, swash 0.2.10, syn 1.0.109, tempfile 3.27.0, toml_datetime 0.6.3, tray-icon 0.24.2, ttf-parser 0.25.1, unicode-bidi 0.3.18, unicode-segmentation 1.13.3, unicode-width 0.2.2, url 2.5.8, uuid 1.26.1, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106, weezl 0.1.12, wit-bindgen 0.57.1, wl-clipboard-rs 0.9.4, yazi 0.2.1, zeno 0.3.3
+### 15. Used by ahash 0.8.12, arrayvec 0.7.8, async-channel 2.5.0, async-executor 1.14.1, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-recursion 1.2.0, async-signal 0.2.14, async-task 4.7.1, atomic-waker 1.1.2, base64 0.22.1, bitflags 1.3.2, bitflags 2.13.2, blocking 1.7.0, bumpalo 3.20.3, cfg-if 1.0.5, cgl 0.3.2, concurrent-queue 2.5.0, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, crossbeam-channel 0.5.17, crossbeam-utils 0.8.23, data-url 0.3.2, displaydoc 0.2.7, equivalent 1.0.2, errno 0.3.14, euclid 0.22.14, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, fixedbitset 0.5.7, flate2 1.1.10, form_urlencoded 1.2.3, fs2 0.4.3, futures-lite 2.6.1, gethostname 1.1.0, global-hotkey 0.8.0, glow 0.16.0, hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.4.1, hermit-abi 0.5.3, idna 1.1.0, idna_adapter 1.2.2, indexmap 2.14.2, js-sys 0.3.106, keyboard-types 0.7.0, libappindicator 0.9.0, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, lock_api 0.4.14, log 0.4.34, muda 0.19.3, num-traits 0.2.19, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, parking_lot 0.12.5, parking_lot_core 0.9.12, percent-encoding 2.3.2, petgraph 0.8.3, piper 0.2.5, plain 0.2.3, png 0.17.16, png 0.18.1, polling 3.11.0, renderdoc-sys 1.1.0, roxmltree 0.20.0, rustc-hash 1.1.0, rustix 0.38.44, rustix 1.1.6, scoped-tls 1.0.1, scopeguard 1.2.0, signal-hook-registry 1.4.8, simd_cesu8 1.2.0, simplecss 0.2.2, smallvec 1.16.3, smol_str 0.2.2, socket2 0.6.5, stable_deref_trait 1.2.1, svgtypes 0.15.3, swash 0.2.10, syn 1.0.109, tempfile 3.27.0, toml_datetime 0.6.3, tray-icon 0.24.2, ttf-parser 0.25.1, unicode-bidi 0.3.18, unicode-segmentation 1.13.3, unicode-width 0.2.2, url 2.5.9, uuid 1.26.1, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106, weezl 0.1.12, wit-bindgen 0.57.1, wl-clipboard-rs 0.9.4, yazi 0.2.1, zeno 0.3.3
 
 ```text
                               Apache License
@@ -5247,7 +5247,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 69. Used by data-url 0.3.2, idna 1.1.0, percent-encoding 2.3.2, url 2.5.8
+### 69. Used by data-url 0.3.2, idna 1.1.0, percent-encoding 2.3.2, url 2.5.9
 
 ```text
 Copyright (c) 2013-2025 The rust-url developers
@@ -7189,7 +7189,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 115. Used by form_urlencoded 1.2.2
+### 115. Used by form_urlencoded 1.2.3
 
 ```text
 Copyright (c) 2013-2016 The rust-url developers
