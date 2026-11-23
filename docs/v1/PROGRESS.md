@@ -14,6 +14,16 @@ Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 - The real-peers end-to-end check caught that a per-app cap of five dropped Box 0.4's "More in Arcade Box…" (unranked,
   so last). An app's interactive `open` entry now stays past the cap, as before; unit test
   `five_per_app_and_the_way_to_the_rest`.
+- `v1.1.0-rc.1` (18d0547) [Release](https://github.com/qa-p1/Arcade-Find/actions/runs/45205417463): the macOS check
+  got no runner the first time (GitHub's "not acquired by Runner ... capacity constraints"; one re-run). On the
+  re-run, the end-to-end job failed once in `tests/real-peers.py` with "Find did not become ready". For 25 s, Find
+  never answered `--status`, and Look and Box didn't register either. The test kept nothing that says why, because
+  the apps write stderr to their own logs in the isolated home. Not promoted.
+- [#35](https://github.com/qa-p1/Arcade-Find/pull/35): on failure, real-peers now saves the last `--status` replies
+  with their timing, each app's process and thread states, the registry folder and every app log. A temporary step
+  ran the check 20 more times on one build
+  ([run](https://github.com/qa-p1/Arcade-Find/actions/runs/45217108765/job/137842914909)): 0 of 20 failed. The step is removed
+  again. A repeat now leaves the evidence.
 
 ## 2026-11-22 (cloud session) - 1.0.1
 
