@@ -74,7 +74,8 @@ the overlay shows), never when the action list opens.
 
 On top of Link's answer, Find drops install entries (the menus show those),
 Look's `look.preview` (Find's own Quick Look) and Box's pipeline plumbing
-(`box.pipelines`, `box.pipeline.run`), keeps at most five entries per app,
+(`box.pipelines`, `box.pipeline.run`), keeps at most five entries per app plus that app's "More in …" entry
+(an interactive `open` action, the way to everything the cap left out),
 and checks the selection as one request: an action with no array pattern
 takes a single value, the summed size must fit `maxBytes` (else the entry is
 greyed out with the standard "Too large for …" text), and data-only actions

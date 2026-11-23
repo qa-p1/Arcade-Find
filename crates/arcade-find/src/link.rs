@@ -351,16 +351,25 @@ pub fn peer_offers(registry: &Registry, rules: &Rules, prefs: &Prefs, disabled: 
     offers_for(&cards, rules, prefs, sel)
 }
 
+/// The app's own window, pre-filled with the selection ("More in Arcade Box…").
+fn opens_app(a: &Action) -> bool {
+    a.verb == "open" && a.interactive
+}
+
 /// [`peer_offers`] for these cards.
 fn offers_for(cards: &[Manifest], rules: &Rules, prefs: &Prefs, sel: &Selection) -> Vec<PeerOffer> {
     let mut out: Vec<PeerOffer> = Vec::new();
     for o in link_offers(sel, cards, rules, prefs) {
         // Install entries belong to the menus; Find's list holds what can run now.
-        if o.install.is_some() || skipped(&o.app, &o.action) || out.iter().filter(|p| p.app == o.app).count() >= PER_APP_MAX {
+        if o.install.is_some() || skipped(&o.app, &o.action) {
             continue;
         }
         let Some(m) = cards.iter().find(|m| m.id == o.app) else { continue };
         let Some(a) = m.usable_actions().find(|a| a.id == o.action) else { continue };
+        // An app's "More in …" entry stays past the cap: it is the way to everything the cap left out.
+        if !opens_app(a) && out.iter().filter(|p| p.app == o.app && !opens_app(&p.action)).count() >= PER_APP_MAX {
+            continue;
+        }
         // Link's offers judge each item; this checks the selection as one request (arrays, total size).
         let Some(mut offer) = offer(m, a, sel) else { continue };
         if !o.enabled {
@@ -896,6 +905,24 @@ mod tests {
         let got = offers_for(&cards, &rules, &prefs, &photos);
         assert_eq!(ids(&got), ["shelf.add", "box:arcade.image.convert#webp"]);
         assert_eq!(got[0].title, "Keep on Shelf");
+    }
+
+    #[test]
+    fn five_per_app_and_the_way_to_the_rest() {
+        // A Box 0.4 card: no ranks, so "More in Arcade Box…" sorts after every featured tool.
+        let more = Action::new("box.open", "More in Arcade Box…", "open").accepts(&["file/*", "file/*[]"]).effects(&["opens-ui"]).interactive(true);
+        let mut actions: Vec<Action> = (0..7)
+            .map(|i| {
+                let mut t = Action::new(&format!("box:arcade.image.t{i}"), &format!("Tool {i}"), "convert").accepts(&["file/image"]).effects(&["writes-files"]);
+                t.featured_for = vec!["file/image".into()];
+                t
+            })
+            .collect();
+        actions.push(more);
+        let cards = vec![app(BOX, actions)];
+        let one = sel_of(&[item("/h/a.png", false, 1)]);
+        let got: Vec<String> = offers_for(&cards, &Rules::default(), &Prefs::default(), &one).into_iter().map(|o| o.action.id).collect();
+        assert_eq!(got, ["box:arcade.image.t0", "box:arcade.image.t1", "box:arcade.image.t2", "box:arcade.image.t3", "box:arcade.image.t4", "box.open"]);
     }
 
     #[test]

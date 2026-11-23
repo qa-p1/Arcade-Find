@@ -230,49 +230,6 @@ jobs:
           name: package-${{ matrix.name }}
           path: dist/*
 
-  upgrade-repeat:
-    # Temporary, for this PR only: the 0.4.3 upgrade check 20 times on one build, for the single unexplained
-    # "0.4.3 did not load the configured pins and history" failure. Removed before merge; the result goes in PROGRESS.
-    name: upgrade from 0.4.3, 20 runs
-    needs: package
-    runs-on: ubuntu-22.04
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Linux test dependencies
-        timeout-minutes: 20
-        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-x11-0 desktop-file-utils xvfb xdotool dbus
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: package-linux-x64
-          path: dist
-      - name: Upgrade from 0.4.3, 20 times
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          chmod +x dist/Arcade-Find-x86_64.AppImage
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.1.1 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
-          python3 scripts/fetch-peer.py qa-p1/Arcade-Find "$RUNNER_TEMP/find-0.4.3" v0.4.3
-          old=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["file"])' "$RUNNER_TEMP/find-0.4.3/source.json")
-          failed=0
-          for i in $(seq 1 20); do
-            if python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-upgrade.py "$RUNNER_TEMP/find-0.4.3/$old" dist/Arcade-Find-x86_64.AppImage > "run-$i.txt" 2>&1; then
-              echo "run $i: passed"
-            else
-              echo "run $i: FAILED"; tail -5 "run-$i.txt"; failed=$((failed + 1))
-            fi
-            mkdir -p target/e2e/repeat && mv "run-$i.txt" target/e2e/repeat/
-            [ -d target/e2e/upgrade ] && mv target/e2e/upgrade "target/e2e/repeat/upgrade-$i"
-          done
-          echo "$failed of 20 runs failed" | tee -a "$GITHUB_STEP_SUMMARY"
-          [ "$failed" -eq 0 ]
-      - name: Preserve the 20 runs
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: upgrade-repeat
-          path: target/e2e/repeat
-
   release-manifest:
     name: arcade-release.json
     needs: package
