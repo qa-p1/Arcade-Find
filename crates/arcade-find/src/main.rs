@@ -416,6 +416,8 @@ fn integration_command(paths: &AppPaths, args: &Args, original_args: &[String]) 
 }
 
 fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_settings: bool, successor_of: Option<u32>) -> ExitCode {
+    // Start-up milestones in events.log: a start that never answers says where it stopped.
+    let _ = arcade_find::diagnostics::event(&paths, "resident: starting");
     let lock = match successor_of {
         Some(_) => instance::acquire_waiting(&paths, Duration::from_secs(15)),
         None => instance::acquire(&paths),
@@ -424,6 +426,7 @@ fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_
         Ok(Some(l)) => l,
         Ok(None) => {
             // Another instance won the race: hand it our command.
+            let _ = arcade_find::diagnostics::event(&paths, "resident: another instance holds the lock");
             if let Some(UiMsg::Show { query, reveal }) = initial {
                 let _ = instance::send(&paths, &Command::Show { query, reveal }, Duration::from_secs(5));
             }
@@ -435,7 +438,9 @@ fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_
         }
     };
 
+    let _ = arcade_find::diagnostics::event(&paths, "resident: lock taken");
     let svc = Service::start(paths.clone(), background);
+    let _ = arcade_find::diagnostics::event(&paths, "resident: service started");
     // Startup touches far more pages than the resident keeps (memory item W0).
     std::thread::spawn(|| {
         std::thread::sleep(Duration::from_secs(5));
@@ -451,6 +456,8 @@ fn run_resident(paths: AppPaths, background: bool, initial: Option<UiMsg>, open_
         }),
     ) {
         eprintln!("arcade-find: command channel unavailable: {e}");
+    } else {
+        let _ = arcade_find::diagnostics::event(&paths, "resident: answering commands");
     }
 
     // Light/dark: read once off the UI thread, then follow changes.
