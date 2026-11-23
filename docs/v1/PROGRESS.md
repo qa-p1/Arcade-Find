@@ -2,7 +2,7 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
-## 2026-11-23 (cloud session) - 1.1.0 in review
+## 2026-11-23 (cloud session) - 1.1.0 released
 
 - Link 1.1.1 offers in the action list, `find.reveal`, `find.show` retitled, Link 1.1 file kinds, catalog names,
   Dependabot #23-#30 (taken or closed with the reason), in [#34](https://github.com/qa-p1/Arcade-Find/pull/34).
@@ -24,6 +24,25 @@ Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
   ran the check 20 more times on one build
   ([run](https://github.com/qa-p1/Arcade-Find/actions/runs/45217108765/job/137842914909)): 0 of 20 failed. The step is removed
   again. A repeat now leaves the evidence.
+- `v1.1.0-rc.2` (0ac717e) [Release](https://github.com/qa-p1/Arcade-Find/actions/runs/45221786732): real-peers
+  passed. The end-to-end job failed once in `tests/wayland-lifecycle.py` ("Wayland resident did not start"): the same
+  stall, with an empty resident log and no `events.log`. The CI runs on main for the same commits passed. Ruled out:
+  no tag- or channel-dependent code, a short socket path, no long-held lock in the status handler, the same package
+  versions. Not promoted.
+- [#36](https://github.com/qa-p1/Arcade-Find/pull/36): the resident writes start-up milestones to `events.log`
+  (`starting`, `lock taken`, `service started`, `answering commands`, and `another instance holds the lock`). Both
+  tests keep that file, so a repeat says where start-up stopped. The cause is still open.
+- `v1.1.0-rc.3` (b6e8210) [Release](https://github.com/qa-p1/Arcade-Find/actions/runs/45233654972): every job passed,
+  end-to-end included. [Gates](https://github.com/qa-p1/Arcade-Find/actions/runs/45236725209) with
+  `previous: v1.0.1`: published files, Linux conformance, budgets, N-1, the delta from 1.0.1 with signature and
+  tampered chunk, and Windows installer smoke passed. The macOS dmg smoke never ran: both attempts got no GitHub Mac
+  ("not acquired by Runner ... capacity constraints", 0 steps). The Tier 1/Tier 2 Linux desktop gates wait on that job,
+  so they were skipped; the rc.3 Release run's own Hyprland desktop check had passed. The owner chose to release on
+  these Linux and Windows results.
+- [Promote](https://github.com/qa-p1/Arcade-Find/actions/runs/45251046808) made `v1.1.0` from rc.3. Verified: the
+  AppImage, dmg, Windows installer and SHA256SUMS.txt are byte for byte rc.3's; `arcade-release.json` and
+  `manifest.json` differ only in channel, tag and notes link, and `manifest.json.sig` is added. `v1.1.0` is the latest
+  release and not a prerelease.
 
 ## 2026-11-22 (cloud session) - 1.0.1
 

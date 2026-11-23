@@ -1,10 +1,11 @@
 # Status
 
-## 2026-11-23: 1.1.0 in review (Arcade everywhere)
+## 2026-11-23: 1.1.0 released (Arcade everywhere)
 
 Released: 1.0.0 (2026-11-17) and 1.0.1 (2026-11-22, System appearance on desktops without the XDG portal); see
-`CHANGELOG.md` and `docs/v1/PROGRESS.md` for their runs. 1.1.0 is in review in
-[#34](https://github.com/qa-p1/Arcade-Find/pull/34):
+`CHANGELOG.md` and `docs/v1/PROGRESS.md` for their runs. 1.1.0 (#34, #35, #36) was released from v1.1.0-rc.3 on
+2026-11-23 without its macOS dmg gate, which never got a GitHub Mac (the owner's decision). The Linux desktop gates
+(Tier 1/Tier 2) wait on that job, so they were skipped; the rc.3 Release run's own Hyprland desktop check passed:
 
 - The action list's other-app entries are Arcade Link 1.1.1's shared offers (catalog rules plus the user's pins,
   hides and defaults), the same list Arcade's file manager menus show; at most five per app, plus the app's own
