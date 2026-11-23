@@ -840,11 +840,14 @@ mod tests {
 
     #[test]
     fn reveal_selects_the_item_by_name() {
-        let pdf = Content { kind: "file/pdf".into(), path: Some("/h/my report.pdf".into()), ..Default::default() };
-        let r = InvokeRequest::new("find.reveal", "t").input(pdf);
-        assert_eq!(reveal_args(&r).unwrap(), (Some("\"my report.pdf\"".into()), Some(PathBuf::from("/h/my report.pdf"))));
-        let dir = Content { kind: "folder/reference".into(), path: Some("/h/photos".into()), ..Default::default() };
-        assert_eq!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(dir)).unwrap(), (Some("photos".into()), Some(PathBuf::from("/h/photos"))));
+        let home = find_core::paths::home_dir();
+        let pdf = home.join("my report.pdf");
+        let file = Content { kind: "file/pdf".into(), path: Some(pdf.to_string_lossy().into_owned()), ..Default::default() };
+        let r = InvokeRequest::new("find.reveal", "t").input(file);
+        assert_eq!(reveal_args(&r).unwrap(), (Some("\"my report.pdf\"".into()), Some(pdf)));
+        let photos = home.join("photos");
+        let dir = Content { kind: "folder/reference".into(), path: Some(photos.to_string_lossy().into_owned()), ..Default::default() };
+        assert_eq!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(dir)).unwrap(), (Some("photos".into()), Some(photos)));
         let two = Content { kind: "file/pdf[]".into(), paths: vec!["/h/a.pdf".into(), "/h/b.pdf".into()], ..Default::default() };
         assert!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(two)).is_err());
         assert!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(Content::plain("x"))).is_err());
