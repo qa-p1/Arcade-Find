@@ -1,5 +1,24 @@
 # Status
 
+## 2026-11-23: 1.1.0 in review (Arcade everywhere)
+
+Released: 1.0.0 (2026-11-17) and 1.0.1 (2026-11-22, System appearance on desktops without the XDG portal); see
+`CHANGELOG.md` and `docs/v1/PROGRESS.md` for their runs. 1.1.0 is in review in
+[#34](https://github.com/qa-p1/Arcade-Find/pull/34):
+
+- The action list's other-app entries are Arcade Link 1.1.1's shared offers (catalog rules plus the user's pins,
+  hides and defaults), the same list Arcade's file manager menus show; at most five per app, plus the app's own
+  "More in …" entry. Box pipelines are no longer asked for separately (Box 1.0 lists them as actions).
+- New card actions: `find.reveal` ("Reveal in Find", file and folder menus, one item) and `find.show` retitled
+  "Search my files for this" (browser selection and command palette, once the browser extension ships).
+- Results carry Link 1.1's exact file kinds (SVG, CSV, JSON, HTML, Markdown, e-books, subtitles).
+- Not taken from Dependabot: accesskit_unix 0.24, smithay-client-toolkit 0.20 and x11rb 0.14. They would add second
+  copies next to the versions winit and egui use; take them with the next egui/winit update.
+- Open: the main-branch failure "0.4.3 did not load the configured pins and history" (once) did not repeat in 20
+  real upgrade runs; `check-upgrade.py` now prints the app's state on a timeout, so a repeat says why.
+
+The notes below are from 0.5.x (before 1.0).
+
 ## 2026-11-06: 0.5.4 confirmation keyboard follow-up
 
 The trash confirmation previously cleared its targets and returned to results
