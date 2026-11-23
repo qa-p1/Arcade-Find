@@ -51,9 +51,50 @@ def main():
             assert result.returncode == 0, (args, result.stdout, result.stderr)
         return result
 
+    status_calls = []
+
     def status():
+        started = time.monotonic()
         result = command(find, '--status', check=False)
+        status_calls.append({'seconds': round(time.monotonic() - started, 2), 'exit': result.returncode,
+                             'stdout': result.stdout[-400:], 'stderr': result.stderr[-400:]})
+        del status_calls[:-5]
         return json.loads(result.stdout) if result.returncode == 0 else {}
+
+    def snapshot(process):
+        """What a started app is doing: alive or exit code, and each thread's name, state and kernel wait."""
+        def threads(pid):
+            out = []
+            for task in sorted(Path('/proc', str(pid), 'task').glob('*')):
+                def read(name):
+                    try:
+                        return (task / name).read_text().strip()
+                    except OSError:
+                        return ''
+                out.append({'tid': task.name, 'name': read('comm'), 'wchan': read('wchan'),
+                            'state': read('stat').rsplit(')', 1)[-1].split()[:1]})
+            return out
+
+        def tree(pid):
+            node = {'pid': pid, 'exe': os.path.realpath('/proc/%d/exe' % pid) if Path('/proc', str(pid)).exists() else None,
+                    'threads': threads(pid), 'children': []}
+            for task in Path('/proc', str(pid), 'task').glob('*'):
+                try:
+                    node['children'] += [tree(int(child)) for child in (task / 'children').read_text().split()]
+                except OSError:
+                    pass
+            return node
+
+        return {'args': process.args, 'exit': process.poll(), 'tree': tree(process.pid) if process.poll() is None else None}
+
+    def keep_logs():
+        """The apps write stderr to their own logs in the isolated home (Link's capture_stderr): keep them."""
+        logs = output / 'logs'
+        logs.mkdir(exist_ok=True)
+        for path in root.rglob('*.log'):
+            if path.is_file() and output not in path.parents:
+                name = str(path.relative_to(root)).replace('/', '__')
+                (logs / name).write_bytes(path.read_bytes()[-200_000:])
 
     def xdo(*args):
         return subprocess.check_output(['xdotool', *map(str, args)], env=env, text=True).strip()
@@ -124,6 +165,11 @@ def main():
                 'sourceUnchanged': True}, indent=2) + '\n')
         except BaseException:
             (output / 'failure-state.json').write_text(json.dumps(status(), indent=2) + '\n')
+            (output / 'failure-diagnostics.json').write_text(json.dumps({
+                'statusCalls': status_calls, 'processes': [snapshot(p) for p in processes],
+                'registry': sorted(p.name for p in (Path(env['ARCADE_HOME']) / 'apps').glob('*')),
+            }, indent=2) + '\n')
+            keep_logs()
             for name in peers:
                 source = Path(env['ARCADE_HOME']) / 'apps' / ('arcade.' + name + '.json')
                 if source.exists():

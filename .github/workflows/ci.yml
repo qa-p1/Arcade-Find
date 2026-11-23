@@ -138,6 +138,25 @@ jobs:
       - name: Native lifecycle, real tray, layer-shell, fallback and real Shelf drag checks
         timeout-minutes: 20
         run: python3 scripts/check.py --native-only --binary target/debug/arcade-find
+      - name: Real peers, 20 runs
+        # Temporary, for this PR only: the v1.1.0-rc.1 Release run's single "Find did not become ready" (Look and Box
+        # didn't register either). Removed before merge; the result goes in PROGRESS.
+        if: success() || failure()
+        timeout-minutes: 40
+        run: |
+          failed=0
+          for i in $(seq 1 20); do
+            rm -rf target/e2e/real-peers
+            if python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 tests/real-peers.py target/debug/arcade-find > "run-$i.txt" 2>&1; then
+              echo "run $i: passed"
+            else
+              echo "run $i: FAILED"; tail -5 "run-$i.txt"; failed=$((failed + 1))
+            fi
+            mkdir -p "target/e2e/repeat/$i" && mv "run-$i.txt" "target/e2e/repeat/$i/"
+            [ -d target/e2e/real-peers ] && mv target/e2e/real-peers "target/e2e/repeat/$i/"
+          done
+          echo "$failed of 20 runs failed" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$failed" -eq 0 ]
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
