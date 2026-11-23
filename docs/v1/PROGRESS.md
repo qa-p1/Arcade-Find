@@ -2,6 +2,19 @@
 
 Detail for `qa-p1/Arcade-catalog` > `dev/v1/PROGRESS.md`. Newest first.
 
+## 2026-11-23 (cloud session) - 1.1.0 in review
+
+- Link 1.1.1 offers in the action list, `find.reveal`, `find.show` retitled, Link 1.1 file kinds, catalog names,
+  Dependabot #23-#30 (taken or closed with the reason), in [#34](https://github.com/qa-p1/Arcade-Find/pull/34).
+- The one unexplained main CI failure ("0.4.3 did not load the configured pins and history"): a temporary job ran the
+  real 0.4.3 → current AppImage upgrade 20 times on one build
+  ([run](https://github.com/qa-p1/Arcade-Find/actions/runs/45185260327/job/137734338994)); 0 of 20 failed. The job is
+  removed again. `check-upgrade.py` now prints what the app reported (`--status`) when a wait times out, so a repeat
+  says whether the overlay was hidden, empty or still loading.
+- The real-peers end-to-end check caught that a per-app cap of five dropped Box 0.4's "More in Arcade Box…" (unranked,
+  so last). An app's interactive `open` entry now stays past the cap, as before; unit test
+  `five_per_app_and_the_way_to_the_rest`.
+
 ## 2026-11-22 (cloud session) - 1.0.1
 
 - D20: System appearance follows the desktop without a portal (light on openbox, as Tools is); Link 1.0.15. The

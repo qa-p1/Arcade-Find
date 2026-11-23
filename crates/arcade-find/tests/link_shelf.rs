@@ -83,17 +83,12 @@ fn fixture(root: &Path) -> Vec<(PathBuf, bool)> {
 }
 
 fn sel(items: &[(PathBuf, bool)]) -> Selection {
-    link::selection(items.iter().map(|(p, d)| Item {
-        path: p,
-        is_dir: *d,
-        link_type: Kind::of(&p.file_name().unwrap().to_string_lossy(), *d).link_type(),
-        size: (!*d).then_some(4),
-    }))
+    link::selection(items.iter().map(|(p, d)| Item { path: p, is_dir: *d, link_type: link::link_type(p, *d), size: (!*d).then_some(4) }))
 }
 
 fn shelf_offer(loc: &Locations, disabled: &[String], s: &Selection) -> Option<link::PeerOffer> {
     let reg = Registry::load(loc);
-    link::peer_offers(&reg, disabled, s, &[]).into_iter().find(|o| o.app == SHELF)
+    link::peer_offers(&reg, &Default::default(), &Default::default(), disabled, s).into_iter().find(|o| o.app == SHELF)
 }
 
 #[test]
@@ -153,7 +148,7 @@ fn sends_the_selection_by_reference() {
     let (_server, mock) = start_mock(&loc, None);
     let s = sel(&files);
     let reg = Registry::load(&loc);
-    let o = link::peer_offers(&reg, &[], &s, &[]).into_iter().find(|o| o.app == SHELF).unwrap();
+    let o = link::peer_offers(&reg, &Default::default(), &Default::default(), &[], &s).into_iter().find(|o| o.app == SHELF).unwrap();
     let m = reg.get(SHELF).unwrap().clone();
     let req = link::request(&o.action, s.inputs.clone(), o.options.clone());
     let r = link::invoke(&loc, &m, &req, None, None).expect("invoke");

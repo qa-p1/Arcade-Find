@@ -20,7 +20,7 @@ use find_core::query::{path_within, KindFilter, TermKind};
 use find_core::{matcher, Engine, Hit, Phase, Query, SearchOptions, Settings};
 
 use crate::instance::Command;
-use crate::link::{self, Item, PeerOffer, Pipeline, Selection};
+use crate::link::{self, Item, PeerOffer, Selection};
 use crate::ui::model::{ActionId, ActionItem, AppGlyph, Context, Effect, Glyph, IndexState, Overlay, PeerAction, ResultsInfo, Row, ToastKind};
 
 /// Results the overlay keeps per query (it scrolls beyond the visible rows).
@@ -224,7 +224,9 @@ pub struct Service {
     pub(crate) pins: Mutex<Pins>,
     registry: OnceLock<SharedRegistry>,
     presence: Mutex<Option<Arc<Presence>>>,
-    pipelines: RwLock<Vec<Pipeline>>,
+    /// The catalog's offer rules and the user's offer choices, re-read when
+    /// the registry changes and each time the overlay shows.
+    offer_rules: RwLock<(arcade_link::offers::Rules, arcade_link::offers::Prefs)>,
     hub: Arc<Hub>,
     search: Arc<SearchSlot>,
     last_query: Mutex<String>,
@@ -268,7 +270,7 @@ impl Service {
             engine,
             registry: OnceLock::new(),
             presence: Mutex::new(None),
-            pipelines: RwLock::new(Vec::new()),
+            offer_rules: RwLock::new(Default::default()),
             hub,
             search: Arc::new(SearchSlot::default()),
             last_query: Mutex::new(String::new()),
@@ -321,7 +323,7 @@ impl Service {
         let weak = Arc::downgrade(self);
         registry.watch(move |_| {
             if let Some(s) = weak.upgrade() {
-                s.refresh_pipelines();
+                s.refresh_offer_rules();
             }
         });
         let _ = self.registry.set(registry);
@@ -329,7 +331,7 @@ impl Service {
         let handler = Arc::new(link::FindHandler { host: Arc::new(LinkHost(Arc::downgrade(self))), background: self.background });
         let presence = Presence::start_document(self.locations.clone(), link::document(&settings, &self.paths), handler);
         *self.presence.lock().unwrap_or_else(|e| e.into_inner()) = Some(Arc::new(presence));
-        self.refresh_pipelines();
+        self.refresh_offer_rules();
     }
 
     pub fn settings(&self) -> Settings {
@@ -345,7 +347,11 @@ impl Service {
     }
 
     pub fn set_visible(&self, v: bool) {
-        self.hub.visible.store(v, Ordering::Relaxed);
+        let was = self.hub.visible.swap(v, Ordering::Relaxed);
+        // The user may have pinned, hidden or picked a default in another app's menu since: two small reads.
+        if v && !was && self.registry.get().is_some() {
+            self.refresh_offer_rules();
+        }
     }
 
     pub fn send(&self, m: UiMsg) {
@@ -397,24 +403,12 @@ impl Service {
         self.send(UiMsg::Settings);
     }
 
-    /// Box's pipelines, cached for the action list. Only asked while Box is
-    /// running (never launches it), on start and when the registry changes.
-    fn refresh_pipelines(&self) {
-        let Some(reg) = self.registry.get() else { return };
-        let settings = self.settings();
-        if !settings.link.enabled || settings.link.disabled_peers.iter().any(|p| p == link::BOX) {
-            return;
-        }
-        let Some(m) = reg.with(|r| r.get(link::BOX).cloned()) else {
-            self.pipelines.write().unwrap_or_else(|e| e.into_inner()).clear();
-            return;
-        };
-        let Some(action) = m.usable_actions().find(|a| a.id == "box.pipelines").cloned() else { return };
-        let Ok(mut c) = arcade_link::Client::connect(&self.locations, link::BOX, &link::me()) else { return };
-        let req = link::request(&action, vec![], json!({}));
-        if let Ok(r) = c.invoke(&req, &mut |_| {}, None) {
-            *self.pipelines.write().unwrap_or_else(|e| e.into_inner()) = link::parse_pipelines(&r);
-        }
+    /// Reads the catalog's offer rules and the user's choices (pinned,
+    /// hidden, defaults) off the UI thread, for the action list.
+    fn refresh_offer_rules(&self) {
+        let rules = arcade_link::catalog::Catalog::load(&self.locations).rules;
+        let prefs = arcade_link::offers::Prefs::load(&self.locations);
+        *self.offer_rules.write().unwrap_or_else(|e| e.into_inner()) = (rules, prefs);
     }
 
     // -----------------------------------------------------------------------
@@ -582,8 +576,8 @@ impl Service {
         }
         let Some(reg) = self.registry.get() else { return vec![] };
         let sel = selection_of(rows);
-        let pipelines = self.pipelines.read().map(|p| p.clone()).unwrap_or_default();
-        reg.with(|r| link::peer_offers(r, &self.disabled_peers(), &sel, &pipelines))
+        let rules = self.offer_rules.read().unwrap_or_else(|e| e.into_inner());
+        reg.with(|r| link::peer_offers(r, &rules.0, &rules.1, &self.disabled_peers(), &sel))
     }
 
     /// The action list for `rows` (Tab).
@@ -843,7 +837,7 @@ impl Service {
 
     fn run_peer(self: &Arc<Self>, pa: PeerAction, title: String, rows: Vec<Row>) {
         let Some(m) = self.registry.get().and_then(|r| r.with(|r| r.get(&pa.app).cloned())) else {
-            let name = link::apps::name(&pa.app).to_string();
+            let name = link::apps::name(&self.locations, &pa.app);
             return self.peer_failed(&pa, format!("{name} isn't installed."), &rows);
         };
         let lookup = pa.preset.as_ref().map(|p| format!("{}#{p}", pa.action.split('#').next().unwrap_or(&pa.action)));

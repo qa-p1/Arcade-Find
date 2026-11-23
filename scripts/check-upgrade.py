@@ -17,14 +17,15 @@ import time
 VERSION = subprocess.run([sys.executable, str(Path(__file__).with_name('check-version.py'))], check=True, capture_output=True, text=True).stdout.strip()
 
 
-def until(fn, message, seconds=20):
+def until(fn, message, seconds=20, last=None):
+    """Waits for `fn`; on failure the message carries `last()` (what the app reported when time ran out)."""
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         value = fn()
         if value:
             return value
         time.sleep(.1)
-    raise AssertionError(message)
+    raise AssertionError(message + (f'; last state: {last()}' if last else ''))
 
 
 def finds_running(root):
@@ -106,7 +107,8 @@ def main():
         try:
             until(lambda: status(installed).get('engine', {}).get('phase') == 'ready', f'released {old_version} did not index the configured root')
             command(installed, '--show')
-            until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, f'{old_version} did not load the configured pins and history')
+            until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, f'{old_version} did not load the configured pins and history',
+                  last=lambda: json.dumps(status(installed)))
             command(installed, '--quit')
             assert old.wait(timeout=15) == 0
             # 1.0.0 rewrites frecency.json in its own format as it exits (2026-11-22, v1.0.1-rc.1 gates): keep the
@@ -160,7 +162,8 @@ def main():
             current_settings = json.loads((new_config / 'settings.json').read_text())
             assert current_settings['shortcut'] == 'Ctrl+Alt+J' and current_settings['theme'] == 'light'
             command(installed, '--show')
-            until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, 'updated Find did not restore pins/history')
+            until(lambda: status(installed).get('ui', {}).get('rows', 0) >= 2, 'updated Find did not restore pins/history',
+                  last=lambda: json.dumps(status(installed)))
             assert status(installed)['ui']['selectedPath'] == str(pinned)
             command(installed, '--quit')
             assert new.wait(timeout=15) == 0

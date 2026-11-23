@@ -100,8 +100,8 @@ pixmap: no GPU context. Backends:
 
 ## Service (`service.rs`)
 
-Owns the engine, frecency, pins, the Link presence and registry, Box's cached
-pipelines, the search worker, and the overlay's narrowing state. Messages to
+Owns the engine, frecency, pins, the Link presence and registry, the catalog's
+offer rules and the user's offer choices, the search worker, and the overlay's narrowing state. Messages to
 the UI thread are `UiMsg`s through a channel the backend owns.
 
 ## Platform integration

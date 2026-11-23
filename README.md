@@ -62,12 +62,12 @@ More in [Features](docs/user/features.md).
 
 ## Works with other Arcade apps
 
-Find works on its own. It connects to other installed Arcade apps automatically over Arcade Link, **without needing Arcade Tools**. Turn this on or off with **Connect with other Arcade apps** in Find's Connected apps settings, with a switch per app. Find shows only actions that accept the selected items.
+Find works on its own. It connects to other installed Arcade apps automatically over Arcade Link, **without needing Arcade Tools**. Turn this on or off with **Connect with other Arcade apps** in Find's Connected apps settings, with a switch per app. The action list shows the same actions, in the same order, as Arcade's entries in your file manager's menu, and that menu has **Reveal in Find** for any file or folder.
 
 | App | What Find adds or receives |
 |---|---|
 | Arcade Look | Enter or **Quick Look** previews the selection; if Look cannot handle it, Enter falls back to the default app. |
-| Arcade Box | Box tools and presets for the selected files, or a saved Box pipeline. |
+| Arcade Box | Box tools and presets that suit the selected files, and your saved Box pipelines. |
 | Arcade Shelf | Add selected files or folders to Shelf by reference; Find stays open. Shelf can ask Find to search for an item. |
 | Arcade Wheel | Add a selected file or a compatible action to Wheel. |
 | Arcade Clipboard | Send selected files or text to your paired devices. |
