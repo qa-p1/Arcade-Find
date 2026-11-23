@@ -5,6 +5,8 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-23
+
 ### Added
 - **Reveal in Find** in Arcade's file manager menus (files and folders) opens Find on that item, selected. Selected
   text in the browser extension and the command palette offer **Search my files for this** (the former "Search in
