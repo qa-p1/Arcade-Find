@@ -5,6 +5,23 @@ and versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Reveal in Find** in Arcade's file manager menus (files and folders) opens Find on that item, selected. Selected
+  text in the browser extension and the command palette offer **Search my files for this** (the former "Search in
+  Find", which Shelf still uses for its items).
+
+### Changed
+- The action list (Tab) takes its other-app entries from Arcade Link's shared answer for the selection instead of
+  rules built into Find: the same actions, order and names as Arcade's entries in your file manager's menu (best
+  matches first, at most five per app). Actions the catalog renames, and actions you pinned or hid in another app's
+  menu, follow along. Folders get what a folder menu offers; a mix of files and folders gets what both take.
+- Arcade Box 1.0 lists each saved pipeline as its own action, so Find no longer asks Box for its pipelines.
+- Files of the kinds Arcade Link 1.1 names exactly reach the apps made for them: SVG drawings, CSV, JSON, HTML,
+  Markdown, e-books and subtitles. `find.search` results carry those types too.
+- Connected apps lists the apps from the shared catalog Arcade Tools keeps, with its names and download pages.
+- Arcade Link 1.1.1 (from 1.0.15); cosmic-text 0.17; serde_json 1.0.154, interprocess 2.4.9, arboard 3.7, trash
+  5.4, notify 8.2.2 and other patch updates; GitHub Actions checkout 7, upload-artifact 7 and download-artifact 8.
+
 ## [1.0.1] - 2026-11-22
 
 ### Changed

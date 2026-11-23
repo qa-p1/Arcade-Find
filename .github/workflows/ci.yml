@@ -25,7 +25,7 @@ jobs:
     name: Settings screenshots (real eframe)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove the runner's incomplete pinned toolchain
         run: rustup toolchain uninstall 1.88.0 || true
       - uses: dtolnay/rust-toolchain@360a4e93673de6630fac2478bc9e35244b01a759 # 1.88.0
@@ -40,10 +40,10 @@ jobs:
       - name: Build Find and the pinned isolation runner
         run: |
           cargo build --locked -p arcade-find --bin arcade-find
-          git clone --depth 1 --branch v1.0.15 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git clone --depth 1 --branch v1.1.1 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
       - name: Capture settings matrix
         run: python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-settings-ui.py target/debug/arcade-find
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: settings-screenshots
@@ -57,7 +57,7 @@ jobs:
         os: [ubuntu-24.04, windows-2022, macos-15]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
@@ -83,7 +83,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           arguments: --workspace --all-features
@@ -94,7 +94,7 @@ jobs:
     needs: check
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
@@ -117,7 +117,7 @@ jobs:
       - name: Build Find and the pinned Link CLI
         run: |
           cargo build --locked -p arcade-find --bin arcade-find --example e2e-pointer
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.15 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.1.1 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           cargo build --locked --manifest-path "$RUNNER_TEMP/link/Cargo.toml" -p arcade-link-cli
           echo "ARCADE_LINK_DIR=$RUNNER_TEMP/link" >> "$GITHUB_ENV"
           echo "ARCADE_LINK_CLI=$RUNNER_TEMP/link/target/debug/arcade-link" >> "$GITHUB_ENV"
@@ -138,7 +138,7 @@ jobs:
       - name: Native lifecycle, real tray, layer-shell, fallback and real Shelf drag checks
         timeout-minutes: 20
         run: python3 scripts/check.py --native-only --binary target/debug/arcade-find
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
           name: e2e-screenshots
@@ -156,7 +156,7 @@ jobs:
           - { name: macos-universal, os: macos-15 }
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Remove incomplete pinned toolchain
         if: runner.os == 'Linux'
         run: rustup toolchain uninstall 1.88.0 || true
@@ -187,7 +187,7 @@ jobs:
       - name: AppImage install, repair and uninstall (isolated)
         if: runner.os == 'Linux'
         run: |
-          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.0.15 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.1.1 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
           python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/verify-appimage.py dist/Arcade-Find-x86_64.AppImage
       - name: Upgrade the real previous AppImages without losing user state
         if: runner.os == 'Linux'
@@ -203,7 +203,7 @@ jobs:
           done
       - name: Preserve upgrade verification evidence
         if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: previous-release-upgrade
           path: target/e2e/upgrade-*
@@ -225,18 +225,61 @@ jobs:
         run: |
           target/release/arcade-find --version
           target/release/arcade-find --arcade-manifest | python3 -c 'import json,sys; m=json.load(sys.stdin); assert m["id"]=="arcade.find" and any(a["id"]=="find.search" for a in m["actions"])'
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: package-${{ matrix.name }}
           path: dist/*
+
+  upgrade-repeat:
+    # Temporary, for this PR only: the 0.4.3 upgrade check 20 times on one build, for the single unexplained
+    # "0.4.3 did not load the configured pins and history" failure. Removed before merge; the result goes in PROGRESS.
+    name: upgrade from 0.4.3, 20 runs
+    needs: package
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Linux test dependencies
+        timeout-minutes: 20
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-x11-0 desktop-file-utils xvfb xdotool dbus
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package-linux-x64
+          path: dist
+      - name: Upgrade from 0.4.3, 20 times
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x dist/Arcade-Find-x86_64.AppImage
+          git -c advice.detachedHead=false clone -q --depth 1 --branch v1.1.1 https://github.com/qa-p1/Arcade-Link "$RUNNER_TEMP/link"
+          python3 scripts/fetch-peer.py qa-p1/Arcade-Find "$RUNNER_TEMP/find-0.4.3" v0.4.3
+          old=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["file"])' "$RUNNER_TEMP/find-0.4.3/source.json")
+          failed=0
+          for i in $(seq 1 20); do
+            if python3 "$RUNNER_TEMP/link/tools/e2e.py" run -- python3 scripts/check-upgrade.py "$RUNNER_TEMP/find-0.4.3/$old" dist/Arcade-Find-x86_64.AppImage > "run-$i.txt" 2>&1; then
+              echo "run $i: passed"
+            else
+              echo "run $i: FAILED"; tail -5 "run-$i.txt"; failed=$((failed + 1))
+            fi
+            mkdir -p target/e2e/repeat && mv "run-$i.txt" target/e2e/repeat/
+            [ -d target/e2e/upgrade ] && mv target/e2e/upgrade "target/e2e/repeat/upgrade-$i"
+          done
+          echo "$failed of 20 runs failed" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$failed" -eq 0 ]
+      - name: Preserve the 20 runs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: upgrade-repeat
+          path: target/e2e/repeat
 
   release-manifest:
     name: arcade-release.json
     needs: package
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: package-*
           path: dist
@@ -248,7 +291,7 @@ jobs:
             --notes "https://github.com/qa-p1/Arcade-Find/blob/${GITHUB_SHA}/CHANGELOG.md" --windows-installer inno dist
           python3 -c 'import json; m=json.load(open("dist/arcade-release.json")); assert all(a["installArgs"] == ["--install", "--silent"] for a in m["assets"] if a["kind"] == "appimage")'
           cat dist/arcade-release.json
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: release-manifest
           path: |
@@ -259,10 +302,10 @@ jobs:
   # ladder, drag out and the window placement (tests/desktop/find_desktop.py). Gates runs the same on the published rc.
   desktop:
     needs: package
-    uses: qa-p1/Arcade-Link/.github/workflows/desktop-e2e.yml@v1.0.15
+    uses: qa-p1/Arcade-Link/.github/workflows/desktop-e2e.yml@v1.1.1
     with:
       name: find
       test: tests/desktop/find_desktop.py
       args: '"$APP"'
       artifact: package-linux-x64
-      link-ref: v1.0.15
+      link-ref: v1.1.1

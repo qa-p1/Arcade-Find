@@ -265,8 +265,9 @@ impl SettingsApp {
         let theme_ctx = ctx.clone();
         theme::watch_system_theme(move || theme_ctx.request_repaint());
         let mut glyphs = vec![("brand".to_string(), texture(&ctx, "brand", crate::ui::icons::glyph_mask_rgba(crate::identity::ID, 64), 64))];
-        for id in link::apps::known() {
-            glyphs.push((id.to_string(), texture(&ctx, id, crate::ui::icons::glyph_mask_rgba(id, 64), 64)));
+        let locations = Locations::discover();
+        for id in link::apps::known(&locations) {
+            glyphs.push((id.clone(), texture(&ctx, &id, crate::ui::icons::glyph_mask_rgba(&id, 64), 64)));
         }
         let welcome = !settings.welcome_complete;
         let app = SettingsApp {
@@ -275,7 +276,7 @@ impl SettingsApp {
             _watch: watcher,
             integration_hints: Vec::new(),
             channel: None,
-            locations: Locations::discover(),
+            locations,
             paths,
             pending_commands: 0,
             notify_close: Arc::new(AtomicBool::new(true)),
@@ -367,7 +368,7 @@ impl SettingsApp {
         std::thread::spawn(move || {
             let reg = Registry::load(&loc);
             let me = link::me();
-            let states = app_ids(&reg).into_iter().map(|id| (id.clone(), app_state(&loc, &reg, &id, &me))).collect();
+            let states = app_ids(&loc, &reg).into_iter().map(|id| (id.clone(), app_state(&loc, &reg, &id, &me))).collect();
             let error = registry_read_error(&loc.registry);
             let _ = tx.send(Bg::Registry(reg, states, error));
             let _ = tx.send(Bg::DesktopBindings(hotkey::hyprland::desktop_bindings()));
@@ -586,8 +587,8 @@ fn registry_read_error(path: &Path) -> Option<String> {
     None
 }
 
-fn app_ids(reg: &Registry) -> Vec<String> {
-    let mut v: Vec<String> = link::apps::known().iter().map(|s| s.to_string()).collect();
+fn app_ids(loc: &Locations, reg: &Registry) -> Vec<String> {
+    let mut v: Vec<String> = link::apps::known(loc);
     for m in reg.apps() {
         if m.id != crate::identity::ID && m.id != ids::TOOLS && !v.contains(&m.id) && m.id.starts_with("arcade.") {
             v.push(m.id.clone());
@@ -1357,7 +1358,7 @@ impl SettingsApp {
         if !states.is_empty() {
             kit.list(ui, |ui| {
                 for (id, state) in &states {
-                    let name = self.registry.as_ref().and_then(|r| r.get(id).map(|m| m.name.clone())).unwrap_or_else(|| link::apps::name(id).to_string());
+                    let name = self.registry.as_ref().and_then(|r| r.get(id).map(|m| m.name.clone())).unwrap_or_else(|| link::apps::name(&self.locations, id));
                     let installed = !matches!(state, AppState::NotInstalled);
                     let mut use_it = !self.settings.link.disabled_peers.contains(id);
                     let (badge, tone) = match state {
@@ -1380,7 +1381,7 @@ impl SettingsApp {
                             if kit.button_state(ui, "Open", ButtonKind::Default, true, false, true).clicked() {
                                 open_app = Some(id.clone());
                             }
-                        } else if link::apps::known().contains(&id.as_str())
+                        } else if link::apps::known(&self.locations).contains(id)
                             && kit.button_state(ui, "Install", ButtonKind::Default, true, false, true).clicked()
                         {
                             install = Some(id.clone());
@@ -1464,7 +1465,7 @@ impl SettingsApp {
                         link::invoke(&loc, &m, &req, None, None).is_ok()
                     },
                 );
-            if !via_tools && open::that_detached(link::apps::releases_url(&id)).is_err() {
+            if !via_tools && open::that_detached(link::apps::releases_url(&loc, &id)).is_err() {
                 let _ = tx.send(Bg::Toast("Couldn't open the browser. Install the app from Arcade Tools instead.".into(), Tone::Danger));
             }
             c.request_repaint();
@@ -1532,7 +1533,7 @@ impl SettingsApp {
         });
         match action {
             Some("tools") => self.open_app(ids::TOOLS),
-            Some("releases") => self.open_url(link::apps::releases_url(crate::identity::ID)),
+            Some("releases") => self.open_url(&link::apps::releases_url(&self.locations, crate::identity::ID)),
             Some("guide") => self.open_url(crate::identity::GUIDE_URL),
             Some("logs") => {
                 let dir = self.paths.log_dir();

@@ -11,7 +11,7 @@ The Rust crates are those of every platform's build (each build includes only it
 
 ## Arcade Link and Arcade Lens files in this repository
 
-- `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.15` (commit `09d52ee`)) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-Link
+- `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.1.1` (commit `d04f3ca`)) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-Link
 - `crates/arcade-find/src/hotkey.rs` (`hyprland` module) (from Arcade Lens `crates/lens-platform/src/hyprland.rs`, branch `arcade/link`, commit `26b3532`) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-lens
 - `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)) (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-Link
 
@@ -30,9 +30,9 @@ The Rust crates are those of every platform's build (each build includes only it
 - ahash 0.8.12 (MIT OR Apache-2.0) — https://github.com/tkaitchuck/ahash
 - android-activity 0.6.1 (MIT OR Apache-2.0) — https://github.com/rust-mobile/android-activity
 - android-properties 0.2.2 (MIT) — https://github.com/miklelappo/android-properties
-- android_system_properties 0.1.6 (MIT OR Apache-2.0) — https://github.com/nical/android_system_properties
-- arboard 3.6.1 (MIT OR Apache-2.0) — https://github.com/1Password/arboard
-- arcade-link 1.0.15 (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-link
+- arboard 3.7.0 (MIT OR Apache-2.0) — https://github.com/1Password/arboard
+- arc-swap 1.9.5 (MIT OR Apache-2.0) — https://github.com/vorner/arc-swap
+- arcade-link 1.1.1 (MIT OR Apache-2.0) — https://github.com/qa-p1/Arcade-link
 - arrayref 0.3.9 (BSD-2-Clause) — https://github.com/droundy/arrayref
 - arrayvec 0.7.8 (MIT OR Apache-2.0) — https://github.com/bluss/arrayvec
 - as-raw-xcb-connection 1.0.1 (MIT OR Apache-2.0) — https://github.com/psychon/as-raw-xcb-connection
@@ -74,7 +74,6 @@ The Rust crates are those of every platform's build (each build includes only it
 - calloop-wayland-source 0.4.1 (MIT) — https://github.com/smithay/calloop-wayland-source
 - cfg-if 1.0.5 (MIT OR Apache-2.0) — https://github.com/rust-lang/cfg-if
 - cgl 0.3.2 (MIT / Apache-2.0) — https://github.com/servo/cgl-rs
-- chrono 0.4.45 (MIT OR Apache-2.0) — https://github.com/chronotope/chrono
 - clipboard-win 5.4.3 (BSL-1.0) — https://github.com/DoumanAsh/clipboard-win
 - codespan-reporting 0.12.0 (Apache-2.0) — https://github.com/brendanzab/codespan
 - combine 4.6.8 (MIT) — https://github.com/Marwes/combine
@@ -84,9 +83,10 @@ The Rust crates are those of every platform's build (each build includes only it
 - core-graphics 0.23.2 (MIT OR Apache-2.0) — https://github.com/servo/core-foundation-rs
 - core-graphics-types 0.1.3 (MIT OR Apache-2.0) — https://github.com/servo/core-foundation-rs
 - core_maths 0.1.1 (MIT) — https://github.com/robertbastian/core_maths
-- cosmic-text 0.15.0 (MIT OR Apache-2.0) — https://github.com/pop-os/cosmic-text
-- crc32fast 1.5.2 (MIT OR Apache-2.0) — https://github.com/srijs/rust-crc32fast
+- cosmic-text 0.17.0 (MIT OR Apache-2.0) — https://github.com/pop-os/cosmic-text
+- crc32fast 1.5.5 (MIT OR Apache-2.0) — https://github.com/srijs/rust-crc32fast
 - crossbeam-channel 0.5.17 (MIT OR Apache-2.0) — https://github.com/crossbeam-rs/crossbeam
+- crossbeam-queue 0.3.14 (MIT OR Apache-2.0) — https://github.com/crossbeam-rs/crossbeam
 - crossbeam-utils 0.8.23 (MIT OR Apache-2.0) — https://github.com/crossbeam-rs/crossbeam
 - crunchy 0.2.4 (MIT) — https://github.com/eira-fransham/crunchy
 - ctor 0.10.1 (Apache-2.0 OR MIT) — https://github.com/mmastrac/rust-ctor
@@ -131,8 +131,8 @@ The Rust crates are those of every platform's build (each build includes only it
 - float-cmp 0.9.0 (MIT) — https://github.com/mikedilger/float-cmp
 - foldhash 0.1.5 (Zlib) — https://github.com/orlp/foldhash
 - foldhash 0.2.0 (Zlib) — https://github.com/orlp/foldhash
-- font-types 0.10.1 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
 - font-types 0.12.6 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
+- font-types 0.9.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
 - fontconfig-parser 0.5.8 (MIT) — https://github.com/Riey/fontconfig-parser
 - fontdb 0.23.0 (MIT) — https://github.com/RazrFalcon/fontdb
 - foreign-types 0.5.0 (MIT/Apache-2.0) — https://github.com/sfackler/foreign-types
@@ -140,7 +140,6 @@ The Rust crates are those of every platform's build (each build includes only it
 - foreign-types-shared 0.3.1 (MIT/Apache-2.0) — https://github.com/sfackler/foreign-types
 - form_urlencoded 1.2.3 (MIT OR Apache-2.0) — https://github.com/servo/rust-url
 - fs2 0.4.3 (MIT/Apache-2.0) — https://github.com/danburkert/fs2-rs
-- fsevent-sys 4.1.0 (MIT) — https://github.com/octplane/fsevent-rust/tree/master/fsevent-sys
 - futures-channel 0.3.34 (MIT OR Apache-2.0) — https://github.com/rust-lang/futures-rs
 - futures-core 0.3.34 (MIT OR Apache-2.0) — https://github.com/rust-lang/futures-rs
 - futures-executor 0.3.34 (MIT OR Apache-2.0) — https://github.com/rust-lang/futures-rs
@@ -173,7 +172,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - gtk-sys 0.18.2 (MIT) — https://github.com/gtk-rs/gtk3-rs
 - gtk3-macros 0.18.2 (MIT) — https://github.com/gtk-rs/gtk3-rs
 - half 2.7.1 (MIT OR Apache-2.0) — https://github.com/VoidStarKat/half-rs
-- harfrust 0.3.2 (MIT) — https://github.com/harfbuzz/harfrust
+- harfrust 0.2.1 (MIT) — https://github.com/harfbuzz/harfrust
 - hashbrown 0.15.5 (MIT OR Apache-2.0) — https://github.com/rust-lang/hashbrown
 - hashbrown 0.16.1 (MIT OR Apache-2.0) — https://github.com/rust-lang/hashbrown
 - hashbrown 0.17.1 (MIT OR Apache-2.0) — https://github.com/rust-lang/hashbrown
@@ -181,8 +180,6 @@ The Rust crates are those of every platform's build (each build includes only it
 - hermit-abi 0.5.3 (MIT OR Apache-2.0) — https://github.com/hermit-os/hermit-rs
 - hex 0.4.3 (MIT OR Apache-2.0) — https://github.com/KokaKiwi/rust-hex
 - hexf-parse 0.2.1 (CC0-1.0) — https://github.com/lifthrasiir/hexf
-- iana-time-zone 0.1.65 (MIT OR Apache-2.0) — https://github.com/strawlab/iana-time-zone
-- iana-time-zone-haiku 0.1.2 (MIT OR Apache-2.0) — https://github.com/strawlab/iana-time-zone
 - icu_collections 2.3.0 (Unicode-3.0) — https://github.com/unicode-org/icu4x
 - icu_locale_core 2.3.0 (Unicode-3.0) — https://github.com/unicode-org/icu4x
 - icu_normalizer 2.3.0 (Unicode-3.0) — https://github.com/unicode-org/icu4x
@@ -197,10 +194,13 @@ The Rust crates are those of every platform's build (each build includes only it
 - indexmap 2.14.2 (Apache-2.0 OR MIT) — https://github.com/indexmap-rs/indexmap
 - inotify 0.11.5 (ISC) — https://github.com/hannobraun/inotify-rs
 - inotify-sys 0.1.8 (ISC) — https://github.com/hannobraun/inotify-sys
-- interprocess 2.4.5 (0BSD OR Apache-2.0) — https://github.com/kotauskas/interprocess
+- interprocess 2.4.9 (0BSD OR Apache-2.0) — https://github.com/kotauskas/interprocess
 - is-docker 0.2.0 (MIT) — https://github.com/TheLarkInn/is-docker
 - is-wsl 0.4.0 (MIT) — https://github.com/TheLarkInn/is-wsl
 - itoa 1.0.18 (MIT OR Apache-2.0) — https://github.com/dtolnay/itoa
+- jiff 1.0.2 (Unlicense OR MIT) — https://github.com/BurntSushi/jiff
+- jiff-core 1.0.1 (Unlicense OR MIT) — https://github.com/BurntSushi/jiff
+- jiff-static 1.0.2 (Unlicense OR MIT) — https://github.com/BurntSushi/jiff
 - jni 0.22.4 (MIT OR Apache-2.0) — https://github.com/jni-rs/jni-rs
 - jni-macros 0.22.4 (MIT OR Apache-2.0) — https://github.com/jni-rs/jni-rs
 - jni-sys 0.3.1 (MIT OR Apache-2.0) — https://github.com/jni-rs/jni-sys
@@ -210,11 +210,11 @@ The Rust crates are those of every platform's build (each build includes only it
 - keyboard-types 0.7.0 (MIT OR Apache-2.0) — https://github.com/pyfisch/keyboard-types
 - kqueue 1.2.1 (MIT) — https://gitlab.com/rust-kqueue/rust-kqueue
 - kqueue-sys 1.1.2 (MIT) — https://gitlab.com/rust-kqueue/rust-kqueue-sys
-- ksni 0.3.6 (Unlicense) — https://github.com/iovxw/ksni
+- ksni 0.3.7 (Unlicense) — https://github.com/iovxw/ksni
 - kurbo 0.11.3 (Apache-2.0 OR MIT) — https://github.com/linebender/kurbo
 - libappindicator 0.9.0 (Apache-2.0 OR MIT)
 - libappindicator-sys 0.9.0 (Apache-2.0 OR MIT)
-- libc 0.2.190 (MIT OR Apache-2.0) — https://github.com/rust-lang/libc
+- libc 0.2.191 (MIT OR Apache-2.0) — https://github.com/rust-lang/libc
 - libloading 0.7.4 (ISC) — https://github.com/nagisa/rust_libloading/
 - libloading 0.8.9 (ISC) — https://github.com/nagisa/rust_libloading/
 - libm 0.2.16 (MIT) — https://github.com/rust-lang/compiler-builtins
@@ -244,7 +244,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - ndk-sys 0.6.0+11769913 (MIT OR Apache-2.0) — https://github.com/rust-mobile/ndk
 - nohash-hasher 0.2.0 (Apache-2.0 OR MIT) — https://github.com/paritytech/nohash-hasher
 - nom 8.0.0 (MIT) — https://github.com/rust-bakery/nom
-- notify 8.2.0 (CC0-1.0) — https://github.com/notify-rs/notify.git
+- notify 8.2.2 (CC0-1.0) — https://github.com/notify-rs/notify.git
 - notify-rust 4.17.0 (MIT/Apache-2.0) — https://github.com/hoodie/notify-rust
 - notify-types 2.1.0 (MIT OR Apache-2.0) — https://github.com/notify-rs/notify.git
 - num-conv 0.2.2 (MIT OR Apache-2.0) — https://github.com/jhpratt/num-conv
@@ -263,6 +263,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - objc2-core-graphics 0.3.2 (Zlib OR Apache-2.0 OR MIT) — https://github.com/madsmtm/objc2
 - objc2-core-image 0.2.2 (MIT) — https://github.com/madsmtm/objc2
 - objc2-core-location 0.2.2 (MIT) — https://github.com/madsmtm/objc2
+- objc2-core-services 0.3.2 (Zlib OR Apache-2.0 OR MIT) — https://github.com/madsmtm/objc2
 - objc2-encode 4.1.0 (MIT) — https://github.com/madsmtm/objc2
 - objc2-foundation 0.2.2 (MIT) — https://github.com/madsmtm/objc2
 - objc2-foundation 0.3.2 (MIT) — https://github.com/madsmtm/objc2
@@ -276,7 +277,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - objc2-uniform-type-identifiers 0.2.2 (MIT) — https://github.com/madsmtm/objc2
 - objc2-user-notifications 0.2.2 (MIT) — https://github.com/madsmtm/objc2
 - once_cell 1.21.4 (MIT OR Apache-2.0) — https://github.com/matklad/once_cell
-- open 5.4.4 (MIT) — https://github.com/Byron/open-rs
+- open 5.4.5 (MIT) — https://github.com/Byron/open-rs
 - option-ext 0.2.0 (MPL-2.0) — https://github.com/soc/option-ext.git
 - orbclient 0.3.55 (MIT) — https://gitlab.redox-os.org/redox-os/orbclient
 - ordered-stream 0.2.0 (MIT OR Apache-2.0) — https://github.com/danieldg/ordered-stream
@@ -318,7 +319,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - r-efi 6.0.0 (MIT OR Apache-2.0 OR LGPL-2.1-or-later) — https://github.com/r-efi/r-efi
 - rangemap 1.8.0 (MIT/Apache-2.0) — https://github.com/jeffparsons/rangemap
 - raw-window-handle 0.6.2 (MIT OR Apache-2.0 OR Zlib) — https://github.com/rust-windowing/raw-window-handle
-- read-fonts 0.35.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
+- read-fonts 0.34.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
 - read-fonts 0.41.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
 - recvmsg 1.0.0 (0BSD)
 - redox_syscall 0.4.1 (MIT) — https://gitlab.redox-os.org/redox-os/syscall
@@ -342,7 +343,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - serde 1.0.229 (MIT OR Apache-2.0) — https://github.com/serde-rs/serde
 - serde_core 1.0.229 (MIT OR Apache-2.0) — https://github.com/serde-rs/serde
 - serde_derive 1.0.229 (MIT OR Apache-2.0) — https://github.com/serde-rs/serde
-- serde_json 1.0.152 (MIT OR Apache-2.0) — https://github.com/serde-rs/json
+- serde_json 1.0.154 (MIT OR Apache-2.0) — https://github.com/serde-rs/json
 - serde_repr 0.1.21 (MIT OR Apache-2.0) — https://github.com/dtolnay/serde-repr
 - serde_spanned 0.6.9 (MIT OR Apache-2.0) — https://github.com/toml-rs/toml
 - signal-hook-registry 1.4.8 (MIT OR Apache-2.0) — https://github.com/vorner/signal-hook
@@ -351,7 +352,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - simdutf8 0.1.5 (MIT OR Apache-2.0) — https://github.com/rusticstuff/simdutf8
 - simplecss 0.2.2 (Apache-2.0 OR MIT) — https://github.com/linebender/simplecss
 - siphasher 1.0.4 (MIT OR Apache-2.0) — https://github.com/jedisct1/rust-siphash
-- skrifa 0.37.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
+- skrifa 0.36.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
 - skrifa 0.44.0 (MIT OR Apache-2.0) — https://github.com/googlefonts/fontations
 - slab 0.4.12 (MIT) — https://github.com/tokio-rs/slab
 - slotmap 1.1.1 (Zlib) — https://github.com/orlp/slotmap
@@ -360,6 +361,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - smithay-client-toolkit 0.20.0 (MIT) — https://github.com/smithay/client-toolkit
 - smithay-clipboard 0.7.3 (MIT) — https://github.com/smithay/smithay-clipboard
 - smol_str 0.2.2 (MIT OR Apache-2.0) — https://github.com/rust-analyzer/smol_str
+- smol_str 0.3.2 (MIT OR Apache-2.0) — https://github.com/rust-analyzer/smol_str
 - socket2 0.6.5 (MIT OR Apache-2.0) — https://github.com/rust-lang/socket2
 - softbuffer 0.4.8 (MIT OR Apache-2.0) — https://github.com/rust-windowing/softbuffer
 - stable_deref_trait 1.2.1 (MIT OR Apache-2.0) — https://github.com/storyyeller/stable_deref_trait
@@ -397,7 +399,7 @@ The Rust crates are those of every platform's build (each build includes only it
 - tracing 0.1.44 (MIT) — https://github.com/tokio-rs/tracing
 - tracing-attributes 0.1.31 (MIT) — https://github.com/tokio-rs/tracing
 - tracing-core 0.1.36 (MIT) — https://github.com/tokio-rs/tracing
-- trash 5.2.9 (MIT) — https://github.com/ArturKovacs/trash
+- trash 5.4.0 (MIT) — https://github.com/ArturKovacs/trash
 - tray-icon 0.24.2 (MIT OR Apache-2.0) — https://github.com/tauri-apps/tray-icon
 - tree_magic_mini 3.2.2 (MIT) — https://github.com/mbrubeck/tree_magic/
 - ttf-parser 0.25.1 (MIT OR Apache-2.0) — https://github.com/harfbuzz/ttf-parser
@@ -467,29 +469,19 @@ The Rust crates are those of every platform's build (each build includes only it
 - windows-strings 0.5.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-sys 0.52.0 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-sys 0.59.0 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows-sys 0.60.2 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-sys 0.61.2 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-targets 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows-targets 0.53.5 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-threading 0.1.0 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-threading 0.2.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows-version 0.1.7 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_aarch64_gnullvm 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_aarch64_gnullvm 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_aarch64_msvc 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_aarch64_msvc 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_i686_gnu 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_i686_gnu 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_i686_gnullvm 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_i686_gnullvm 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_i686_msvc 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_i686_msvc 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_x86_64_gnu 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_x86_64_gnu 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_x86_64_gnullvm 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_x86_64_gnullvm 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - windows_x86_64_msvc 0.52.6 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
-- windows_x86_64_msvc 0.53.1 (MIT OR Apache-2.0) — https://github.com/microsoft/windows-rs
 - winit 0.30.13 (Apache-2.0) — https://github.com/rust-windowing/winit
 - winnow 0.5.40 (MIT) — https://github.com/winnow-rs/winnow
 - winnow 1.0.4 (MIT) — https://github.com/winnow-rs/winnow
@@ -544,7 +536,7 @@ another program or library. Windows and macOS packages hold only Find's own prog
 
 ## Licence texts
 
-### 1. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.15` (commit `09d52ee`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.0.15, async-trait 0.1.92, itoa 1.0.18, libc 0.2.190, litrs 1.0.0, num_enum 0.7.6, num_enum_derive 0.7.6, pastey 0.2.3, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 2.1.3, rustversion 1.0.23, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.152, serde_repr 0.1.21, syn 2.0.119, syn 3.0.7, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.26
+### 1. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.1.1` (commit `d04f3ca`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.1.1, async-trait 0.1.92, itoa 1.0.18, libc 0.2.191, litrs 1.0.0, num_enum 0.7.6, num_enum_derive 0.7.6, pastey 0.2.3, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 2.1.3, rustversion 1.0.23, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, serde_repr 0.1.21, syn 2.0.119, syn 3.0.7, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.26
 
 ```text
                               Apache License
@@ -725,7 +717,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 END OF TERMS AND CONDITIONS
 ```
 
-### 2. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.0.15` (commit `09d52ee`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.0.15
+### 2. Used by `assets/glyphs/*.svg`, `assets/app-icon/` (from Arcade Link `design/glyphs/`, `design/app-icons/find/`, tag `v1.1.1` (commit `d04f3ca`)), `packaging/windows/arcade.iss`, `arcade-integration.ps1` (from Arcade Link `packaging/windows/`, tag `v0.3.0` (commit `33650a8`; unchanged in `v0.4.5`)), arcade-link 1.1.1
 
 ```text
 MIT License
@@ -780,7 +772,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 4. Used by ab_glyph 0.2.32, ab_glyph_rasterizer 0.1.10, android-activity 0.6.1, arboard 3.6.1, fdeflate 0.3.7, field-offset 0.3.6, half 2.7.1, image 0.25.10, linebender_resource_handle 0.1.1, miniz_oxide 0.8.9, miniz_oxide 0.9.1, naga 27.0.3, num-conv 0.2.2, owned_ttf_parser 0.25.1, pin-project 1.1.13, pin-project-internal 1.1.13, pin-project-lite 0.2.17, portable-atomic 1.15.0, portable-atomic-util 0.2.8, raw-window-handle 0.6.2, resvg 0.45.1, simdutf8 0.1.5, tauri-winrt-notification 0.7.3, time 0.3.55, time-core 0.1.9, tiny-xlib 0.2.5, usvg 0.45.1, wgpu 27.0.1, wgpu-core 27.0.3, wgpu-core-deps-windows-linux-android 27.0.0, wgpu-hal 27.0.4, wgpu-types 27.0.1, widestring 1.2.1
+### 4. Used by ab_glyph 0.2.32, ab_glyph_rasterizer 0.1.10, android-activity 0.6.1, arboard 3.7.0, fdeflate 0.3.7, field-offset 0.3.6, half 2.7.1, image 0.25.10, linebender_resource_handle 0.1.1, miniz_oxide 0.8.9, miniz_oxide 0.9.1, naga 27.0.3, num-conv 0.2.2, owned_ttf_parser 0.25.1, pin-project 1.1.13, pin-project-internal 1.1.13, pin-project-lite 0.2.17, portable-atomic 1.15.0, portable-atomic-util 0.2.8, raw-window-handle 0.6.2, resvg 0.45.1, simdutf8 0.1.5, tauri-winrt-notification 0.7.3, time 0.3.55, time-core 0.1.9, tiny-xlib 0.2.5, usvg 0.45.1, wgpu 27.0.1, wgpu-core 27.0.3, wgpu-core-deps-windows-linux-android 27.0.0, wgpu-hal 27.0.4, wgpu-types 27.0.1, widestring 1.2.1
 
 ```text
                                  Apache License
@@ -1414,7 +1406,7 @@ AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
 OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ```
 
-### 14. Used by adler2 2.0.1, async-channel 2.5.0, async-executor 1.14.1, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-recursion 1.2.0, async-signal 0.2.14, async-task 4.7.1, async-trait 0.1.92, atomic-waker 1.1.2, blocking 1.7.0, concurrent-queue 2.5.0, displaydoc 0.2.7, endi 1.1.1, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, futures-lite 2.6.1, glow 0.16.0, hermit-abi 0.5.3, itoa 1.0.18, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, num_enum 0.7.6, num_enum_derive 0.7.6, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, pastey 0.2.3, pin-project 1.1.13, pin-project-internal 1.1.13, pin-project-lite 0.2.17, piper 0.2.5, polling 3.11.0, portable-atomic 1.15.0, portable-atomic-util 0.2.8, proc-macro-crate 1.3.1, proc-macro-crate 2.0.2, proc-macro-crate 3.5.0, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 1.1.0, rustc-hash 2.1.3, rustix 0.38.44, rustix 1.1.6, rustversion 1.0.23, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.152, serde_repr 0.1.21, simd_cesu8 1.2.0, smol_str 0.2.2, syn 1.0.109, syn 2.0.119, syn 3.0.7, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.26, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wit-bindgen 0.57.1, x11 2.21.0, x11-dl 2.21.0, zbus-lockstep 0.5.2, zbus-lockstep-macros 0.5.2, zmij 1.0.23, zvariant_utils 4.2.0
+### 14. Used by adler2 2.0.1, async-channel 2.5.0, async-executor 1.14.1, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-recursion 1.2.0, async-signal 0.2.14, async-task 4.7.1, async-trait 0.1.92, atomic-waker 1.1.2, blocking 1.7.0, concurrent-queue 2.5.0, displaydoc 0.2.7, endi 1.1.1, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, futures-lite 2.6.1, glow 0.16.0, hermit-abi 0.5.3, itoa 1.0.18, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, num_enum 0.7.6, num_enum_derive 0.7.6, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, pastey 0.2.3, pin-project 1.1.13, pin-project-internal 1.1.13, pin-project-lite 0.2.17, piper 0.2.5, polling 3.11.0, portable-atomic 1.15.0, portable-atomic-util 0.2.8, proc-macro-crate 1.3.1, proc-macro-crate 2.0.2, proc-macro-crate 3.5.0, proc-macro2 1.0.107, quote 1.0.47, rustc-hash 1.1.0, rustc-hash 2.1.3, rustix 0.38.44, rustix 1.1.6, rustversion 1.0.23, semver 1.0.28, serde 1.0.229, serde_core 1.0.229, serde_derive 1.0.229, serde_json 1.0.154, serde_repr 0.1.21, simd_cesu8 1.2.0, smol_str 0.2.2, smol_str 0.3.2, syn 1.0.109, syn 2.0.119, syn 3.0.7, thiserror 1.0.69, thiserror 2.0.21, thiserror-impl 1.0.69, thiserror-impl 2.0.21, unicode-ident 1.0.26, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wit-bindgen 0.57.1, x11 2.21.0, x11-dl 2.21.0, zbus-lockstep 0.5.2, zbus-lockstep-macros 0.5.2, zmij 1.0.23, zvariant_utils 4.2.0
 
 ```text
 Permission is hereby granted, free of charge, to any
@@ -1442,7 +1434,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 15. Used by ahash 0.8.12, arrayvec 0.7.8, async-channel 2.5.0, async-executor 1.14.1, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-recursion 1.2.0, async-signal 0.2.14, async-task 4.7.1, atomic-waker 1.1.2, base64 0.22.1, bitflags 1.3.2, bitflags 2.13.2, blocking 1.7.0, bumpalo 3.20.3, cfg-if 1.0.5, cgl 0.3.2, concurrent-queue 2.5.0, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, crossbeam-channel 0.5.17, crossbeam-utils 0.8.23, data-url 0.3.2, displaydoc 0.2.7, equivalent 1.0.2, errno 0.3.14, euclid 0.22.14, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, fixedbitset 0.5.7, flate2 1.1.10, form_urlencoded 1.2.3, fs2 0.4.3, futures-lite 2.6.1, gethostname 1.1.0, global-hotkey 0.8.0, glow 0.16.0, hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.4.1, hermit-abi 0.5.3, idna 1.1.0, idna_adapter 1.2.2, indexmap 2.14.2, js-sys 0.3.106, keyboard-types 0.7.0, libappindicator 0.9.0, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, lock_api 0.4.14, log 0.4.34, muda 0.19.3, num-traits 0.2.19, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, parking_lot 0.12.5, parking_lot_core 0.9.12, percent-encoding 2.3.2, petgraph 0.8.3, piper 0.2.5, plain 0.2.3, png 0.17.16, png 0.18.1, polling 3.11.0, renderdoc-sys 1.1.0, roxmltree 0.20.0, rustc-hash 1.1.0, rustix 0.38.44, rustix 1.1.6, scoped-tls 1.0.1, scopeguard 1.2.0, signal-hook-registry 1.4.8, simd_cesu8 1.2.0, simplecss 0.2.2, smallvec 1.16.3, smol_str 0.2.2, socket2 0.6.5, stable_deref_trait 1.2.1, svgtypes 0.15.3, swash 0.2.10, syn 1.0.109, tempfile 3.27.0, toml_datetime 0.6.3, tray-icon 0.24.2, ttf-parser 0.25.1, unicode-bidi 0.3.18, unicode-segmentation 1.13.3, unicode-width 0.2.2, url 2.5.9, uuid 1.26.1, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106, weezl 0.1.12, wit-bindgen 0.57.1, wl-clipboard-rs 0.9.4, yazi 0.2.1, zeno 0.3.3
+### 15. Used by ahash 0.8.12, arc-swap 1.9.5, arrayvec 0.7.8, async-channel 2.5.0, async-executor 1.14.1, async-io 2.6.0, async-lock 3.4.2, async-process 2.5.0, async-recursion 1.2.0, async-signal 0.2.14, async-task 4.7.1, atomic-waker 1.1.2, base64 0.22.1, bitflags 1.3.2, bitflags 2.13.2, blocking 1.7.0, bumpalo 3.20.3, cfg-if 1.0.5, cgl 0.3.2, concurrent-queue 2.5.0, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, crossbeam-channel 0.5.17, crossbeam-queue 0.3.14, crossbeam-utils 0.8.23, data-url 0.3.2, displaydoc 0.2.7, equivalent 1.0.2, errno 0.3.14, euclid 0.22.14, event-listener 5.4.2, event-listener-strategy 0.5.4, fastrand 2.5.0, fixedbitset 0.5.7, flate2 1.1.10, form_urlencoded 1.2.3, fs2 0.4.3, futures-lite 2.6.1, gethostname 1.1.0, global-hotkey 0.8.0, glow 0.16.0, hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1, heck 0.4.1, hermit-abi 0.5.3, idna 1.1.0, idna_adapter 1.2.2, indexmap 2.14.2, js-sys 0.3.106, keyboard-types 0.7.0, libappindicator 0.9.0, linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, lock_api 0.4.14, log 0.4.34, muda 0.19.3, num-traits 0.2.19, once_cell 1.21.4, ordered-stream 0.2.0, parking 2.2.1, parking_lot 0.12.5, parking_lot_core 0.9.12, percent-encoding 2.3.2, petgraph 0.8.3, piper 0.2.5, plain 0.2.3, png 0.17.16, png 0.18.1, polling 3.11.0, renderdoc-sys 1.1.0, roxmltree 0.20.0, rustc-hash 1.1.0, rustix 0.38.44, rustix 1.1.6, scoped-tls 1.0.1, scopeguard 1.2.0, signal-hook-registry 1.4.8, simd_cesu8 1.2.0, simplecss 0.2.2, smallvec 1.16.3, smol_str 0.2.2, smol_str 0.3.2, socket2 0.6.5, stable_deref_trait 1.2.1, svgtypes 0.15.3, swash 0.2.10, syn 1.0.109, tempfile 3.27.0, toml_datetime 0.6.3, tray-icon 0.24.2, ttf-parser 0.25.1, unicode-bidi 0.3.18, unicode-segmentation 1.13.3, unicode-width 0.2.2, url 2.5.9, uuid 1.26.1, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106, weezl 0.1.12, wit-bindgen 0.57.1, wl-clipboard-rs 0.9.4, yazi 0.2.1, zeno 0.3.3
 
 ```text
                               Apache License
@@ -1757,50 +1749,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 20. Used by android_system_properties 0.1.6
-
-```text
-Copyright 2016 Nicolas Silva
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
-### 21. Used by android_system_properties 0.1.6
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2013 Nicolas Silva
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
-### 22. Used by AppImage type2-runtime (Linux AppImage)
+### 20. Used by AppImage type2-runtime (Linux AppImage)
 
 ```text
 MIT License
@@ -1823,7 +1772,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 23. Used by arboard 3.6.1
+### 21. Used by arboard 3.7.0
 
 ```text
 MIT License
@@ -1849,7 +1798,37 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 24. Used by arrayref 0.3.9
+### 22. Used by arc-swap 1.9.5
+
+```text
+Copyright (c) 2017 arc-swap developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+### 23. Used by arrayref 0.3.9
 
 ```text
 Copyright (c) 2015 David Roundy <roundyd@physics.oregonstate.edu>
@@ -1880,7 +1859,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### 25. Used by arrayvec 0.7.8
+### 24. Used by arrayvec 0.7.8
 
 ```text
 Copyright (c) Ulrik Sverdrup "bluss" 2015-2023
@@ -1910,7 +1889,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 26. Used by as-raw-xcb-connection 1.0.1, codespan-reporting 0.12.0, kurbo 0.11.3, nohash-hasher 0.2.0, self_cell 1.3.0, siphasher 1.0.4, static_assertions 1.1.0, sys-locale 0.3.2, tinyvec 1.13.3, unicode-linebreak 0.1.5, utf8_iter 1.0.4, x11rb 0.13.2, x11rb-protocol 0.13.2, zune-core 0.5.3, zune-jpeg 0.5.15
+### 25. Used by as-raw-xcb-connection 1.0.1, codespan-reporting 0.12.0, kurbo 0.11.3, nohash-hasher 0.2.0, self_cell 1.3.0, siphasher 1.0.4, static_assertions 1.1.0, sys-locale 0.3.2, tinyvec 1.13.3, unicode-linebreak 0.1.5, utf8_iter 1.0.4, x11rb 0.13.2, x11rb-protocol 0.13.2, zune-core 0.5.3, zune-jpeg 0.5.15
 
 ```text
                                  Apache License
@@ -2116,7 +2095,7 @@ DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 27. Used by as-raw-xcb-connection 1.0.1
+### 26. Used by as-raw-xcb-connection 1.0.1
 
 ```text
 Copyright 2019 as-raw-xcb-connection Contributers
@@ -2146,7 +2125,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 28. Used by async-broadcast 0.7.2
+### 27. Used by async-broadcast 0.7.2
 
 ```text
                                  Apache License
@@ -2341,7 +2320,7 @@ DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 29. Used by async-broadcast 0.7.2
+### 28. Used by async-broadcast 0.7.2
 
 ```text
 The MIT License (MIT)
@@ -2367,7 +2346,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 30. Used by atk 0.18.2, atk-sys 0.18.2, cairo-rs 0.18.5, cairo-sys-rs 0.18.2, gdk 0.18.2, gdk-pixbuf 0.18.5, gdk-pixbuf-sys 0.18.0, gdk-sys 0.18.2, gio 0.18.4, gio-sys 0.18.1, glib 0.18.5, glib-macros 0.18.5, glib-sys 0.18.1, gobject-sys 0.18.0, gtk 0.18.2, gtk-sys 0.18.2, gtk3-macros 0.18.2, pango 0.18.3, pango-sys 0.18.0, siphasher 1.0.4
+### 29. Used by atk 0.18.2, atk-sys 0.18.2, cairo-rs 0.18.5, cairo-sys-rs 0.18.2, gdk 0.18.2, gdk-pixbuf 0.18.5, gdk-pixbuf-sys 0.18.0, gdk-sys 0.18.2, gio 0.18.4, gio-sys 0.18.1, glib 0.18.5, glib-macros 0.18.5, glib-sys 0.18.1, gobject-sys 0.18.0, gtk 0.18.2, gtk-sys 0.18.2, gtk3-macros 0.18.2, pango 0.18.3, pango-sys 0.18.0, siphasher 1.0.4
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -2389,7 +2368,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 31. Used by atk 0.18.2, cairo-rs 0.18.5, gdk 0.18.2, gdk-pixbuf 0.18.5, gio 0.18.4, glib 0.18.5, glib-macros 0.18.5, gtk 0.18.2, gtk3-macros 0.18.2, pango 0.18.3
+### 30. Used by atk 0.18.2, cairo-rs 0.18.5, gdk 0.18.2, gdk-pixbuf 0.18.5, gio 0.18.4, glib 0.18.5, glib-macros 0.18.5, gtk 0.18.2, gtk3-macros 0.18.2, pango 0.18.3
 
 ```text
 The gtk-rs Project is licensed under the MIT license, see the LICENSE file or
@@ -2408,7 +2387,7 @@ LGPL or other licenses. For more information check the license of each GNOME
 library.
 ```
 
-### 32. Used by atomic-waker 1.1.2, futures-lite 2.6.1
+### 31. Used by atomic-waker 1.1.2, futures-lite 2.6.1
 
 ```text
 ===============================================================================
@@ -2458,7 +2437,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 33. Used by atspi 0.25.0, atspi-common 0.9.0, atspi-connection 0.9.0
+### 32. Used by atspi 0.25.0, atspi-common 0.9.0, atspi-connection 0.9.0
 
 ```text
 Apache License
@@ -2664,7 +2643,7 @@ Apache License
    limitations under the License.
 ```
 
-### 34. Used by atspi 0.25.0, atspi-common 0.9.0, atspi-connection 0.9.0
+### 33. Used by atspi 0.25.0, atspi-common 0.9.0, atspi-connection 0.9.0
 
 ```text
 Copyright (c) 2022 Tait Hoyem <tait@tait.tech>
@@ -2688,7 +2667,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 35. Used by atspi-proxies 0.9.0
+### 34. Used by atspi-proxies 0.9.0
 
 ```text
 atspi-proxies is offered under Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -2713,7 +2692,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 36. Used by base64 0.22.1
+### 35. Used by base64 0.22.1
 
 ```text
 The MIT License (MIT)
@@ -2739,7 +2718,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 37. Used by bit-set 0.8.0, bit-vec 0.8.0, downcast-rs 1.2.1
+### 36. Used by bit-set 0.8.0, bit-vec 0.8.0, downcast-rs 1.2.1
 
 ```text
                               Apache License
@@ -2945,7 +2924,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 38. Used by bit-set 0.8.0, bit-vec 0.8.0
+### 37. Used by bit-set 0.8.0, bit-vec 0.8.0
 
 ```text
 Copyright (c) 2023 The Rust Project Developers
@@ -2975,7 +2954,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 39. Used by bitflags 1.3.2, bitflags 2.13.2, log 0.4.34, num-traits 0.2.19
+### 38. Used by bitflags 1.3.2, bitflags 2.13.2, log 0.4.34, num-traits 0.2.19
 
 ```text
 Copyright (c) 2014 The Rust Project Developers
@@ -3005,7 +2984,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 40. Used by block2 0.5.1
+### 39. Used by block2 0.5.1
 
 ```text
 block2 is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -3030,7 +3009,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 41. Used by block2 0.6.2
+### 40. Used by block2 0.6.2
 
 ```text
 block2 is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -3055,7 +3034,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 42. Used by bumpalo 3.20.3
+### 41. Used by bumpalo 3.20.3
 
 ```text
 Copyright (c) 2019 Nick Fitzgerald
@@ -3085,7 +3064,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 43. Used by bytemuck 1.25.2, bytemuck_derive 1.12.1
+### 42. Used by bytemuck 1.25.2, bytemuck_derive 1.12.1
 
 ```text
 Apache License
@@ -3151,7 +3130,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 44. Used by bytemuck 1.25.2, bytemuck_derive 1.12.1, tinyvec 1.13.3
+### 43. Used by bytemuck 1.25.2, bytemuck_derive 1.12.1, tinyvec 1.13.3
 
 ```text
 Copyright (c) 2019 Daniel "Lokathor" Gee.
@@ -3167,7 +3146,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 45. Used by bytemuck 1.25.2, bytemuck_derive 1.12.1
+### 44. Used by bytemuck 1.25.2, bytemuck_derive 1.12.1
 
 ```text
 MIT License
@@ -3181,7 +3160,7 @@ The above copyright notice and this permission notice (including the next paragr
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 46. Used by byteorder-lite 0.1.0, memchr 2.8.3, walkdir 2.5.0
+### 45. Used by byteorder-lite 0.1.0, jiff 1.0.2, jiff-core 1.0.1, jiff-static 1.0.2, memchr 2.8.3, walkdir 2.5.0
 
 ```text
 The MIT License (MIT)
@@ -3207,7 +3186,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 47. Used by bytes 1.12.1
+### 46. Used by bytes 1.12.1
 
 ```text
 Copyright (c) 2018 Carl Lerche
@@ -3237,7 +3216,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 48. Used by calloop 0.13.0, calloop 0.14.5, smithay-client-toolkit 0.19.2, smithay-client-toolkit 0.20.0
+### 47. Used by calloop 0.13.0, calloop 0.14.5, smithay-client-toolkit 0.19.2, smithay-client-toolkit 0.20.0
 
 ```text
 Copyright (c) 2018 Victor Berger
@@ -3261,7 +3240,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 49. Used by calloop-wayland-source 0.3.0, calloop-wayland-source 0.4.1
+### 48. Used by calloop-wayland-source 0.3.0, calloop-wayland-source 0.4.1
 
 ```text
 Copyright (c) 2023 Kirill Chibisov
@@ -3285,7 +3264,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 50. Used by cfg-if 1.0.5, js-sys 0.3.106, scoped-tls 1.0.1, socket2 0.6.5, toml_datetime 0.6.3, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106
+### 49. Used by cfg-if 1.0.5, js-sys 0.3.106, scoped-tls 1.0.1, socket2 0.6.5, toml_datetime 0.6.3, wasm-bindgen 0.2.129, wasm-bindgen-futures 0.4.79, wasm-bindgen-macro 0.2.129, wasm-bindgen-macro-support 0.2.129, wasm-bindgen-shared 0.2.129, web-sys 0.3.106
 
 ```text
 Copyright (c) 2014 Alex Crichton
@@ -3315,7 +3294,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 51. Used by cgl 0.3.2, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, euclid 0.22.14
+### 50. Used by cgl 0.3.2, core-foundation 0.9.4, core-foundation-sys 0.8.7, core-graphics 0.23.2, core-graphics-types 0.1.3, euclid 0.22.14
 
 ```text
 Copyright (c) 2012-2013 Mozilla Foundation
@@ -3345,7 +3324,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 52. Used by cgl 0.3.2, core-graphics 0.23.2, euclid 0.22.14
+### 51. Used by cgl 0.3.2, core-graphics 0.23.2, euclid 0.22.14
 
 ```text
 Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
@@ -3355,251 +3334,7 @@ option. All files in the project carrying such notice may not be
 copied, modified, or distributed except according to those terms.
 ```
 
-### 53. Used by chrono 0.4.45
-
-```text
-Rust-chrono is dual-licensed under The MIT License [1] and
-Apache 2.0 License [2]. Copyright (c) 2014--2026, Kang Seonghoon and
-contributors.
-
-Nota Bene: This is same as the Rust Project's own license.
-
-
-[1]: <http://opensource.org/licenses/MIT>, which is reproduced below:
-
-~~~~
-The MIT License (MIT)
-
-Copyright (c) 2014, Kang Seonghoon.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-~~~~
-
-
-[2]: <http://www.apache.org/licenses/LICENSE-2.0>, which is reproduced below:
-
-~~~~
-                              Apache License
-                        Version 2.0, January 2004
-                     http://www.apache.org/licenses/
-
-TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-
-1. Definitions.
-
-   "License" shall mean the terms and conditions for use, reproduction,
-   and distribution as defined by Sections 1 through 9 of this document.
-
-   "Licensor" shall mean the copyright owner or entity authorized by
-   the copyright owner that is granting the License.
-
-   "Legal Entity" shall mean the union of the acting entity and all
-   other entities that control, are controlled by, or are under common
-   control with that entity. For the purposes of this definition,
-   "control" means (i) the power, direct or indirect, to cause the
-   direction or management of such entity, whether by contract or
-   otherwise, or (ii) ownership of fifty percent (50%) or more of the
-   outstanding shares, or (iii) beneficial ownership of such entity.
-
-   "You" (or "Your") shall mean an individual or Legal Entity
-   exercising permissions granted by this License.
-
-   "Source" form shall mean the preferred form for making modifications,
-   including but not limited to software source code, documentation
-   source, and configuration files.
-
-   "Object" form shall mean any form resulting from mechanical
-   transformation or translation of a Source form, including but
-   not limited to compiled object code, generated documentation,
-   and conversions to other media types.
-
-   "Work" shall mean the work of authorship, whether in Source or
-   Object form, made available under the License, as indicated by a
-   copyright notice that is included in or attached to the work
-   (an example is provided in the Appendix below).
-
-   "Derivative Works" shall mean any work, whether in Source or Object
-   form, that is based on (or derived from) the Work and for which the
-   editorial revisions, annotations, elaborations, or other modifications
-   represent, as a whole, an original work of authorship. For the purposes
-   of this License, Derivative Works shall not include works that remain
-   separable from, or merely link (or bind by name) to the interfaces of,
-   the Work and Derivative Works thereof.
-
-   "Contribution" shall mean any work of authorship, including
-   the original version of the Work and any modifications or additions
-   to that Work or Derivative Works thereof, that is intentionally
-   submitted to Licensor for inclusion in the Work by the copyright owner
-   or by an individual or Legal Entity authorized to submit on behalf of
-   the copyright owner. For the purposes of this definition, "submitted"
-   means any form of electronic, verbal, or written communication sent
-   to the Licensor or its representatives, including but not limited to
-   communication on electronic mailing lists, source code control systems,
-   and issue tracking systems that are managed by, or on behalf of, the
-   Licensor for the purpose of discussing and improving the Work, but
-   excluding communication that is conspicuously marked or otherwise
-   designated in writing by the copyright owner as "Not a Contribution."
-
-   "Contributor" shall mean Licensor and any individual or Legal Entity
-   on behalf of whom a Contribution has been received by Licensor and
-   subsequently incorporated within the Work.
-
-2. Grant of Copyright License. Subject to the terms and conditions of
-   this License, each Contributor hereby grants to You a perpetual,
-   worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-   copyright license to reproduce, prepare Derivative Works of,
-   publicly display, publicly perform, sublicense, and distribute the
-   Work and such Derivative Works in Source or Object form.
-
-3. Grant of Patent License. Subject to the terms and conditions of
-   this License, each Contributor hereby grants to You a perpetual,
-   worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-   (except as stated in this section) patent license to make, have made,
-   use, offer to sell, sell, import, and otherwise transfer the Work,
-   where such license applies only to those patent claims licensable
-   by such Contributor that are necessarily infringed by their
-   Contribution(s) alone or by combination of their Contribution(s)
-   with the Work to which such Contribution(s) was submitted. If You
-   institute patent litigation against any entity (including a
-   cross-claim or counterclaim in a lawsuit) alleging that the Work
-   or a Contribution incorporated within the Work constitutes direct
-   or contributory patent infringement, then any patent licenses
-   granted to You under this License for that Work shall terminate
-   as of the date such litigation is filed.
-
-4. Redistribution. You may reproduce and distribute copies of the
-   Work or Derivative Works thereof in any medium, with or without
-   modifications, and in Source or Object form, provided that You
-   meet the following conditions:
-
-   (a) You must give any other recipients of the Work or
-       Derivative Works a copy of this License; and
-
-   (b) You must cause any modified files to carry prominent notices
-       stating that You changed the files; and
-
-   (c) You must retain, in the Source form of any Derivative Works
-       that You distribute, all copyright, patent, trademark, and
-       attribution notices from the Source form of the Work,
-       excluding those notices that do not pertain to any part of
-       the Derivative Works; and
-
-   (d) If the Work includes a "NOTICE" text file as part of its
-       distribution, then any Derivative Works that You distribute must
-       include a readable copy of the attribution notices contained
-       within such NOTICE file, excluding those notices that do not
-       pertain to any part of the Derivative Works, in at least one
-       of the following places: within a NOTICE text file distributed
-       as part of the Derivative Works; within the Source form or
-       documentation, if provided along with the Derivative Works; or,
-       within a display generated by the Derivative Works, if and
-       wherever such third-party notices normally appear. The contents
-       of the NOTICE file are for informational purposes only and
-       do not modify the License. You may add Your own attribution
-       notices within Derivative Works that You distribute, alongside
-       or as an addendum to the NOTICE text from the Work, provided
-       that such additional attribution notices cannot be construed
-       as modifying the License.
-
-   You may add Your own copyright statement to Your modifications and
-   may provide additional or different license terms and conditions
-   for use, reproduction, or distribution of Your modifications, or
-   for any such Derivative Works as a whole, provided Your use,
-   reproduction, and distribution of the Work otherwise complies with
-   the conditions stated in this License.
-
-5. Submission of Contributions. Unless You explicitly state otherwise,
-   any Contribution intentionally submitted for inclusion in the Work
-   by You to the Licensor shall be under the terms and conditions of
-   this License, without any additional terms or conditions.
-   Notwithstanding the above, nothing herein shall supersede or modify
-   the terms of any separate license agreement you may have executed
-   with Licensor regarding such Contributions.
-
-6. Trademarks. This License does not grant permission to use the trade
-   names, trademarks, service marks, or product names of the Licensor,
-   except as required for reasonable and customary use in describing the
-   origin of the Work and reproducing the content of the NOTICE file.
-
-7. Disclaimer of Warranty. Unless required by applicable law or
-   agreed to in writing, Licensor provides the Work (and each
-   Contributor provides its Contributions) on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-   implied, including, without limitation, any warranties or conditions
-   of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-   PARTICULAR PURPOSE. You are solely responsible for determining the
-   appropriateness of using or redistributing the Work and assume any
-   risks associated with Your exercise of permissions under this License.
-
-8. Limitation of Liability. In no event and under no legal theory,
-   whether in tort (including negligence), contract, or otherwise,
-   unless required by applicable law (such as deliberate and grossly
-   negligent acts) or agreed to in writing, shall any Contributor be
-   liable to You for damages, including any direct, indirect, special,
-   incidental, or consequential damages of any character arising as a
-   result of this License or out of the use or inability to use the
-   Work (including but not limited to damages for loss of goodwill,
-   work stoppage, computer failure or malfunction, or any and all
-   other commercial damages or losses), even if such Contributor
-   has been advised of the possibility of such damages.
-
-9. Accepting Warranty or Additional Liability. While redistributing
-   the Work or Derivative Works thereof, You may choose to offer,
-   and charge a fee for, acceptance of support, warranty, indemnity,
-   or other liability obligations and/or rights consistent with this
-   License. However, in accepting such obligations, You may act only
-   on Your own behalf and on Your sole responsibility, not on behalf
-   of any other Contributor, and only if You agree to indemnify,
-   defend, and hold each Contributor harmless for any liability
-   incurred by, or claims asserted against, such Contributor by reason
-   of your accepting any such warranty or additional liability.
-
-END OF TERMS AND CONDITIONS
-
-APPENDIX: How to apply the Apache License to your work.
-
-   To apply the Apache License to your work, attach the following
-   boilerplate notice, with the fields enclosed by brackets "[]"
-   replaced with your own identifying information. (Don't include
-   the brackets!)  The text should be enclosed in the appropriate
-   comment syntax for the file format. We also recommend that a
-   file or class name and description of purpose be included on the
-   same "printed page" as the copyright notice for easier
-   identification within third-party archives.
-
-Copyright [yyyy] [name of copyright owner]
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-~~~~
-```
-
-### 54. Used by clipboard-win 5.4.3
+### 52. Used by clipboard-win 5.4.3
 
 ```text
 clipboard-win is offered under BSL-1.0; it publishes no licence file, so the standard BSL-1.0 text follows.
@@ -3613,7 +3348,7 @@ The copyright notices in the Software and this entire statement, including the a
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 55. Used by combine 4.6.8
+### 53. Used by combine 4.6.8
 
 ```text
 The MIT License (MIT)
@@ -3639,7 +3374,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 56. Used by core_maths 0.1.1
+### 54. Used by core_maths 0.1.1
 
 ```text
 MIT License
@@ -3665,7 +3400,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 57. Used by cosmic-text 0.15.0
+### 55. Used by cosmic-text 0.17.0
 
 ```text
                                  Apache License
@@ -3871,7 +3606,7 @@ SOFTWARE.
    limitations under the License.
 ```
 
-### 58. Used by cosmic-text 0.15.0
+### 56. Used by cosmic-text 0.17.0
 
 ```text
 The MIT License (MIT)
@@ -3897,7 +3632,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 59. Used by crc32fast 1.5.2, foreign-types 0.5.0, foreign-types-macros 0.2.4, foreign-types-shared 0.3.1, hex 0.4.3, jni-sys 0.3.1, jni-sys 0.4.1, notify-rust 4.17.0, quick-error 2.0.1, serde_spanned 0.6.9, toml_edit 0.19.15, toml_edit 0.20.2, winapi 0.3.9
+### 57. Used by crc32fast 1.5.5, foreign-types 0.5.0, foreign-types-macros 0.2.4, foreign-types-shared 0.3.1, hex 0.4.3, jni-sys 0.3.1, jni-sys 0.4.1, notify-rust 4.17.0, quick-error 2.0.1, serde_spanned 0.6.9, toml_edit 0.19.15, toml_edit 0.20.2, winapi 0.3.9
 
 ```text
                                  Apache License
@@ -4103,7 +3838,7 @@ SOFTWARE.
    limitations under the License.
 ```
 
-### 60. Used by crc32fast 1.5.2
+### 58. Used by crc32fast 1.5.5
 
 ```text
 MIT License
@@ -4129,7 +3864,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 61. Used by crossbeam-channel 0.5.17
+### 59. Used by crossbeam-channel 0.5.17
 
 ```text
 ===============================================================================
@@ -4727,7 +4462,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 62. Used by crossbeam-channel 0.5.17, crossbeam-utils 0.8.23
+### 60. Used by crossbeam-channel 0.5.17, crossbeam-queue 0.3.14, crossbeam-utils 0.8.23
 
 ```text
 The MIT License (MIT)
@@ -4759,7 +4494,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 63. Used by crunchy 0.2.4
+### 61. Used by crunchy 0.2.4
 
 ```text
 The MIT License (MIT)
@@ -4785,7 +4520,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 64. Used by ctor 0.10.1, dpi 0.1.2, dtor 0.8.1, winit 0.30.13
+### 62. Used by ctor 0.10.1, dpi 0.1.2, dtor 0.8.1, winit 0.30.13
 
 ```text
 Apache License
@@ -4991,7 +4726,7 @@ Apache License
    limitations under the License.
 ```
 
-### 65. Used by ctor 0.10.1, dtor 0.8.1, tinyvec 1.13.3
+### 63. Used by ctor 0.10.1, dtor 0.8.1, tinyvec 1.13.3
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -5001,7 +4736,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 66. Used by cursor-icon 1.2.0
+### 64. Used by cursor-icon 1.2.0
 
 ```text
                                  Apache License
@@ -5207,7 +4942,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
    limitations under the License.
 ```
 
-### 67. Used by cursor-icon 1.2.0, wayland-csd-frame 0.3.0
+### 65. Used by cursor-icon 1.2.0, wayland-csd-frame 0.3.0
 
 ```text
 Copyright (c) 2023 Kirill Chibisov
@@ -5231,7 +4966,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 68. Used by cursor-icon 1.2.0
+### 66. Used by cursor-icon 1.2.0
 
 ```text
 Copyright (c) 2023 Kirill Chibisov
@@ -5247,7 +4982,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 69. Used by data-url 0.3.2, idna 1.1.0, percent-encoding 2.3.2, url 2.5.9
+### 67. Used by data-url 0.3.2, idna 1.1.0, percent-encoding 2.3.2, url 2.5.9
 
 ```text
 Copyright (c) 2013-2025 The rust-url developers
@@ -5277,7 +5012,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 70. Used by deranged 0.5.9
+### 68. Used by deranged 0.5.9
 
 ```text
                                  Apache License
@@ -5483,7 +5218,7 @@ DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 71. Used by deranged 0.5.9
+### 69. Used by deranged 0.5.9
 
 ```text
 Copyright (c) 2024 Jacob Pratt et al.
@@ -5507,7 +5242,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 72. Used by dirs 6.0.0, dirs-sys 0.5.0
+### 70. Used by dirs 6.0.0, dirs-sys 0.5.0
 
 ```text
                               Apache License
@@ -5686,7 +5421,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
    of your accepting any such warranty or additional liability.
 ```
 
-### 73. Used by dirs 6.0.0, dirs-sys 0.5.0
+### 71. Used by dirs 6.0.0, dirs-sys 0.5.0
 
 ```text
 Copyright (c) 2018-2019 dirs-rs contributors
@@ -5710,7 +5445,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 74. Used by dispatch 0.2.0
+### 72. Used by dispatch 0.2.0
 
 ```text
 dispatch is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -5735,7 +5470,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 75. Used by dispatch2 0.3.1
+### 73. Used by dispatch2 0.3.1
 
 ```text
 dispatch2 is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -5760,7 +5495,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 76. Used by dlib 0.5.3
+### 74. Used by dlib 0.5.3
 
 ```text
 Copyright (c) 2015 Victor Berger
@@ -5784,7 +5519,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 77. Used by doctest-file 1.1.1
+### 75. Used by doctest-file 1.1.1
 
 ```text
 BSD Zero Clause License
@@ -5803,7 +5538,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ```
 
-### 78. Used by document-features 0.2.12
+### 76. Used by document-features 0.2.12
 
 ```text
 Apache License
@@ -5881,7 +5616,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 79. Used by document-features 0.2.12
+### 77. Used by document-features 0.2.12
 
 ```text
 Copyright (c) 2020 Olivier Goffart <ogoffart@sixtyfps.io>
@@ -5905,7 +5640,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 80. Used by downcast-rs 1.2.1
+### 78. Used by downcast-rs 1.2.1
 
 ```text
 Copyright (c) 2020 Ashish Myles and contributors
@@ -5935,7 +5670,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 81. Used by dpi 0.1.2
+### 79. Used by dpi 0.1.2
 
 ```text
 rust-lang/libm as a whole is available for use under the MIT license:
@@ -5991,7 +5726,7 @@ have been licensed under extremely permissive terms.
 ------------------------------------------------------------------------------
 ```
 
-### 82. Used by ecolor 0.33.3
+### 80. Used by ecolor 0.33.3
 
 ```text
 ecolor is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6016,7 +5751,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 83. Used by eframe 0.33.3
+### 81. Used by eframe 0.33.3
 
 ```text
 eframe is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6041,7 +5776,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 84. Used by egui 0.33.3
+### 82. Used by egui 0.33.3
 
 ```text
 egui is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6066,7 +5801,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 85. Used by egui-wgpu 0.33.3
+### 83. Used by egui-wgpu 0.33.3
 
 ```text
 egui-wgpu is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6091,7 +5826,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 86. Used by egui-winit 0.33.3
+### 84. Used by egui-winit 0.33.3
 
 ```text
 egui-winit is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6116,7 +5851,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 87. Used by egui_glow 0.33.3
+### 85. Used by egui_glow 0.33.3
 
 ```text
 egui_glow is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6141,7 +5876,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 88. Used by emath 0.33.3
+### 86. Used by emath 0.33.3
 
 ```text
 emath is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6166,7 +5901,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 89. Used by enumflags2 0.7.12
+### 87. Used by enumflags2 0.7.12
 
 ```text
 Apache License
@@ -6239,7 +5974,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 90. Used by enumflags2 0.7.12
+### 88. Used by enumflags2 0.7.12
 
 ```text
 Copyright (c) 2017-2023 Maik Klein, Maja Kądziołka
@@ -6269,7 +6004,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 91. Used by enumflags2_derive 0.7.12
+### 89. Used by enumflags2_derive 0.7.12
 
 ```text
 Apache License
@@ -6342,7 +6077,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 92. Used by enumflags2_derive 0.7.12
+### 90. Used by enumflags2_derive 0.7.12
 
 ```text
 Copyright (c) 2017 Maik Klein
@@ -6372,7 +6107,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 93. Used by epaint 0.33.3
+### 91. Used by epaint 0.33.3
 
 ```text
 epaint is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -6397,7 +6132,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 94. Used by epaint_default_fonts 0.33.3
+### 92. Used by epaint_default_fonts 0.33.3
 
 ```text
 -------------------------------
@@ -6498,7 +6233,7 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM OTHER
 DEALINGS IN THE FONT SOFTWARE.
 ```
 
-### 95. Used by epaint_default_fonts 0.33.3
+### 93. Used by epaint_default_fonts 0.33.3
 
 ```text
 MIT License
@@ -6512,7 +6247,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 96. Used by epaint_default_fonts 0.33.3
+### 94. Used by epaint_default_fonts 0.33.3
 
 ```text
 The work in the Hack project is Copyright 2018 Source Foundry Authors and licensed under the MIT License
@@ -6548,7 +6283,7 @@ THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
 Except as contained in this notice, the names of Gnome, the Gnome Foundation, and Bitstream Inc., shall not be used in advertising or otherwise to promote the sale, use or other dealings in this Font Software without prior written authorization from the Gnome Foundation or Bitstream Inc., respectively. For further information, contact: fonts at gnome dot org.
 ```
 
-### 97. Used by epaint_default_fonts 0.33.3
+### 95. Used by epaint_default_fonts 0.33.3
 
 ```text
 This Font Software is licensed under the SIL Open Font License,
@@ -6645,7 +6380,7 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
-### 98. Used by equivalent 1.0.2
+### 96. Used by equivalent 1.0.2
 
 ```text
 Copyright (c) 2016--2023
@@ -6675,7 +6410,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 99. Used by errno 0.3.14
+### 97. Used by errno 0.3.14
 
 ```text
 Copyright (c) 2014 Chris Wong
@@ -6705,7 +6440,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 100. Used by error-code 3.4.0
+### 98. Used by error-code 3.4.0
 
 ```text
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -6733,7 +6468,7 @@ ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 101. Used by fax 0.2.7
+### 99. Used by fax 0.2.7
 
 ```text
 Copyright © 2021 The pdf-rs contributers.
@@ -6745,7 +6480,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 102. Used by fdeflate 0.3.7, image 0.25.10
+### 100. Used by fdeflate 0.3.7, image 0.25.10
 
 ```text
 MIT License
@@ -6775,7 +6510,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 103. Used by field-offset 0.3.6
+### 101. Used by field-offset 0.3.6
 
 ```text
 MIT License
@@ -6801,7 +6536,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 104. Used by fixedbitset 0.5.7
+### 102. Used by fixedbitset 0.5.7
 
 ```text
 Copyright (c) 2015-2017
@@ -6831,7 +6566,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 105. Used by flate2 1.1.10
+### 103. Used by flate2 1.1.10
 
 ```text
 Copyright (c) 2014-2026 Alex Crichton
@@ -6861,7 +6596,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 106. Used by float-cmp 0.9.0
+### 104. Used by float-cmp 0.9.0
 
 ```text
 Copyright (c) 2014-2020 Optimal Computing (NZ) Ltd
@@ -6885,7 +6620,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ```
 
-### 107. Used by foldhash 0.1.5, foldhash 0.2.0
+### 105. Used by foldhash 0.1.5, foldhash 0.2.0
 
 ```text
 Copyright (c) 2024 Orson Peters
@@ -6909,109 +6644,7 @@ the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 108. Used by font-types 0.10.1, read-fonts 0.35.0, skrifa 0.37.0
-
-```text
-Apache License
-
-Version 2.0, January 2004
-
-http://www.apache.org/licenses/
-
-TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-
-1. Definitions.
-
-"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
-
-"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
-
-"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
-
-"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
-
-"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
-
-"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
-
-"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
-
-"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
-
-"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
-
-"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
-
-2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
-
-3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.
-
-4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:
-
-You must give any other recipients of the Work or Derivative Works a copy of this License; and
-You must cause any modified files to carry prominent notices stating that You changed the files; and
-You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
-If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.
-
-You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.
-5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
-
-6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
-
-7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
-
-8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
-
-9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
-
-END OF TERMS AND CONDITIONS
-
-Copyright 2019 Colin Rothfels
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
-### 109. Used by font-types 0.10.1, read-fonts 0.35.0, skrifa 0.37.0
-
-```text
-Copyright (c) 2019 Colin Rothfels
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-```
-
-### 110. Used by font-types 0.12.6, read-fonts 0.41.0, skrifa 0.44.0
+### 106. Used by font-types 0.12.6, read-fonts 0.41.0, skrifa 0.44.0
 
 ```text
 Apache License
@@ -7083,7 +6716,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 111. Used by font-types 0.12.6, read-fonts 0.41.0, skrifa 0.44.0
+### 107. Used by font-types 0.12.6, read-fonts 0.41.0, skrifa 0.44.0
 
 ```text
 Copyright (c) 2019 Fontations Developers
@@ -7113,7 +6746,109 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 112. Used by fontconfig-parser 0.5.8
+### 108. Used by font-types 0.9.0, read-fonts 0.34.0, skrifa 0.36.0
+
+```text
+Apache License
+
+Version 2.0, January 2004
+
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+
+"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+
+"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+
+"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+
+"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+
+"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+
+"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
+
+"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
+
+"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
+
+"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+
+2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by combination of their Contribution(s) with the Work to which such Contribution(s) was submitted. If You institute patent litigation against any entity (including a cross-claim or counterclaim in a lawsuit) alleging that the Work or a Contribution incorporated within the Work constitutes direct or contributory patent infringement, then any patent licenses granted to You under this License for that Work shall terminate as of the date such litigation is filed.
+
+4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without modifications, and in Source or Object form, provided that You meet the following conditions:
+
+You must give any other recipients of the Work or Derivative Works a copy of this License; and
+You must cause any modified files to carry prominent notices stating that You changed the files; and
+You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work, excluding those notices that do not pertain to any part of the Derivative Works; and
+If the Work includes a "NOTICE" text file as part of its distribution, then any Derivative Works that You distribute must include a readable copy of the attribution notices contained within such NOTICE file, excluding those notices that do not pertain to any part of the Derivative Works, in at least one of the following places: within a NOTICE text file distributed as part of the Derivative Works; within the Source form or documentation, if provided along with the Derivative Works; or, within a display generated by the Derivative Works, if and wherever such third-party notices normally appear. The contents of the NOTICE file are for informational purposes only and do not modify the License. You may add Your own attribution notices within Derivative Works that You distribute, alongside or as an addendum to the NOTICE text from the Work, provided that such additional attribution notices cannot be construed as modifying the License.
+
+You may add Your own copyright statement to Your modifications and may provide additional or different license terms and conditions for use, reproduction, or distribution of Your modifications, or for any such Derivative Works as a whole, provided Your use, reproduction, and distribution of the Work otherwise complies with the conditions stated in this License.
+5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work by You to the Licensor shall be under the terms and conditions of this License, without any additional terms or conditions. Notwithstanding the above, nothing herein shall supersede or modify the terms of any separate license agreement you may have executed with Licensor regarding such Contributions.
+
+6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor, except as required for reasonable and customary use in describing the origin of the Work and reproducing the content of the NOTICE file.
+
+7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each Contributor provides its Contributions) on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied, including, without limitation, any warranties or conditions of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A PARTICULAR PURPOSE. You are solely responsible for determining the appropriateness of using or redistributing the Work and assume any risks associated with Your exercise of permissions under this License.
+
+8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise, unless required by applicable law (such as deliberate and grossly negligent acts) or agreed to in writing, shall any Contributor be liable to You for damages, including any direct, indirect, special, incidental, or consequential damages of any character arising as a result of this License or out of the use or inability to use the Work (including but not limited to damages for loss of goodwill, work stoppage, computer failure or malfunction, or any and all other commercial damages or losses), even if such Contributor has been advised of the possibility of such damages.
+
+9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer, and charge a fee for, acceptance of support, warranty, indemnity, or other liability obligations and/or rights consistent with this License. However, in accepting such obligations, You may act only on Your own behalf and on Your sole responsibility, not on behalf of any other Contributor, and only if You agree to indemnify, defend, and hold each Contributor harmless for any liability incurred by, or claims asserted against, such Contributor by reason of your accepting any such warranty or additional liability.
+
+END OF TERMS AND CONDITIONS
+
+Copyright 2019 Colin Rothfels
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+```
+
+### 109. Used by font-types 0.9.0, read-fonts 0.34.0, skrifa 0.36.0
+
+```text
+Copyright (c) 2019 Colin Rothfels
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+### 110. Used by fontconfig-parser 0.5.8
 
 ```text
 MIT License
@@ -7139,7 +6874,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 113. Used by fontdb 0.23.0
+### 111. Used by fontdb 0.23.0
 
 ```text
 The MIT License (MIT)
@@ -7165,7 +6900,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 114. Used by foreign-types 0.5.0, foreign-types-macros 0.2.4, foreign-types-shared 0.3.1
+### 112. Used by foreign-types 0.5.0, foreign-types-macros 0.2.4, foreign-types-shared 0.3.1
 
 ```text
 Copyright (c) 2017 The foreign-types Developers
@@ -7189,7 +6924,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 115. Used by form_urlencoded 1.2.3
+### 113. Used by form_urlencoded 1.2.3
 
 ```text
 Copyright (c) 2013-2016 The rust-url developers
@@ -7219,7 +6954,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 116. Used by fs2 0.4.3, heck 0.4.1, unicode-bidi 0.3.18, unicode-segmentation 1.13.3, unicode-width 0.2.2
+### 114. Used by fs2 0.4.3, heck 0.4.1, unicode-bidi 0.3.18, unicode-segmentation 1.13.3, unicode-width 0.2.2
 
 ```text
 Copyright (c) 2015 The Rust Project Developers
@@ -7249,33 +6984,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 117. Used by fsevent-sys 4.1.0
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2015 Pierre Baillet
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
-### 118. Used by futures-channel 0.3.34, futures-core 0.3.34, futures-executor 0.3.34, futures-io 0.3.34, futures-macro 0.3.34, futures-task 0.3.34, futures-util 0.3.34
+### 115. Used by futures-channel 0.3.34, futures-core 0.3.34, futures-executor 0.3.34, futures-io 0.3.34, futures-macro 0.3.34, futures-task 0.3.34, futures-util 0.3.34
 
 ```text
                               Apache License
@@ -7482,7 +7191,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 119. Used by futures-channel 0.3.34, futures-core 0.3.34, futures-executor 0.3.34, futures-io 0.3.34, futures-macro 0.3.34, futures-task 0.3.34, futures-util 0.3.34
+### 116. Used by futures-channel 0.3.34, futures-core 0.3.34, futures-executor 0.3.34, futures-io 0.3.34, futures-macro 0.3.34, futures-task 0.3.34, futures-util 0.3.34
 
 ```text
 Copyright (c) 2016 Alex Crichton
@@ -7513,7 +7222,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 120. Used by getrandom 0.3.4, getrandom 0.4.3
+### 117. Used by getrandom 0.3.4, getrandom 0.4.3
 
 ```text
                               Apache License
@@ -7719,7 +7428,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 121. Used by getrandom 0.3.4
+### 118. Used by getrandom 0.3.4
 
 ```text
 Copyright (c) 2018-2025 The rust-random Project Developers
@@ -7750,7 +7459,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 122. Used by getrandom 0.4.3
+### 119. Used by getrandom 0.4.3
 
 ```text
 Copyright (c) 2018-2026 The rust-random Project Developers
@@ -7781,7 +7490,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 123. Used by global-hotkey 0.8.0, muda 0.19.3, tray-icon 0.24.2
+### 120. Used by global-hotkey 0.8.0, muda 0.19.3, tray-icon 0.24.2
 
 ```text
 MIT License
@@ -7807,7 +7516,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 124. Used by global-hotkey 0.8.0
+### 121. Used by global-hotkey 0.8.0
 
 ```text
 SPDXVersion: SPDX-2.1
@@ -7831,7 +7540,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/global-hotkey.git
 Creator: Person: Daniel Thompson-Yvetot
 ```
 
-### 125. Used by glow 0.16.0
+### 122. Used by glow 0.16.0
 
 ```text
 This software is provided 'as-is', without any express or implied
@@ -7851,7 +7560,7 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 126. Used by glutin 0.32.3, glutin_egl_sys 0.7.1, glutin_glx_sys 0.6.1, glutin_wgl_sys 0.6.1, softbuffer 0.4.8
+### 123. Used by glutin 0.32.3, glutin_egl_sys 0.7.1, glutin_glx_sys 0.6.1, glutin_wgl_sys 0.6.1, softbuffer 0.4.8
 
 ```text
 Apache License
@@ -8057,7 +7766,7 @@ Apache License
    limitations under the License.
 ```
 
-### 127. Used by glutin-winit 0.5.0
+### 124. Used by glutin-winit 0.5.0
 
 ```text
 Copyright © 2022 Kirill Chibisov
@@ -8081,7 +7790,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 128. Used by harfrust 0.3.2
+### 125. Used by harfrust 0.2.1
 
 ```text
 The MIT License (MIT)
@@ -8108,7 +7817,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 129. Used by hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1
+### 126. Used by hashbrown 0.15.5, hashbrown 0.16.1, hashbrown 0.17.1
 
 ```text
 Copyright (c) 2016 Amanieu d'Antras
@@ -8138,7 +7847,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 130. Used by hex 0.4.3
+### 127. Used by hex 0.4.3
 
 ```text
 Copyright (c) 2013-2014 The Rust Project Developers.
@@ -8163,7 +7872,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 131. Used by hexf-parse 0.2.1
+### 128. Used by hexf-parse 0.2.1
 
 ```text
 hexf-parse is offered under CC0-1.0; it publishes no licence file, so the standard CC0-1.0 text follows.
@@ -8291,243 +8000,7 @@ express Statement of Purpose.
     this CC0 or use of the Work.
 ```
 
-### 132. Used by iana-time-zone 0.1.65, iana-time-zone-haiku 0.1.2
-
-```text
-                              Apache License
-                        Version 2.0, January 2004
-                     http://www.apache.org/licenses/
-
-TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
-
-1. Definitions.
-
-   "License" shall mean the terms and conditions for use, reproduction,
-   and distribution as defined by Sections 1 through 9 of this document.
-
-   "Licensor" shall mean the copyright owner or entity authorized by
-   the copyright owner that is granting the License.
-
-   "Legal Entity" shall mean the union of the acting entity and all
-   other entities that control, are controlled by, or are under common
-   control with that entity. For the purposes of this definition,
-   "control" means (i) the power, direct or indirect, to cause the
-   direction or management of such entity, whether by contract or
-   otherwise, or (ii) ownership of fifty percent (50%) or more of the
-   outstanding shares, or (iii) beneficial ownership of such entity.
-
-   "You" (or "Your") shall mean an individual or Legal Entity
-   exercising permissions granted by this License.
-
-   "Source" form shall mean the preferred form for making modifications,
-   including but not limited to software source code, documentation
-   source, and configuration files.
-
-   "Object" form shall mean any form resulting from mechanical
-   transformation or translation of a Source form, including but
-   not limited to compiled object code, generated documentation,
-   and conversions to other media types.
-
-   "Work" shall mean the work of authorship, whether in Source or
-   Object form, made available under the License, as indicated by a
-   copyright notice that is included in or attached to the work
-   (an example is provided in the Appendix below).
-
-   "Derivative Works" shall mean any work, whether in Source or Object
-   form, that is based on (or derived from) the Work and for which the
-   editorial revisions, annotations, elaborations, or other modifications
-   represent, as a whole, an original work of authorship. For the purposes
-   of this License, Derivative Works shall not include works that remain
-   separable from, or merely link (or bind by name) to the interfaces of,
-   the Work and Derivative Works thereof.
-
-   "Contribution" shall mean any work of authorship, including
-   the original version of the Work and any modifications or additions
-   to that Work or Derivative Works thereof, that is intentionally
-   submitted to Licensor for inclusion in the Work by the copyright owner
-   or by an individual or Legal Entity authorized to submit on behalf of
-   the copyright owner. For the purposes of this definition, "submitted"
-   means any form of electronic, verbal, or written communication sent
-   to the Licensor or its representatives, including but not limited to
-   communication on electronic mailing lists, source code control systems,
-   and issue tracking systems that are managed by, or on behalf of, the
-   Licensor for the purpose of discussing and improving the Work, but
-   excluding communication that is conspicuously marked or otherwise
-   designated in writing by the copyright owner as "Not a Contribution."
-
-   "Contributor" shall mean Licensor and any individual or Legal Entity
-   on behalf of whom a Contribution has been received by Licensor and
-   subsequently incorporated within the Work.
-
-2. Grant of Copyright License. Subject to the terms and conditions of
-   this License, each Contributor hereby grants to You a perpetual,
-   worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-   copyright license to reproduce, prepare Derivative Works of,
-   publicly display, publicly perform, sublicense, and distribute the
-   Work and such Derivative Works in Source or Object form.
-
-3. Grant of Patent License. Subject to the terms and conditions of
-   this License, each Contributor hereby grants to You a perpetual,
-   worldwide, non-exclusive, no-charge, royalty-free, irrevocable
-   (except as stated in this section) patent license to make, have made,
-   use, offer to sell, sell, import, and otherwise transfer the Work,
-   where such license applies only to those patent claims licensable
-   by such Contributor that are necessarily infringed by their
-   Contribution(s) alone or by combination of their Contribution(s)
-   with the Work to which such Contribution(s) was submitted. If You
-   institute patent litigation against any entity (including a
-   cross-claim or counterclaim in a lawsuit) alleging that the Work
-   or a Contribution incorporated within the Work constitutes direct
-   or contributory patent infringement, then any patent licenses
-   granted to You under this License for that Work shall terminate
-   as of the date such litigation is filed.
-
-4. Redistribution. You may reproduce and distribute copies of the
-   Work or Derivative Works thereof in any medium, with or without
-   modifications, and in Source or Object form, provided that You
-   meet the following conditions:
-
-   (a) You must give any other recipients of the Work or
-       Derivative Works a copy of this License; and
-
-   (b) You must cause any modified files to carry prominent notices
-       stating that You changed the files; and
-
-   (c) You must retain, in the Source form of any Derivative Works
-       that You distribute, all copyright, patent, trademark, and
-       attribution notices from the Source form of the Work,
-       excluding those notices that do not pertain to any part of
-       the Derivative Works; and
-
-   (d) If the Work includes a "NOTICE" text file as part of its
-       distribution, then any Derivative Works that You distribute must
-       include a readable copy of the attribution notices contained
-       within such NOTICE file, excluding those notices that do not
-       pertain to any part of the Derivative Works, in at least one
-       of the following places: within a NOTICE text file distributed
-       as part of the Derivative Works; within the Source form or
-       documentation, if provided along with the Derivative Works; or,
-       within a display generated by the Derivative Works, if and
-       wherever such third-party notices normally appear. The contents
-       of the NOTICE file are for informational purposes only and
-       do not modify the License. You may add Your own attribution
-       notices within Derivative Works that You distribute, alongside
-       or as an addendum to the NOTICE text from the Work, provided
-       that such additional attribution notices cannot be construed
-       as modifying the License.
-
-   You may add Your own copyright statement to Your modifications and
-   may provide additional or different license terms and conditions
-   for use, reproduction, or distribution of Your modifications, or
-   for any such Derivative Works as a whole, provided Your use,
-   reproduction, and distribution of the Work otherwise complies with
-   the conditions stated in this License.
-
-5. Submission of Contributions. Unless You explicitly state otherwise,
-   any Contribution intentionally submitted for inclusion in the Work
-   by You to the Licensor shall be under the terms and conditions of
-   this License, without any additional terms or conditions.
-   Notwithstanding the above, nothing herein shall supersede or modify
-   the terms of any separate license agreement you may have executed
-   with Licensor regarding such Contributions.
-
-6. Trademarks. This License does not grant permission to use the trade
-   names, trademarks, service marks, or product names of the Licensor,
-   except as required for reasonable and customary use in describing the
-   origin of the Work and reproducing the content of the NOTICE file.
-
-7. Disclaimer of Warranty. Unless required by applicable law or
-   agreed to in writing, Licensor provides the Work (and each
-   Contributor provides its Contributions) on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
-   implied, including, without limitation, any warranties or conditions
-   of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
-   PARTICULAR PURPOSE. You are solely responsible for determining the
-   appropriateness of using or redistributing the Work and assume any
-   risks associated with Your exercise of permissions under this License.
-
-8. Limitation of Liability. In no event and under no legal theory,
-   whether in tort (including negligence), contract, or otherwise,
-   unless required by applicable law (such as deliberate and grossly
-   negligent acts) or agreed to in writing, shall any Contributor be
-   liable to You for damages, including any direct, indirect, special,
-   incidental, or consequential damages of any character arising as a
-   result of this License or out of the use or inability to use the
-   Work (including but not limited to damages for loss of goodwill,
-   work stoppage, computer failure or malfunction, or any and all
-   other commercial damages or losses), even if such Contributor
-   has been advised of the possibility of such damages.
-
-9. Accepting Warranty or Additional Liability. While redistributing
-   the Work or Derivative Works thereof, You may choose to offer,
-   and charge a fee for, acceptance of support, warranty, indemnity,
-   or other liability obligations and/or rights consistent with this
-   License. However, in accepting such obligations, You may act only
-   on Your own behalf and on Your sole responsibility, not on behalf
-   of any other Contributor, and only if You agree to indemnify,
-   defend, and hold each Contributor harmless for any liability
-   incurred by, or claims asserted against, such Contributor by reason
-   of your accepting any such warranty or additional liability.
-
-END OF TERMS AND CONDITIONS
-
-APPENDIX: How to apply the Apache License to your work.
-
-   To apply the Apache License to your work, attach the following
-   boilerplate notice, with the fields enclosed by brackets "[]"
-   replaced with your own identifying information. (Don't include
-   the brackets!)  The text should be enclosed in the appropriate
-   comment syntax for the file format. We also recommend that a
-   file or class name and description of purpose be included on the
-   same "printed page" as the copyright notice for easier
-   identification within third-party archives.
-
-Copyright 2020 Andrew Straw
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-```
-
-### 133. Used by iana-time-zone 0.1.65, iana-time-zone-haiku 0.1.2
-
-```text
-Copyright (c) 2020 Andrew D. Straw
-
-Permission is hereby granted, free of charge, to any
-person obtaining a copy of this software and associated
-documentation files (the "Software"), to deal in the
-Software without restriction, including without
-limitation the rights to use, copy, modify, merge,
-publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software
-is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice
-shall be included in all copies or substantial portions
-of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
-TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
-CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
-IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-DEALINGS IN THE SOFTWARE.
-```
-
-### 134. Used by icu_collections 2.3.0, icu_locale_core 2.3.0, icu_normalizer 2.3.0, icu_normalizer_data 2.3.0, icu_properties 2.3.0, icu_properties_data 2.3.0, icu_provider 2.3.1, litemap 0.8.3, potential_utf 0.1.6, tinystr 0.8.4, writeable 0.6.4, yoke 0.8.3, yoke-derive 0.8.4, zerofrom 0.1.8, zerofrom-derive 0.1.8, zerotrie 0.2.5, zerovec 0.11.8, zerovec-derive 0.11.6
+### 129. Used by icu_collections 2.3.0, icu_locale_core 2.3.0, icu_normalizer 2.3.0, icu_normalizer_data 2.3.0, icu_properties 2.3.0, icu_properties_data 2.3.0, icu_provider 2.3.1, litemap 0.8.3, potential_utf 0.1.6, tinystr 0.8.4, writeable 0.6.4, yoke 0.8.3, yoke-derive 0.8.4, zerofrom 0.1.8, zerofrom-derive 0.1.8, zerotrie 0.2.5, zerovec 0.11.8, zerovec-derive 0.11.6
 
 ```text
 UNICODE LICENSE V3
@@ -8578,7 +8051,7 @@ Portions of ICU4X may have been adapted from ICU4C and/or ICU4J.
 ICU 1.8.1 to ICU 57.1 © 1995-2016 International Business Machines Corporation and others.
 ```
 
-### 135. Used by idna_adapter 1.2.2
+### 130. Used by idna_adapter 1.2.2
 
 ```text
 Copyright (c) The rust-url developers
@@ -8608,7 +8081,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 136. Used by imagesize 0.13.0
+### 131. Used by imagesize 0.13.0
 
 ```text
 MIT License
@@ -8634,7 +8107,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 137. Used by indexmap 2.14.2
+### 132. Used by indexmap 2.14.2
 
 ```text
 Copyright (c) 2016--2017
@@ -8664,7 +8137,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 138. Used by inotify 0.11.5, inotify-sys 0.1.8
+### 133. Used by inotify 0.11.5, inotify-sys 0.1.8
 
 ```text
 Copyright (c) Hanno Braun and contributors
@@ -8682,7 +8155,7 @@ TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF
 THIS SOFTWARE.
 ```
 
-### 139. Used by Inter (typeface, carried by Arcade Link's design kit)
+### 134. Used by Inter (typeface, carried by Arcade Link's design kit)
 
 ```text
 Copyright (c) 2016 The Inter Project Authors (https://github.com/rsms/inter)
@@ -8779,7 +8252,7 @@ FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
 OTHER DEALINGS IN THE FONT SOFTWARE.
 ```
 
-### 140. Used by interprocess 2.4.5
+### 135. Used by interprocess 2.4.9
 
 ```text
 										Apache License
@@ -8960,7 +8433,7 @@ TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
 END OF TERMS AND CONDITIONS
 ```
 
-### 141. Used by interprocess 2.4.5
+### 136. Used by interprocess 2.4.9
 
 ```text
 BSD Zero Clause License
@@ -8979,7 +8452,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ```
 
-### 142. Used by is-docker 0.2.0, is-wsl 0.4.0
+### 137. Used by is-docker 0.2.0, is-wsl 0.4.0
 
 ```text
 MIT License
@@ -9005,7 +8478,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 143. Used by jni 0.22.4
+### 138. Used by jiff 1.0.2, jiff-core 1.0.1, jiff-static 1.0.2, memchr 2.8.3, same-file 1.0.6, walkdir 2.5.0, winapi-util 0.1.11
+
+```text
+This project is dual-licensed under the Unlicense and MIT licenses.
+
+You may use this code under the terms of either license.
+```
+
+### 139. Used by jni 0.22.4
 
 ```text
 jni is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -9030,7 +8511,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 144. Used by jni-macros 0.22.4
+### 140. Used by jni-macros 0.22.4
 
 ```text
 jni-macros is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -9055,7 +8536,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 145. Used by jni-sys 0.3.1, jni-sys 0.4.1
+### 141. Used by jni-sys 0.3.1, jni-sys 0.4.1
 
 ```text
 Copyright (c) 2015 The rust-jni-sys Developers
@@ -9079,7 +8560,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 146. Used by jni-sys-macros 0.4.1
+### 142. Used by jni-sys-macros 0.4.1
 
 ```text
 jni-sys-macros is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -9104,7 +8585,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 147. Used by keyboard-types 0.7.0
+### 143. Used by keyboard-types 0.7.0
 
 ```text
 Copyright (c) 2017 Pyfisch
@@ -9128,7 +8609,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 148. Used by kqueue 1.2.1, kqueue-sys 1.1.2
+### 144. Used by kqueue 1.2.1, kqueue-sys 1.1.2
 
 ```text
 Copyright (c) 2016 William Orr <will@worrbase.com>
@@ -9152,7 +8633,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 149. Used by ksni 0.3.6
+### 145. Used by ksni 0.3.7
 
 ```text
 ksni is offered under Unlicense; it publishes no licence file, so the standard Unlicense text follows.
@@ -9169,7 +8650,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 For more information, please refer to <http://unlicense.org/>
 ```
 
-### 150. Used by kurbo 0.11.3
+### 146. Used by kurbo 0.11.3
 
 ```text
 Copyright (c) 2018 Raph Levien
@@ -9199,7 +8680,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 151. Used by libappindicator 0.9.0
+### 147. Used by libappindicator 0.9.0
 
 ```text
 MIT License
@@ -9226,7 +8707,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 152. Used by libappindicator-sys 0.9.0
+### 148. Used by libappindicator-sys 0.9.0
 
 ```text
 libappindicator-sys is offered under Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -9251,7 +8732,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 153. Used by libc 0.2.190
+### 149. Used by libc 0.2.191
 
 ```text
 Copyright (c) The Rust Project Developers
@@ -9281,7 +8762,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 154. Used by libloading 0.7.4, libloading 0.8.9
+### 150. Used by libloading 0.7.4, libloading 0.8.9
 
 ```text
 Copyright © 2015, Simonas Kazlauskas
@@ -9298,7 +8779,7 @@ NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE US
 THIS SOFTWARE.
 ```
 
-### 155. Used by libm 0.2.16
+### 151. Used by libm 0.2.16
 
 ```text
 rust-lang/libm as a whole is available for use under the MIT license:
@@ -9561,7 +9042,7 @@ have been licensed under extremely permissive terms.
 Copyright notices are retained in src/* files where relevant.
 ```
 
-### 156. Used by libredox 0.1.25
+### 152. Used by libredox 0.1.25
 
 ```text
 MIT License
@@ -9587,7 +9068,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 157. Used by libxdo 0.6.0, libxdo-sys 0.11.0
+### 153. Used by libxdo 0.6.0, libxdo-sys 0.11.0
 
 ```text
 The MIT License (MIT)
@@ -9613,7 +9094,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 158. Used by linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, rustix 0.38.44, rustix 1.1.6, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wit-bindgen 0.57.1
+### 154. Used by linux-raw-sys 0.12.1, linux-raw-sys 0.4.15, rustix 0.38.44, rustix 1.1.6, wasi 0.11.1+wasi-snapshot-preview1, wasip2 1.0.4+wasi-0.2.12, wit-bindgen 0.57.1
 
 ```text
                                  Apache License
@@ -9836,7 +9317,7 @@ the License, but only in their entirety and only with respect to the Combined
 Software.
 ```
 
-### 159. Used by linux-raw-sys 0.12.1, linux-raw-sys 0.4.15
+### 155. Used by linux-raw-sys 0.12.1, linux-raw-sys 0.4.15
 
 ```text
 Short version for non-lawyers:
@@ -9870,7 +9351,7 @@ is licensed under:
 at your option.
 ```
 
-### 160. Used by litrs 1.0.0
+### 156. Used by litrs 1.0.0
 
 ```text
 Copyright (c) 2020 Project Developers
@@ -9900,7 +9381,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 161. Used by lock_api 0.4.14, parking_lot 0.12.5, parking_lot_core 0.9.12
+### 157. Used by lock_api 0.4.14, parking_lot 0.12.5, parking_lot_core 0.9.12
 
 ```text
 Copyright (c) 2016 The Rust Project Developers
@@ -9930,7 +9411,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 162. Used by mac-notification-sys 0.6.15
+### 158. Used by mac-notification-sys 0.6.15
 
 ```text
 mac-notification-sys is offered under MIT/Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -9955,15 +9436,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 163. Used by memchr 2.8.3, same-file 1.0.6, walkdir 2.5.0, winapi-util 0.1.11
-
-```text
-This project is dual-licensed under the Unlicense and MIT licenses.
-
-You may use this code under the terms of either license.
-```
-
-### 164. Used by memmap2 0.8.0, memmap2 0.9.11
+### 159. Used by memmap2 0.8.0, memmap2 0.9.11
 
 ```text
                               Apache License
@@ -10169,7 +9642,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 165. Used by memmap2 0.8.0, memmap2 0.9.11
+### 160. Used by memmap2 0.8.0, memmap2 0.9.11
 
 ```text
 Copyright (c) 2020 Yevhenii Reizner
@@ -10200,7 +9673,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 166. Used by memoffset 0.9.1
+### 161. Used by memoffset 0.9.1
 
 ```text
 Copyright (c) 2017 Gilad Naaman
@@ -10224,7 +9697,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 167. Used by miniz_oxide 0.8.9, miniz_oxide 0.9.1
+### 162. Used by miniz_oxide 0.8.9, miniz_oxide 0.9.1
 
 ```text
 Copyright 2013-2014 RAD Game Tools and Valve Software
@@ -10243,7 +9716,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 168. Used by miniz_oxide 0.8.9, miniz_oxide 0.9.1
+### 163. Used by miniz_oxide 0.8.9, miniz_oxide 0.9.1
 
 ```text
 MIT License
@@ -10273,7 +9746,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 169. Used by miniz_oxide 0.8.9, miniz_oxide 0.9.1
+### 164. Used by miniz_oxide 0.8.9, miniz_oxide 0.9.1
 
 ```text
 MIT License
@@ -10302,7 +9775,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 170. Used by mio 1.2.4
+### 165. Used by mio 1.2.4
 
 ```text
 Copyright (c) 2014 Carl Lerche and other MIO contributors
@@ -10326,7 +9799,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 171. Used by moxcms 0.8.1, pxfm 0.1.30
+### 166. Used by moxcms 0.8.1, pxfm 0.1.30
 
 ```text
                                  Apache License
@@ -10532,7 +10005,7 @@ THE SOFTWARE.
    limitations under the License.
 ```
 
-### 172. Used by moxcms 0.8.1, pxfm 0.1.30
+### 167. Used by moxcms 0.8.1, pxfm 0.1.30
 
 ```text
 Copyright (c) Radzivon Bartoshyk. All rights reserved.
@@ -10563,7 +10036,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### 173. Used by muda 0.19.3
+### 168. Used by muda 0.19.3
 
 ```text
 SPDXVersion: SPDX-2.1
@@ -10587,7 +10060,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/muda.git
 Creator: Person: Daniel Thompson-Yvetot
 ```
 
-### 174. Used by naga 27.0.3, wgpu 27.0.1, wgpu-core 27.0.3, wgpu-core-deps-windows-linux-android 27.0.0, wgpu-hal 27.0.4, wgpu-types 27.0.1
+### 169. Used by naga 27.0.3, wgpu 27.0.1, wgpu-core 27.0.3, wgpu-core-deps-windows-linux-android 27.0.0, wgpu-hal 27.0.4, wgpu-types 27.0.1
 
 ```text
 MIT License
@@ -10613,7 +10086,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 175. Used by ndk 0.9.0
+### 170. Used by ndk 0.9.0
 
 ```text
 ndk is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -10638,7 +10111,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 176. Used by ndk-context 0.1.1
+### 171. Used by ndk-context 0.1.1
 
 ```text
 ndk-context is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -10663,7 +10136,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 177. Used by ndk-sys 0.6.0+11769913
+### 172. Used by ndk-sys 0.6.0+11769913
 
 ```text
 ndk-sys is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -10688,7 +10161,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 178. Used by nohash-hasher 0.2.0
+### 173. Used by nohash-hasher 0.2.0
 
 ```text
 Copyright 2018 Parity Technologies (UK) Ltd.
@@ -10711,7 +10184,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 179. Used by nom 8.0.0
+### 174. Used by nom 8.0.0
 
 ```text
 Copyright (c) 2014-2019 Geoffroy Couprie
@@ -10736,7 +10209,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 180. Used by notify 8.2.0
+### 175. Used by notify 8.2.2
 
 ```text
 Creative Commons CC0 1.0 Universal
@@ -10782,7 +10255,7 @@ For these and/or other purposes and motivations, and without any expectation of 
      d. Affirmer understands and acknowledges that Creative Commons is not a party to this document and has no duty or obligation with respect to this CC0 or use of the Work.
 ```
 
-### 181. Used by notify-rust 4.17.0
+### 176. Used by notify-rust 4.17.0
 
 ```text
 MIT License
@@ -10808,7 +10281,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 182. Used by notify-types 2.1.0
+### 177. Used by notify-types 2.1.0
 
 ```text
                               Apache License
@@ -11014,7 +10487,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 183. Used by notify-types 2.1.0
+### 178. Used by notify-types 2.1.0
 
 ```text
 Copyright (c) 2023 Notify Contributors
@@ -11044,7 +10517,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 184. Used by num-conv 0.2.2
+### 179. Used by num-conv 0.2.2
 
 ```text
 Copyright (c) Jacob Pratt
@@ -11068,7 +10541,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 185. Used by num_enum 0.7.6, num_enum_derive 0.7.6
+### 180. Used by num_enum 0.7.6, num_enum_derive 0.7.6
 
 ```text
 Copyright (c) 2018, Daniel Wagner-Hall
@@ -11100,7 +10573,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### 186. Used by objc-sys 0.3.5
+### 181. Used by objc-sys 0.3.5
 
 ```text
 objc-sys is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11125,7 +10598,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 187. Used by objc2 0.5.3
+### 182. Used by objc2 0.5.3
 
 ```text
 objc2 is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11150,7 +10623,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 188. Used by objc2 0.6.5
+### 183. Used by objc2 0.6.5
 
 ```text
 objc2 is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11175,7 +10648,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 189. Used by objc2-app-kit 0.2.2
+### 184. Used by objc2-app-kit 0.2.2
 
 ```text
 objc2-app-kit is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11200,7 +10673,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 190. Used by objc2-app-kit 0.3.2
+### 185. Used by objc2-app-kit 0.3.2
 
 ```text
 objc2-app-kit is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11225,7 +10698,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 191. Used by objc2-cloud-kit 0.2.2
+### 186. Used by objc2-cloud-kit 0.2.2
 
 ```text
 objc2-cloud-kit is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11250,7 +10723,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 192. Used by objc2-contacts 0.2.2
+### 187. Used by objc2-contacts 0.2.2
 
 ```text
 objc2-contacts is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11275,7 +10748,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 193. Used by objc2-core-data 0.2.2
+### 188. Used by objc2-core-data 0.2.2
 
 ```text
 objc2-core-data is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11300,7 +10773,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 194. Used by objc2-core-foundation 0.3.2
+### 189. Used by objc2-core-foundation 0.3.2
 
 ```text
 objc2-core-foundation is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11325,7 +10798,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 195. Used by objc2-core-graphics 0.3.2
+### 190. Used by objc2-core-graphics 0.3.2
 
 ```text
 objc2-core-graphics is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11350,7 +10823,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 196. Used by objc2-core-image 0.2.2
+### 191. Used by objc2-core-image 0.2.2
 
 ```text
 objc2-core-image is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11375,7 +10848,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 197. Used by objc2-core-location 0.2.2
+### 192. Used by objc2-core-location 0.2.2
 
 ```text
 objc2-core-location is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11400,7 +10873,32 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 198. Used by objc2-encode 4.1.0
+### 193. Used by objc2-core-services 0.3.2
+
+```text
+objc2-core-services is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
+
+MIT License
+
+Copyright (c) the objc2-core-services developers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the
+following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO
+EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
+USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+### 194. Used by objc2-encode 4.1.0
 
 ```text
 objc2-encode is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11425,7 +10923,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 199. Used by objc2-foundation 0.2.2, objc2-foundation 0.3.2
+### 195. Used by objc2-foundation 0.2.2, objc2-foundation 0.3.2
 
 ```text
 objc2-foundation is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11450,7 +10948,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 200. Used by objc2-io-surface 0.3.2
+### 196. Used by objc2-io-surface 0.3.2
 
 ```text
 objc2-io-surface is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11475,7 +10973,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 201. Used by objc2-link-presentation 0.2.2
+### 197. Used by objc2-link-presentation 0.2.2
 
 ```text
 objc2-link-presentation is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11500,7 +10998,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 202. Used by objc2-metal 0.2.2
+### 198. Used by objc2-metal 0.2.2
 
 ```text
 objc2-metal is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11525,7 +11023,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 203. Used by objc2-quartz-core 0.2.2
+### 199. Used by objc2-quartz-core 0.2.2
 
 ```text
 objc2-quartz-core is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11550,7 +11048,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 204. Used by objc2-quartz-core 0.3.2
+### 200. Used by objc2-quartz-core 0.3.2
 
 ```text
 objc2-quartz-core is offered under Zlib OR Apache-2.0 OR MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11575,7 +11073,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 205. Used by objc2-symbols 0.2.2
+### 201. Used by objc2-symbols 0.2.2
 
 ```text
 objc2-symbols is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11600,7 +11098,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 206. Used by objc2-ui-kit 0.2.2
+### 202. Used by objc2-ui-kit 0.2.2
 
 ```text
 objc2-ui-kit is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11625,7 +11123,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 207. Used by objc2-uniform-type-identifiers 0.2.2
+### 203. Used by objc2-uniform-type-identifiers 0.2.2
 
 ```text
 objc2-uniform-type-identifiers is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11650,7 +11148,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 208. Used by objc2-user-notifications 0.2.2
+### 204. Used by objc2-user-notifications 0.2.2
 
 ```text
 objc2-user-notifications is offered under MIT; it publishes no licence file, so the standard MIT text follows.
@@ -11675,7 +11173,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 209. Used by open 5.4.4
+### 205. Used by open 5.4.5
 
 ```text
 The MIT License (MIT)
@@ -11705,7 +11203,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 210. Used by option-ext 0.2.0
+### 206. Used by option-ext 0.2.0
 
 ```text
 Mozilla Public License Version 2.0
@@ -12083,7 +11581,7 @@ Exhibit B - "Incompatible With Secondary Licenses" Notice
   defined by the Mozilla Public License, v. 2.0.
 ```
 
-### 211. Used by orbclient 0.3.55
+### 207. Used by orbclient 0.3.55
 
 ```text
 The MIT License (MIT)
@@ -12109,7 +11607,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 212. Used by os_pipe 1.2.3
+### 208. Used by os_pipe 1.2.3
 
 ```text
 The MIT License (MIT)
@@ -12133,7 +11631,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 213. Used by parking 2.2.1
+### 209. Used by parking 2.2.1
 
 ```text
 ===============================================================================
@@ -12147,7 +11645,7 @@ option. All files in the project carrying such notice may not be
 copied, modified, or distributed except according to those terms.
 ```
 
-### 214. Used by petgraph 0.8.3
+### 210. Used by petgraph 0.8.3
 
 ```text
 Copyright (c) 2015
@@ -12177,7 +11675,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 215. Used by pico-args 0.5.0
+### 211. Used by pico-args 0.5.0
 
 ```text
 Copyright (c) 2019 Yevhenii Reizner
@@ -12201,7 +11699,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 216. Used by plain 0.2.3
+### 212. Used by plain 0.2.3
 
 ```text
 Copyright (c) 2017 Plain contributors
@@ -12231,7 +11729,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 217. Used by png 0.17.16, png 0.18.1
+### 213. Used by png 0.17.16, png 0.18.1
 
 ```text
 Copyright (c) 2015 nwin
@@ -12261,7 +11759,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 218. Used by powerfmt 0.2.1
+### 214. Used by powerfmt 0.2.1
 
 ```text
                                  Apache License
@@ -12467,7 +11965,7 @@ DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 219. Used by powerfmt 0.2.1
+### 215. Used by powerfmt 0.2.1
 
 ```text
 Copyright (c) 2023 Jacob Pratt et al.
@@ -12491,7 +11989,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 220. Used by proc-macro-error 1.0.4, proc-macro-error-attr 1.0.4
+### 216. Used by proc-macro-error 1.0.4, proc-macro-error-attr 1.0.4
 
 ```text
                               Apache License
@@ -12697,7 +12195,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 221. Used by proc-macro-error 1.0.4, proc-macro-error-attr 1.0.4
+### 217. Used by proc-macro-error 1.0.4, proc-macro-error-attr 1.0.4
 
 ```text
 MIT License
@@ -12723,7 +12221,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 222. Used by profiling 1.0.18
+### 218. Used by profiling 1.0.18
 
 ```text
 profiling is offered under MIT OR Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -12748,7 +12246,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 223. Used by quick-error 2.0.1
+### 219. Used by quick-error 2.0.1
 
 ```text
 Copyright (c) 2015 The quick-error Developers
@@ -12772,7 +12270,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 224. Used by quick-xml 0.41.0
+### 220. Used by quick-xml 0.41.0
 
 ```text
 The MIT License (MIT)
@@ -12800,7 +12298,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 225. Used by r-efi 5.3.0, r-efi 6.0.0
+### 221. Used by r-efi 5.3.0, r-efi 6.0.0
 
 ```text
 r-efi is offered under MIT OR Apache-2.0 OR LGPL-2.1-or-later; it publishes no licence file, so the standard MIT text follows.
@@ -12825,7 +12323,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 226. Used by rangemap 1.8.0
+### 222. Used by rangemap 1.8.0
 
 ```text
                                  Apache License
@@ -13020,7 +12518,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 227. Used by rangemap 1.8.0
+### 223. Used by rangemap 1.8.0
 
 ```text
 Copyright 2019 Jeffrey Parsons
@@ -13032,7 +12530,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 228. Used by raw-window-handle 0.6.2
+### 224. Used by raw-window-handle 0.6.2
 
 ```text
 Copyright (c) 2020 Osspial
@@ -13048,7 +12546,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 229. Used by raw-window-handle 0.6.2
+### 225. Used by raw-window-handle 0.6.2
 
 ```text
 MIT License
@@ -13074,7 +12572,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 230. Used by recvmsg 1.0.0
+### 226. Used by recvmsg 1.0.0
 
 ```text
 BSD Zero Clause License
@@ -13093,7 +12591,7 @@ OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
 PERFORMANCE OF THIS SOFTWARE.
 ```
 
-### 231. Used by redox_syscall 0.4.1, redox_syscall 0.5.18, redox_syscall 0.9.4
+### 227. Used by redox_syscall 0.4.1, redox_syscall 0.5.18, redox_syscall 0.9.4
 
 ```text
 Copyright (c) 2017 Redox OS Developers
@@ -13120,7 +12618,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 232. Used by redox_users 0.5.3
+### 228. Used by redox_users 0.5.3
 
 ```text
 The MIT License (MIT)
@@ -13146,7 +12644,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 233. Used by renderdoc-sys 1.1.0
+### 229. Used by renderdoc-sys 1.1.0
 
 ```text
 Copyright (c) 2022 Eyal Kalderon
@@ -13176,7 +12674,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 234. Used by resvg 0.45.1, usvg 0.45.1
+### 230. Used by resvg 0.45.1, usvg 0.45.1
 
 ```text
 Copyright 2017 the Resvg Authors
@@ -13206,7 +12704,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 235. Used by rgb 0.8.53
+### 231. Used by rgb 0.8.53
 
 ```text
 MIT License
@@ -13232,7 +12730,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 236. Used by roxmltree 0.20.0
+### 232. Used by roxmltree 0.20.0
 
 ```text
 The MIT License (MIT)
@@ -13258,7 +12756,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 237. Used by rustix 0.38.44, rustix 1.1.6
+### 233. Used by rustix 0.38.44, rustix 1.1.6
 
 ```text
 Short version for non-lawyers:
@@ -13292,7 +12790,7 @@ is licensed under:
 at your option.
 ```
 
-### 238. Used by same-file 1.0.6, winapi-util 0.1.11
+### 234. Used by same-file 1.0.6, winapi-util 0.1.11
 
 ```text
 The MIT License (MIT)
@@ -13318,7 +12816,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 239. Used by scopeguard 1.2.0
+### 235. Used by scopeguard 1.2.0
 
 ```text
 Copyright (c) 2016-2019 Ulrik Sverdrup "bluss" and scopeguard developers
@@ -13348,7 +12846,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 240. Used by self_cell 1.3.0
+### 236. Used by self_cell 1.3.0
 
 ```text
                     GNU GENERAL PUBLIC LICENSE
@@ -13692,7 +13190,7 @@ library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.
 ```
 
-### 241. Used by serde_spanned 0.6.9, toml_datetime 1.1.2+spec-1.1.0, toml_edit 0.19.15, toml_edit 0.20.2, toml_edit 0.25.17+spec-1.1.0, toml_parser 1.1.5+spec-1.1.0
+### 237. Used by serde_spanned 0.6.9, toml_datetime 1.1.2+spec-1.1.0, toml_edit 0.19.15, toml_edit 0.20.2, toml_edit 0.25.17+spec-1.1.0, toml_parser 1.1.5+spec-1.1.0
 
 ```text
 Copyright (c) Individual contributors
@@ -13716,7 +13214,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 242. Used by signal-hook-registry 1.4.8
+### 238. Used by signal-hook-registry 1.4.8
 
 ```text
 Copyright (c) 2017 tokio-jsonrpc developers
@@ -13746,7 +13244,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 243. Used by simd-adler32 0.3.10
+### 239. Used by simd-adler32 0.3.10
 
 ```text
 MIT License
@@ -13772,7 +13270,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 244. Used by simplecss 0.2.2
+### 240. Used by simplecss 0.2.2
 
 ```text
 The MIT License (MIT)
@@ -13798,7 +13296,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 245. Used by siphasher 1.0.4
+### 241. Used by siphasher 1.0.4
 
 ```text
 Copyright 2012-2016 The Rust Project Developers.
@@ -13810,7 +13308,7 @@ http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
 option.
 ```
 
-### 246. Used by slab 0.4.12
+### 242. Used by slab 0.4.12
 
 ```text
 Copyright (c) 2019 Carl Lerche
@@ -13840,7 +13338,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 247. Used by slotmap 1.1.1
+### 243. Used by slotmap 1.1.1
 
 ```text
 Copyright (c) 2021 Orson Peters <orsonpeters@gmail.com>
@@ -13864,7 +13362,7 @@ the following restrictions:
  3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 248. Used by smallvec 1.16.3
+### 244. Used by smallvec 1.16.3
 
 ```text
 Copyright (c) 2018 The Servo Project Developers
@@ -13894,7 +13392,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 249. Used by smithay-clipboard 0.7.3
+### 245. Used by smithay-clipboard 0.7.3
 
 ```text
 Copyright (c) 2018 Lucas Timmins & Victor Berger
@@ -13918,7 +13416,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 250. Used by softbuffer 0.4.8
+### 246. Used by softbuffer 0.4.8
 
 ```text
 Copyright 2022 Kirill Chibisov
@@ -13942,7 +13440,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 251. Used by stable_deref_trait 1.2.1
+### 247. Used by stable_deref_trait 1.2.1
 
 ```text
 Copyright (c) 2017 Robert Grosse
@@ -13972,7 +13470,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 252. Used by static_assertions 1.1.0
+### 248. Used by static_assertions 1.1.0
 
 ```text
 MIT License
@@ -13998,7 +13496,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 253. Used by strict-num 0.1.1
+### 249. Used by strict-num 0.1.1
 
 ```text
 Copyright (c) 2022 Yevhenii Reizner
@@ -14022,7 +13520,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 254. Used by svgtypes 0.15.3, ttf-parser 0.25.1
+### 250. Used by svgtypes 0.15.3, ttf-parser 0.25.1
 
 ```text
 Copyright (c) 2018 Yevhenii Reizner
@@ -14046,7 +13544,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 255. Used by swash 0.2.10, zeno 0.3.3
+### 251. Used by swash 0.2.10, zeno 0.3.3
 
 ```text
 Copyright (c) 2020 Chad Brokaw
@@ -14076,7 +13574,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 256. Used by synstructure 0.14.0
+### 252. Used by synstructure 0.14.0
 
 ```text
 Copyright 2016 Nika Layzell
@@ -14088,7 +13586,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 257. Used by sys-locale 0.3.2
+### 253. Used by sys-locale 0.3.2
 
 ```text
 MIT License
@@ -14114,7 +13612,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 258. Used by tauri-winrt-notification 0.7.3
+### 254. Used by tauri-winrt-notification 0.7.3
 
 ```text
 MIT License
@@ -14140,7 +13638,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 259. Used by tauri-winrt-notification 0.7.3
+### 255. Used by tauri-winrt-notification 0.7.3
 
 ```text
 SPDXVersion: SPDX-2.1
@@ -14164,7 +13662,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/winrt-notification.git
 Creator: Person: Daniel Thompson-Yvetot
 ```
 
-### 260. Used by tempfile 3.27.0
+### 256. Used by tempfile 3.27.0
 
 ```text
 Copyright (c) 2015 Steven Allen
@@ -14194,7 +13692,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 261. Used by tiff 0.11.3
+### 257. Used by tiff 0.11.3
 
 ```text
 MIT License
@@ -14220,7 +13718,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 262. Used by time 0.3.55, time-core 0.1.9
+### 258. Used by time 0.3.55, time-core 0.1.9
 
 ```text
 Copyright (c) Jacob Pratt et al.
@@ -14244,7 +13742,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 263. Used by tiny-skia 0.11.4, tiny-skia-path 0.11.4
+### 259. Used by tiny-skia 0.11.4, tiny-skia-path 0.11.4
 
 ```text
 Copyright (c) 2011 Google Inc. All rights reserved.
@@ -14279,7 +13777,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### 264. Used by tiny-xlib 0.2.5
+### 260. Used by tiny-xlib 0.2.5
 
 ```text
 Copyright (c) 2023 John Nunley
@@ -14295,7 +13793,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 265. Used by tiny-xlib 0.2.5
+### 261. Used by tiny-xlib 0.2.5
 
 ```text
 MIT License
@@ -14321,7 +13819,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 266. Used by tokio 1.53.3
+### 262. Used by tokio 1.53.3
 
 ```text
 MIT License
@@ -14347,7 +13845,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 267. Used by tokio-macros 2.7.2
+### 263. Used by tokio-macros 2.7.2
 
 ```text
 MIT License
@@ -14374,7 +13872,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 268. Used by toml_datetime 1.1.2+spec-1.1.0, toml_edit 0.25.17+spec-1.1.0, toml_parser 1.1.5+spec-1.1.0
+### 264. Used by toml_datetime 1.1.2+spec-1.1.0, toml_edit 0.25.17+spec-1.1.0, toml_parser 1.1.5+spec-1.1.0
 
 ```text
                                  Apache License
@@ -14580,7 +14078,7 @@ SOFTWARE.
    limitations under the License.
 ```
 
-### 269. Used by tracing 0.1.44, tracing-attributes 0.1.31, tracing-core 0.1.36
+### 265. Used by tracing 0.1.44, tracing-attributes 0.1.31, tracing-core 0.1.36
 
 ```text
 Copyright (c) 2019 Tokio Contributors
@@ -14610,7 +14108,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 270. Used by trash 5.2.9
+### 266. Used by trash 5.4.0
 
 ```text
 Copyright 2019 Artúr Barnabás Kovács
@@ -14631,7 +14129,7 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 271. Used by tray-icon 0.24.2
+### 267. Used by tray-icon 0.24.2
 
 ```text
 SPDXVersion: SPDX-2.1
@@ -14655,7 +14153,7 @@ PackageDownloadLocation: git+ssh://github.com/tauri-apps/tray-icon.git
 Creator: Person: Daniel Thompson-Yvetot
 ```
 
-### 272. Used by tree_magic_mini 3.2.2
+### 268. Used by tree_magic_mini 3.2.2
 
 ```text
 MIT License
@@ -14681,7 +14179,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 273. Used by type-map 0.5.1
+### 269. Used by type-map 0.5.1
 
 ```text
                               Apache License
@@ -15091,7 +14589,7 @@ limitations under the License.
    limitations under the License.
 ```
 
-### 274. Used by type-map 0.5.1
+### 270. Used by type-map 0.5.1
 
 ```text
 Copyright (c) 2022 Jacob Brown
@@ -15175,7 +14673,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 275. Used by uds_windows 1.2.1
+### 271. Used by uds_windows 1.2.1
 
 ```text
     MIT License
@@ -15201,7 +14699,7 @@ DEALINGS IN THE SOFTWARE.
     SOFTWARE
 ```
 
-### 276. Used by unicode-bidi 0.3.18
+### 272. Used by unicode-bidi 0.3.18
 
 ```text
 This project is copyright 2015, The Servo Project Developers (given in the
@@ -15214,7 +14712,7 @@ carrying such notice may not be copied, modified, or distributed except
 according to those terms.
 ```
 
-### 277. Used by unicode-ident 1.0.26
+### 273. Used by unicode-ident 1.0.26
 
 ```text
 UNICODE LICENSE V3
@@ -15258,7 +14756,7 @@ dealings in these Data Files or Software without prior written
 authorization of the copyright holder.
 ```
 
-### 278. Used by unicode-script 0.5.8
+### 274. Used by unicode-script 0.5.8
 
 ```text
                               Apache License
@@ -15464,7 +14962,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 279. Used by unicode-script 0.5.8
+### 275. Used by unicode-script 0.5.8
 
 ```text
 MIT License
@@ -15496,7 +14994,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 280. Used by unicode-segmentation 1.13.3, unicode-width 0.2.2
+### 276. Used by unicode-segmentation 1.13.3, unicode-width 0.2.2
 
 ```text
 Licensed under the Apache License, Version 2.0
@@ -15508,7 +15006,7 @@ notice may not be copied, modified, or distributed except
 according to those terms.
 ```
 
-### 281. Used by urlencoding 2.1.3
+### 277. Used by urlencoding 2.1.3
 
 ```text
 © 2016 Bertram Truong
@@ -15533,7 +15031,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 282. Used by utf8_iter 1.0.4
+### 278. Used by utf8_iter 1.0.4
 
 ```text
 Copyright Mozilla Foundation
@@ -15580,7 +15078,7 @@ licensed under the Apache License, Version 2.0 <LICENSE-APACHE> or
 <LICENSE-MIT> or <http://opensource.org/licenses/MIT>, at your option.
 ```
 
-### 283. Used by utf8_iter 1.0.4
+### 279. Used by utf8_iter 1.0.4
 
 ```text
 Copyright Mozilla Foundation
@@ -15610,7 +15108,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 284. Used by uuid 1.26.1
+### 280. Used by uuid 1.26.1
 
 ```text
 Copyright (c) 2014 The Rust Project Developers
@@ -15641,7 +15139,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 285. Used by wayland-backend 0.3.17, wayland-client 0.31.15, wayland-cursor 0.31.14, wayland-protocols 0.32.13, wayland-protocols-experimental 20250721.0.1, wayland-protocols-misc 0.3.12, wayland-protocols-plasma 0.3.12, wayland-protocols-wlr 0.3.12, wayland-scanner 0.31.11, wayland-sys 0.31.11
+### 281. Used by wayland-backend 0.3.17, wayland-client 0.31.15, wayland-cursor 0.31.14, wayland-protocols 0.32.13, wayland-protocols-experimental 20250721.0.1, wayland-protocols-misc 0.3.12, wayland-protocols-plasma 0.3.12, wayland-protocols-wlr 0.3.12, wayland-scanner 0.31.11, wayland-sys 0.31.11
 
 ```text
 Copyright (c) 2015 Elinor Berger
@@ -15665,7 +15163,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 286. Used by web-time 1.1.0
+### 282. Used by web-time 1.1.0
 
 ```text
                                  Apache License
@@ -15871,7 +15369,7 @@ THE SOFTWARE.
    limitations under the License.
 ```
 
-### 287. Used by web-time 1.1.0
+### 283. Used by web-time 1.1.0
 
 ```text
 MIT License
@@ -15897,7 +15395,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 288. Used by webbrowser 1.2.4
+### 284. Used by webbrowser 1.2.4
 
 ```text
                               Apache License
@@ -16092,7 +15590,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ```
 
-### 289. Used by webbrowser 1.2.4
+### 285. Used by webbrowser 1.2.4
 
 ```text
 The MIT License (MIT)
@@ -16124,7 +15622,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 290. Used by weezl 0.1.12
+### 286. Used by weezl 0.1.12
 
 ```text
 The MIT License (MIT)
@@ -16150,7 +15648,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 291. Used by winapi 0.3.9
+### 287. Used by winapi 0.3.9
 
 ```text
 Copyright (c) 2015-2018 The winapi-rs Developers
@@ -16174,7 +15672,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 292. Used by winapi-i686-pc-windows-gnu 0.4.0
+### 288. Used by winapi-i686-pc-windows-gnu 0.4.0
 
 ```text
 winapi-i686-pc-windows-gnu is offered under MIT/Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -16199,7 +15697,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 293. Used by winapi-x86_64-pc-windows-gnu 0.4.0
+### 289. Used by winapi-x86_64-pc-windows-gnu 0.4.0
 
 ```text
 winapi-x86_64-pc-windows-gnu is offered under MIT/Apache-2.0; it publishes no licence file, so the standard MIT text follows.
@@ -16224,7 +15722,7 @@ IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTI
 USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 294. Used by windows 0.61.3, windows 0.62.2, windows-collections 0.2.0, windows-collections 0.3.2, windows-core 0.61.2, windows-core 0.62.2, windows-future 0.2.1, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.1.3, windows-link 0.2.1, windows-numerics 0.2.0, windows-numerics 0.3.1, windows-result 0.3.4, windows-result 0.4.1, windows-strings 0.4.2, windows-strings 0.5.1, windows-sys 0.52.0, windows-sys 0.59.0, windows-sys 0.60.2, windows-sys 0.61.2, windows-targets 0.52.6, windows-targets 0.53.5, windows-threading 0.1.0, windows-threading 0.2.1, windows-version 0.1.7, windows_aarch64_gnullvm 0.52.6, windows_aarch64_gnullvm 0.53.1, windows_aarch64_msvc 0.52.6, windows_aarch64_msvc 0.53.1, windows_i686_gnu 0.52.6, windows_i686_gnu 0.53.1, windows_i686_gnullvm 0.52.6, windows_i686_gnullvm 0.53.1, windows_i686_msvc 0.52.6, windows_i686_msvc 0.53.1, windows_x86_64_gnu 0.52.6, windows_x86_64_gnu 0.53.1, windows_x86_64_gnullvm 0.52.6, windows_x86_64_gnullvm 0.53.1, windows_x86_64_msvc 0.52.6, windows_x86_64_msvc 0.53.1
+### 290. Used by windows 0.61.3, windows 0.62.2, windows-collections 0.2.0, windows-collections 0.3.2, windows-core 0.61.2, windows-core 0.62.2, windows-future 0.2.1, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.1.3, windows-link 0.2.1, windows-numerics 0.2.0, windows-numerics 0.3.1, windows-result 0.3.4, windows-result 0.4.1, windows-strings 0.4.2, windows-strings 0.5.1, windows-sys 0.52.0, windows-sys 0.59.0, windows-sys 0.61.2, windows-targets 0.52.6, windows-threading 0.1.0, windows-threading 0.2.1, windows-version 0.1.7, windows_aarch64_gnullvm 0.52.6, windows_aarch64_msvc 0.52.6, windows_i686_gnu 0.52.6, windows_i686_gnullvm 0.52.6, windows_i686_msvc 0.52.6, windows_x86_64_gnu 0.52.6, windows_x86_64_gnullvm 0.52.6, windows_x86_64_msvc 0.52.6
 
 ```text
                                  Apache License
@@ -16430,7 +15928,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 295. Used by windows 0.61.3, windows 0.62.2, windows-collections 0.2.0, windows-collections 0.3.2, windows-core 0.61.2, windows-core 0.62.2, windows-future 0.2.1, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.1.3, windows-link 0.2.1, windows-numerics 0.2.0, windows-numerics 0.3.1, windows-result 0.3.4, windows-result 0.4.1, windows-strings 0.4.2, windows-strings 0.5.1, windows-sys 0.52.0, windows-sys 0.59.0, windows-sys 0.60.2, windows-sys 0.61.2, windows-targets 0.52.6, windows-targets 0.53.5, windows-threading 0.1.0, windows-threading 0.2.1, windows-version 0.1.7, windows_aarch64_gnullvm 0.52.6, windows_aarch64_gnullvm 0.53.1, windows_aarch64_msvc 0.52.6, windows_aarch64_msvc 0.53.1, windows_i686_gnu 0.52.6, windows_i686_gnu 0.53.1, windows_i686_gnullvm 0.52.6, windows_i686_gnullvm 0.53.1, windows_i686_msvc 0.52.6, windows_i686_msvc 0.53.1, windows_x86_64_gnu 0.52.6, windows_x86_64_gnu 0.53.1, windows_x86_64_gnullvm 0.52.6, windows_x86_64_gnullvm 0.53.1, windows_x86_64_msvc 0.52.6, windows_x86_64_msvc 0.53.1
+### 291. Used by windows 0.61.3, windows 0.62.2, windows-collections 0.2.0, windows-collections 0.3.2, windows-core 0.61.2, windows-core 0.62.2, windows-future 0.2.1, windows-future 0.3.2, windows-implement 0.60.2, windows-interface 0.59.3, windows-link 0.1.3, windows-link 0.2.1, windows-numerics 0.2.0, windows-numerics 0.3.1, windows-result 0.3.4, windows-result 0.4.1, windows-strings 0.4.2, windows-strings 0.5.1, windows-sys 0.52.0, windows-sys 0.59.0, windows-sys 0.61.2, windows-targets 0.52.6, windows-threading 0.1.0, windows-threading 0.2.1, windows-version 0.1.7, windows_aarch64_gnullvm 0.52.6, windows_aarch64_msvc 0.52.6, windows_i686_gnu 0.52.6, windows_i686_gnullvm 0.52.6, windows_i686_msvc 0.52.6, windows_x86_64_gnu 0.52.6, windows_x86_64_gnullvm 0.52.6, windows_x86_64_msvc 0.52.6
 
 ```text
     MIT License
@@ -16456,7 +15954,7 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
     SOFTWARE
 ```
 
-### 296. Used by winnow 0.5.40, winnow 1.0.4
+### 292. Used by winnow 0.5.40, winnow 1.0.4
 
 ```text
 Permission is hereby granted, free of charge, to any person obtaining
@@ -16479,7 +15977,7 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-### 297. Used by wl-clipboard-rs 0.9.4
+### 293. Used by wl-clipboard-rs 0.9.4
 
 ```text
 Copyright (c) 2019 Ivan Molodetskikh
@@ -16509,7 +16007,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 298. Used by x11rb 0.13.2, x11rb-protocol 0.13.2
+### 294. Used by x11rb 0.13.2, x11rb-protocol 0.13.2
 
 ```text
 Copyright 2019 x11rb Contributers
@@ -16539,7 +16037,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 299. Used by xcursor 0.3.11
+### 295. Used by xcursor 0.3.11
 
 ```text
 MIT License
@@ -16565,7 +16063,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 300. Used by xkbcommon 0.7.0
+### 296. Used by xkbcommon 0.7.0
 
 ```text
 Copyright (c) 2016 Remi Thebault <remi.thebault@gmail.com>
@@ -16595,7 +16093,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 301. Used by xkbcommon-dl 0.4.2
+### 297. Used by xkbcommon-dl 0.4.2
 
 ```text
 The MIT License (MIT)
@@ -16621,7 +16119,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 302. Used by xkeysym 0.2.1
+### 298. Used by xkeysym 0.2.1
 
 ```text
                                  Apache License
@@ -16827,7 +16325,7 @@ SOFTWARE.
    limitations under the License.
 ```
 
-### 303. Used by xkeysym 0.2.1
+### 299. Used by xkeysym 0.2.1
 
 ```text
 Copyright (c) 2022-2023 John Nunley
@@ -16851,7 +16349,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 304. Used by xkeysym 0.2.1
+### 300. Used by xkeysym 0.2.1
 
 ```text
 Copyright (c) 2022-2023 John Nunley
@@ -16867,7 +16365,7 @@ Permission is granted to anyone to use this software for any purpose, including 
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 305. Used by xmlwriter 0.1.0
+### 301. Used by xmlwriter 0.1.0
 
 ```text
 The MIT License (MIT)
@@ -16893,7 +16391,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 306. Used by yazi 0.2.1
+### 302. Used by yazi 0.2.1
 
 ```text
 Copyright (c) 2020 Chad Brokaw
@@ -16917,7 +16415,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-### 307. Used by zbus 5.19.0, zbus_macros 5.19.0, zbus_names 4.3.4, zbus_xml 5.2.1, zvariant 5.15.0, zvariant_derive 5.15.0
+### 303. Used by zbus 5.19.0, zbus_macros 5.19.0, zbus_names 4.3.4, zbus_xml 5.2.1, zvariant 5.15.0, zvariant_derive 5.15.0
 
 ```text
 Copyright (c) 2024 Zeeshan Ali Khan & zbus contributors
@@ -16947,7 +16445,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 308. Used by zcheapstr 1.1.0
+### 304. Used by zcheapstr 1.1.0
 
 ```text
 Copyright (c) 2026 Zeeshan Ali Khan & zcheapstr contributors
@@ -16977,7 +16475,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 309. Used by zerocopy 0.8.62, zerocopy-derive 0.8.62
+### 305. Used by zerocopy 0.8.62, zerocopy-derive 0.8.62
 
 ```text
                                  Apache License
@@ -17183,7 +16681,7 @@ DEALINGS IN THE SOFTWARE.
    limitations under the License.
 ```
 
-### 310. Used by zerocopy 0.8.62, zerocopy-derive 0.8.62
+### 306. Used by zerocopy 0.8.62, zerocopy-derive 0.8.62
 
 ```text
 Copyright 2019 The Fuchsia Authors.
@@ -17212,7 +16710,7 @@ THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
 
-### 311. Used by zerocopy 0.8.62, zerocopy-derive 0.8.62
+### 307. Used by zerocopy 0.8.62, zerocopy-derive 0.8.62
 
 ```text
 Copyright 2023 The Fuchsia Authors
@@ -17242,7 +16740,7 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 ```
 
-### 312. Used by zlib-rs 0.6.8
+### 308. Used by zlib-rs 0.6.8
 
 ```text
 (C) 2024 Trifecta Tech Foundation
@@ -17266,7 +16764,7 @@ freely, subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 ```
 
-### 313. Used by zune-core 0.5.3, zune-jpeg 0.5.15
+### 309. Used by zune-core 0.5.3, zune-jpeg 0.5.15
 
 ```text
 MIT License
@@ -17292,7 +16790,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### 314. Used by zune-core 0.5.3, zune-jpeg 0.5.15
+### 310. Used by zune-core 0.5.3, zune-jpeg 0.5.15
 
 ```text
 zlib License

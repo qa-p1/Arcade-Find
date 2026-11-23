@@ -28,7 +28,13 @@ actions and nothing listens.
 | Action | v | Accepts | Produces | Effects | Interactive | One-shot |
 |---|---|---|---|---|---|---|
 | `find.search` "Find matching files" | 1 | `text/plain` (the query), or `options.query` | `file/*[]`, `folder/reference` | — | no | yes |
-| `find.show` "Search in Find" | 1 | nothing, `text/plain`, `file/*`, `folder/reference` | — | `opens-ui` | yes | no |
+| `find.show` "Search my files for this" | 1 | nothing, `text/plain`, `file/*`, `folder/reference` | — | `opens-ui` | yes | no |
+| `find.reveal` "Reveal in Find" | 1 | one `file/*` or `folder/reference` | — | `opens-ui` | yes | no |
+
+Surfaces (Link 1.1 card fields): `find.search` is `internal` (apps call it;
+no menu shows it), `find.show` is offered for selected text in the browser
+and the palette, and `find.reveal` in file and folder menus (`maxItems` 1,
+rank 10, so the tools made for a file type come first).
 
 **`find.search`** options: `query`, `limit` (1–1000, default 50), `hidden`
 (default false). Same query language as the overlay, but no frecency, no
@@ -49,23 +55,37 @@ recent/pinned items, and no content search (`/…` and empty queries answer
 
 **`find.show`**: no input opens the overlay with `options.query`; text sets
 the query; a folder sets `in:"~/that/folder" ` plus `options.query`; a file
-searches its name and selects it when it appears ("Reveal in Find").
+searches its name and selects it when it appears. Shelf's "Search in Find"
+sends its items here, so `find.show` keeps taking files and folders.
+
+**`find.reveal`**: one file or folder (an absolute path); Find searches its
+name and selects it when it appears.
 
 ## Peers Find uses
 
-Peer entries come from the cached registry (refreshed by a directory watch,
-never read when the action list opens) and are shown only if the peer is
-installed (its executable exists), its Link is on, it isn't switched off in
-Find's Connected apps, the action is available on this OS, and every value of
-the selection matches its `accepts` (SPEC §5.2). An action with no array
-pattern is offered only for a single value. `maxBytes` disables the entry
-with the standard "Too large for …" text. Data-only actions (no effects, not
-interactive, no file outputs, e.g. `look.inspect`) aren't listed.
+Peer entries are Arcade Link's offers (`arcade_link::offers::offers`) for the
+selection, from the cached registry's cards, the shared catalog's `rules`
+(hide, rename, boost, jobs) and the user's `offers.json` (pinned, hidden,
+defaults). Files are asked as a file menu (`file-menu`) would ask, with Link's
+exact kinds (`file/csv`, `file/svg`, …); folders as a folder menu
+(`folder-menu`); a mix of both keeps only the entries both lists hold. The
+cards and rules are read off the UI thread (a registry watch, and each time
+the overlay shows), never when the action list opens.
+
+On top of Link's answer, Find drops install entries (the menus show those),
+Look's `look.preview` (Find's own Quick Look) and Box's pipeline plumbing
+(`box.pipelines`, `box.pipeline.run`), keeps at most five entries per app,
+and checks the selection as one request: an action with no array pattern
+takes a single value, the summed size must fit `maxBytes` (else the entry is
+greyed out with the standard "Too large for …" text), and data-only actions
+(no effects, not interactive, no file outputs, e.g. `look.inspect`) aren't
+listed. A greyed-out offer from Link (`maxItems`, per-file size) shows Link's
+reason.
 
 | Peer | Where it shows | Calls |
 |---|---|---|
 | Look | **Enter**, Space, "Quick Look" | `look.preview` with the selection; falls back to the default app when Look can't take it |
-| Box | Tab: featured tools for the selection's type, pipelines, "More in Arcade Box…" | `box:<tool>` (`#preset`), `box.pipeline.run` with `options.pipeline`, `box.open`; `box.pipelines` is read only while Box is running |
+| Box | Tab: the tools ranked for the selection's type, and each saved pipeline (its own action in Box 1.0) | `box:<tool>` (`#preset`), Box's pipeline actions, `box.open` |
 | Shelf | Tab: "Add to Shelf" for any selection, with a payload preview; Find stays open | `shelf.add` (see [SHELF.md](shelf.md)) |
 | Wheel | Tab: "Add to Wheel" (single file) | `wheel.add_action` |
 | Clipboard | Tab: "Send to my devices ↗" with a payload preview | `clipboard.add` |

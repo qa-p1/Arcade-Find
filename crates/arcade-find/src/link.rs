@@ -1,11 +1,11 @@
-//! Arcade Link: Find's manifest and actions (`find.search`, `find.show`),
-//! one-shot mode, and the peer actions Find offers for selected results.
+//! Arcade Link: Find's manifest and actions (`find.search`, `find.show`,
+//! `find.reveal`), one-shot mode, and the peer actions Find offers for
+//! selected results.
 //!
-//! Peer entries are found generically from the cached registry: any
-//! installed app's action that accepts every value of the selection is
-//! offered (SPEC §1.2, §5.2). Nothing here is specific to one peer except
-//! Look's preview (Find's own "Quick Look") and Box's featured tools and
-//! pipelines.
+//! Peer entries come from Arcade Link's offers (SPEC §1.2, §5.2): the same
+//! list, order, renames and user choices a file manager's "Arcade" menu
+//! shows. Nothing here is specific to one peer except Look's preview (Find's
+//! own "Quick Look") and Box's pipeline plumbing, which is never offered.
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -14,29 +14,31 @@ use std::sync::Arc;
 use arcade_link::client::{invoke_action, CallOptions};
 use arcade_link::content::{self, Content};
 use arcade_link::error::{standard_message, ErrorCode};
-use arcade_link::manifest::Shortcut;
+use arcade_link::manifest::{surface, Shortcut};
+use arcade_link::offers::{self, Prefs, Rules};
 use arcade_link::{Action, Handler, InvokeContext, InvokeRequest, InvokeResult, LinkError, Locations, Manifest, PeerInfo, Registry, Reply};
 use serde_json::{json, Value};
 
-use find_core::kind::Kind;
 use find_core::{Hit, Query, Settings};
 
-/// The other Arcade apps, from Arcade Link's shared metadata (v0.2.0 lists
-/// Shelf and Find).
+/// The other Arcade apps, from the shared catalog Arcade Tools keeps (Link's
+/// built-in list when there is none yet).
 pub mod apps {
-    use arcade_link::manifest::{self, ids};
+    use arcade_link::catalog::Catalog;
+    use arcade_link::manifest::ids;
+    use arcade_link::Locations;
 
     pub const SHELF: &str = ids::SHELF;
 
-    /// The apps Connected apps always lists (with "Get" when missing).
-    pub fn known() -> Vec<&'static str> {
-        ids::APPS.iter().copied().filter(|&id| id != ids::FIND).collect()
+    /// The apps Connected apps always lists (with "Install" when missing).
+    pub fn known(locations: &Locations) -> Vec<String> {
+        Catalog::load(locations).app_ids().into_iter().filter(|id| id != ids::FIND).collect()
     }
-    pub fn name(id: &str) -> &str {
-        manifest::app_name(id)
+    pub fn name(locations: &Locations, id: &str) -> String {
+        Catalog::load(locations).name(id)
     }
-    pub fn releases_url(id: &str) -> &'static str {
-        manifest::releases_url(id)
+    pub fn releases_url(locations: &Locations, id: &str) -> String {
+        Catalog::load(locations).releases_url(id)
     }
 }
 
@@ -46,15 +48,26 @@ pub const BOX: &str = "arcade.box";
 /// Most results `find.search` returns.
 pub const SEARCH_MAX: usize = 1000;
 const SEARCH_DEFAULT: usize = 50;
-/// Featured Box tools shown inline (SPEC: 3–5 per type).
-const BOX_FEATURED_MAX: usize = 5;
+/// Most entries one app adds to the action list (Link orders them by rank).
+const PER_APP_MAX: usize = 5;
 
 /// The actions Find exposes.
 pub fn actions() -> Vec<Action> {
-    vec![
-        Action::new("find.search", "Find matching files", "search").accepts(&["text/plain"]).produces(&["file/*[]", "folder/reference"]),
-        Action::new("find.show", "Search in Find", "search").accepts(&["text/plain", "file/*", "folder/reference"]).effects(&["opens-ui"]).interactive(true),
-    ]
+    let mut search = Action::new("find.search", "Find matching files", "search").accepts(&["text/plain"]).produces(&["file/*[]", "folder/reference"]);
+    search.surfaces = vec!["internal".into()];
+    // Shelf's "Search in Find" hands over a file or folder, so those stay accepted; menus show it for selected text.
+    let mut show = Action::new("find.show", "Search my files for this", "search")
+        .accepts(&["text/plain", "file/*", "folder/reference"])
+        .effects(&["opens-ui"])
+        .interactive(true);
+    show.surfaces = vec![surface::BROWSER_SELECTION.into(), surface::PALETTE.into()];
+    show.keywords = ["find", "search", "files", "locate"].map(String::from).to_vec();
+    let mut reveal =
+        Action::new("find.reveal", "Reveal in Find", "search").accepts(&["file/*", "file/*[]", "folder/reference"]).effects(&["opens-ui"]).interactive(true);
+    reveal.surfaces = vec![surface::FILE_MENU.into(), surface::FOLDER_MENU.into()];
+    reveal.max_items = Some(1);
+    reveal.rank.insert("*".into(), 10);
+    vec![search, show, reveal]
 }
 
 pub fn me() -> PeerInfo {
@@ -122,8 +135,42 @@ pub struct Item<'a> {
 
 impl<'a> Item<'a> {
     pub fn from_hit(h: &'a Hit) -> Item<'a> {
-        Item { path: &h.path, is_dir: h.is_dir, link_type: Kind::of(&h.name, h.is_dir).link_type(), size: (!h.is_dir).then_some(h.size) }
+        Item { path: &h.path, is_dir: h.is_dir, link_type: link_type(&h.path, h.is_dir), size: (!h.is_dir).then_some(h.size) }
     }
+}
+
+const FILE_TYPES: [&str; 21] = [
+    "file/svg",
+    "file/csv",
+    "file/json",
+    "file/html",
+    "file/markdown",
+    "file/ebook",
+    "file/subtitle",
+    "file/image",
+    "file/video",
+    "file/audio",
+    "file/pdf",
+    "file/document",
+    "file/spreadsheet",
+    "file/presentation",
+    "file/archive",
+    "file/text",
+    "file/code",
+    "file/font",
+    "file/model",
+    "file/any",
+    "folder/reference",
+];
+
+/// The Link type of a path: Link's own kinds (`file/csv`, `file/svg`, …), so
+/// Find offers what a file manager's menu offers for the same file.
+pub fn link_type(path: &Path, is_dir: bool) -> &'static str {
+    if is_dir {
+        return "folder/reference";
+    }
+    let kind = content::file_kind_for_path(path);
+    FILE_TYPES.iter().copied().find(|t| t.strip_prefix("file/") == Some(kind)).unwrap_or("file/any")
 }
 
 /// A selection encoded as Link inputs.
@@ -138,6 +185,10 @@ pub struct Selection {
     pub skipped: usize,
     /// Display names in selection order (payload previews).
     pub names: Vec<String>,
+    /// Each file as Link's offers see it (type and size), in selection order.
+    pub files: Vec<offers::Item>,
+    /// How many folders are selected.
+    pub folders: usize,
 }
 
 impl Selection {
@@ -178,6 +229,7 @@ pub fn selection<'a>(items: impl IntoIterator<Item = Item<'a>>) -> Selection {
             folders.push(p.to_string());
         } else {
             sel.bytes += it.size.unwrap_or(0);
+            sel.files.push(offers::Item { kind: it.link_type.to_string(), size: it.size, hints: Vec::new() });
             files.push((p.to_string(), it.link_type, it.size));
         }
     }
@@ -193,6 +245,7 @@ pub fn selection<'a>(items: impl IntoIterator<Item = Item<'a>>) -> Selection {
             sel.inputs.push(Content { kind: format!("{kind}[]"), paths: files.into_iter().map(|f| f.0).collect(), ..Default::default() });
         }
     }
+    sel.folders = folders.len();
     sel.inputs.extend(folders.into_iter().map(|p| Content { kind: "folder/reference".into(), path: Some(p), ..Default::default() }));
     sel
 }
@@ -240,36 +293,6 @@ pub fn offer(m: &Manifest, a: &Action, sel: &Selection) -> Option<Offer> {
     Some(Offer::Ready)
 }
 
-/// A Box pipeline (from `box.pipelines`, `structured/pipelines`).
-#[derive(Debug, Clone, PartialEq, serde::Deserialize)]
-pub struct Pipeline {
-    pub id: String,
-    pub name: String,
-    #[serde(default = "one")]
-    pub version: u32,
-    #[serde(default)]
-    pub accepts: Vec<String>,
-    #[serde(default)]
-    pub effects: Vec<String>,
-    #[serde(default)]
-    pub interactive: bool,
-}
-
-fn one() -> u32 {
-    1
-}
-
-/// Parses `box.pipelines` output.
-pub fn parse_pipelines(r: &InvokeResult) -> Vec<Pipeline> {
-    r.outputs
-        .iter()
-        .filter(|c| c.kind == "structured/pipelines")
-        .filter_map(|c| c.data.clone())
-        .filter_map(|d| serde_json::from_value::<Vec<Pipeline>>(d).ok())
-        .flatten()
-        .collect()
-}
-
 /// A peer action to show for a selection.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PeerOffer {
@@ -280,8 +303,6 @@ pub struct PeerOffer {
     pub title: String,
     pub offer: Offer,
     pub options: Value,
-    /// A Box pipeline entry.
-    pub pipeline: bool,
 }
 
 impl PeerOffer {
@@ -301,70 +322,51 @@ impl PeerOffer {
     }
 }
 
-/// Every peer action to offer for `sel`, from the cached registry.
-/// No disk or IPC work: safe to call when the action list opens.
-pub fn peer_offers(registry: &Registry, disabled: &[String], sel: &Selection, pipelines: &[Pipeline]) -> Vec<PeerOffer> {
-    let mut out = Vec::new();
-    if sel.is_empty() {
-        return out;
+/// Never offered: Find's own "Quick Look", and Box's pipeline plumbing.
+fn skipped(app: &str, action: &str) -> bool {
+    (app == LOOK && action == "look.preview") || (app == BOX && (action == "box.pipelines" || action == "box.pipeline.run"))
+}
+
+/// Link's offers for the selection: files as a file menu sees them, folders
+/// as a folder menu does; a mixed selection gets what both lists share.
+fn link_offers(sel: &Selection, cards: &[Manifest], rules: &Rules, prefs: &Prefs) -> Vec<offers::Offer> {
+    let for_files = (!sel.files.is_empty()).then(|| offers::offers(&sel.files, surface::FILE_MENU, cards, rules, prefs));
+    // One folder stands for all of them: `offer` below checks the whole selection.
+    let for_folders = (sel.folders > 0).then(|| offers::offers(&[offers::Item::new("folder/reference")], surface::FOLDER_MENU, cards, rules, prefs));
+    match (for_files, for_folders) {
+        (Some(f), Some(d)) => f.into_iter().filter(|o| d.iter().any(|x| x.app == o.app && x.action == o.action)).collect(),
+        (Some(only), None) | (None, Some(only)) => only,
+        (None, None) => Vec::new(),
     }
-    for m in registry.peers(crate::identity::ID).filter(|m| !disabled.contains(&m.id) && m.settings.link_enabled) {
-        let mut featured = 0;
-        for a in m.usable_actions() {
-            // Look's preview is Find's own "Quick Look" entry.
-            if m.id == LOOK && a.id == "look.preview" {
-                continue;
-            }
-            if m.id == BOX {
-                // Box: featured tools inline; pipelines come from `box.pipelines`.
-                if a.id == "box.pipeline.run" || a.id == "box.pipelines" {
-                    continue;
-                }
-                if a.id.starts_with("box:") {
-                    let featured_here =
-                        !a.featured_for.is_empty() && sel.inputs.iter().all(|c| a.featured_for.iter().any(|f| content::type_matches(f, &c.kind)));
-                    if !featured_here || featured >= BOX_FEATURED_MAX {
-                        continue;
-                    }
-                }
-            }
-            let Some(o) = offer(m, a, sel) else { continue };
-            if m.id == BOX && a.id.starts_with("box:") {
-                featured += 1;
-            }
-            out.push(PeerOffer {
-                app: m.id.clone(),
-                app_name: m.name.clone(),
-                action: a.clone(),
-                title: a.title.clone(),
-                offer: o,
-                options: json!({}),
-                pipeline: false,
-            });
+}
+
+/// Every peer action to offer for `sel`, from the cached registry, the
+/// catalog's rules and the user's choices (pinned first, then by rank).
+/// No disk or IPC work: safe to call when the action list opens.
+pub fn peer_offers(registry: &Registry, rules: &Rules, prefs: &Prefs, disabled: &[String], sel: &Selection) -> Vec<PeerOffer> {
+    if sel.is_empty() {
+        return Vec::new();
+    }
+    let cards: Vec<Manifest> = registry.peers(crate::identity::ID).filter(|m| !disabled.contains(&m.id) && m.settings.link_enabled).cloned().collect();
+    offers_for(&cards, rules, prefs, sel)
+}
+
+/// [`peer_offers`] for these cards.
+fn offers_for(cards: &[Manifest], rules: &Rules, prefs: &Prefs, sel: &Selection) -> Vec<PeerOffer> {
+    let mut out: Vec<PeerOffer> = Vec::new();
+    for o in link_offers(sel, cards, rules, prefs) {
+        // Install entries belong to the menus; Find's list holds what can run now.
+        if o.install.is_some() || skipped(&o.app, &o.action) || out.iter().filter(|p| p.app == o.app).count() >= PER_APP_MAX {
+            continue;
         }
-        if m.id == BOX {
-            if let Some(run) = m.usable_actions().find(|a| a.id == "box.pipeline.run") {
-                for p in pipelines {
-                    if p.accepts.is_empty() || !sel.inputs.iter().all(|c| content::accepts_content(&p.accepts, c)) {
-                        continue;
-                    }
-                    let mut action = run.clone();
-                    action.accepts = p.accepts.clone();
-                    action.effects = p.effects.clone();
-                    action.interactive = p.interactive;
-                    action.group = Some("Pipelines".into());
-                    out.push(PeerOffer {
-                        app: m.id.clone(),
-                        app_name: m.name.clone(),
-                        action,
-                        title: p.name.clone(),
-                        offer: Offer::Ready,
-                        options: json!({ "pipeline": p.id }),
-                        pipeline: true,
-                    });
-                }
-            }
+        let Some(m) = cards.iter().find(|m| m.id == o.app) else { continue };
+        let Some(a) = m.usable_actions().find(|a| a.id == o.action) else { continue };
+        // Link's offers judge each item; this checks the selection as one request (arrays, total size).
+        let Some(mut offer) = offer(m, a, sel) else { continue };
+        if !o.enabled {
+            offer = Offer::Disabled(o.reason.clone().unwrap_or_else(|| format!("{} can't do this right now.", m.name)));
         }
+        out.push(PeerOffer { app: m.id.clone(), app_name: m.name.clone(), action: a.clone(), title: o.title, offer, options: json!({}) });
     }
     out
 }
@@ -508,7 +510,7 @@ pub fn run_search(host: &dyn Host, req: &InvokeRequest) -> Result<InvokeResult, 
                 "path": h.path.to_string_lossy(),
                 "name": h.name,
                 "parent": h.parent.to_string_lossy(),
-                "type": Kind::of(&h.name, h.is_dir).link_type(),
+                "type": link_type(&h.path, h.is_dir),
                 "isDir": h.is_dir,
                 "isSymlink": h.is_symlink,
                 "size": if h.is_dir { Value::Null } else { json!(h.size) },
@@ -569,11 +571,33 @@ pub fn show_args(req: &InvokeRequest) -> Result<(Option<String>, Option<PathBuf>
         return Ok((Some(q), None));
     }
     if content::type_matches("file/*[]", &c.kind) {
-        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).ok_or_else(|| LinkError::unsupported("Arcade Find needs a file name"))?;
-        let q = if name.chars().any(char::is_whitespace) && !name.contains('"') { format!("\"{name}\"") } else { name };
-        return Ok((Some(q), Some(path)));
+        return Ok((Some(name_query(&path)?), Some(path)));
     }
     Err(LinkError::unsupported("Arcade Find can't search for this kind of content"))
+}
+
+/// The item's name as a query (quoted when it has spaces).
+fn name_query(path: &Path) -> Result<String, LinkError> {
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).ok_or_else(|| LinkError::unsupported("Arcade Find needs a file name"))?;
+    Ok(if name.chars().any(char::is_whitespace) && !name.contains('"') { format!("\"{name}\"") } else { name })
+}
+
+/// The query and the item to select for `find.reveal`: the file or folder by
+/// its name, selected when it appears.
+pub fn reveal_args(req: &InvokeRequest) -> Result<(Option<String>, Option<PathBuf>), LinkError> {
+    let c = req.inputs.first().ok_or_else(|| LinkError::unsupported("Arcade Find needs a file or folder to reveal"))?;
+    if !(c.kind == "folder/reference" || content::type_matches("file/*[]", &c.kind)) {
+        return Err(LinkError::unsupported("Arcade Find reveals files and folders"));
+    }
+    if c.paths.len() > 1 || req.inputs.len() > 1 {
+        return Err(LinkError::unsupported("Arcade Find reveals one item at a time"));
+    }
+    let path =
+        c.path.as_deref().or(c.paths.first().map(String::as_str)).map(PathBuf::from).ok_or_else(|| LinkError::unsupported("Arcade Find needs a path"))?;
+    if !path.is_absolute() {
+        return Err(LinkError::unsupported("Arcade Find needs an absolute path"));
+    }
+    Ok((Some(name_query(&path)?), Some(path)))
 }
 
 impl FindHandler {
@@ -582,6 +606,11 @@ impl FindHandler {
             "find.search" => run_search(self.host.as_ref(), &req),
             "find.show" => {
                 let (query, reveal) = show_args(&req)?;
+                self.host.show(query, reveal)?;
+                Ok(InvokeResult::message("Showing Arcade Find"))
+            }
+            "find.reveal" => {
+                let (query, reveal) = reveal_args(&req)?;
                 self.host.show(query, reveal)?;
                 Ok(InvokeResult::message("Showing Arcade Find"))
             }
@@ -678,12 +707,7 @@ mod tests {
     }
 
     fn sel_of(items: &[(PathBuf, bool, u64)]) -> Selection {
-        selection(items.iter().map(|(p, d, s)| Item {
-            path: p,
-            is_dir: *d,
-            link_type: Kind::of(&p.file_name().unwrap().to_string_lossy(), *d).link_type(),
-            size: (!*d).then_some(*s),
-        }))
+        selection(items.iter().map(|(p, d, s)| Item { path: p, is_dir: *d, link_type: link_type(p, *d), size: (!*d).then_some(*s) }))
     }
 
     #[test]
@@ -770,6 +794,105 @@ mod tests {
         let mut small = collect.clone();
         small.max_bytes = Some(1);
         assert!(matches!(offer(&m, &small, &files), Some(Offer::Disabled(r)) if r.contains("Too large for App arcade.x")));
+    }
+
+    #[test]
+    fn link_types_are_links_own_kinds() {
+        for (name, kind) in [
+            ("a.csv", "file/csv"),
+            ("a.SVG", "file/svg"),
+            ("a.png", "file/image"),
+            ("a.epub", "file/ebook"),
+            ("a.srt", "file/subtitle"),
+            ("a.xyz", "file/any"),
+            ("Makefile", "file/any"),
+        ] {
+            assert_eq!(link_type(Path::new(name), false), kind, "{name}");
+        }
+        assert_eq!(link_type(Path::new("/h/d.png"), true), "folder/reference");
+        // Every kind Link names has a static type here (else it would fall back to file/any).
+        for ext in ["svg", "csv", "json", "html", "md", "epub", "srt", "png", "mp4", "mp3", "pdf", "docx", "xlsx", "pptx", "zip", "txt", "rs", "ttf", "stl"] {
+            let p = PathBuf::from(format!("a.{ext}"));
+            assert_eq!(link_type(&p, false), format!("file/{}", content::file_kind_for_path(&p)), "{ext}");
+        }
+    }
+
+    #[test]
+    fn the_card_says_where_finds_actions_are_offered() {
+        let a = actions();
+        let by = |id: &str| a.iter().find(|x| x.id == id).unwrap().clone();
+        assert_eq!(by("find.search").surfaces, vec!["internal"]);
+        let show = by("find.show");
+        assert_eq!(show.title, "Search my files for this");
+        assert!(show.on_surface(surface::BROWSER_SELECTION) && show.on_surface(surface::PALETTE) && !show.on_surface(surface::FILE_MENU));
+        // Shelf hands find.show a file or a folder.
+        assert!(content::accepts_content(&show.accepts, &Content { kind: "file/pdf".into(), path: Some("/h/a.pdf".into()), ..Default::default() }));
+        let reveal = by("find.reveal");
+        assert!(reveal.on_surface(surface::FILE_MENU) && reveal.on_surface(surface::FOLDER_MENU));
+        assert_eq!(reveal.max_items, Some(1));
+        let m = manifest(&Settings::default());
+        let menu = offers::offers(&[offers::Item::new("file/pdf")], surface::FILE_MENU, &[m.clone()], &Rules::default(), &Prefs::default());
+        assert_eq!(menu.iter().map(|o| o.action.as_str()).collect::<Vec<_>>(), ["find.reveal"]);
+        let two =
+            offers::offers(&[offers::Item::new("file/pdf"), offers::Item::new("file/png")], surface::FILE_MENU, &[m], &Rules::default(), &Prefs::default());
+        assert!(!two[0].enabled && two[0].reason.as_deref() == Some("Takes at most 1 item"));
+    }
+
+    #[test]
+    fn reveal_selects_the_item_by_name() {
+        let pdf = Content { kind: "file/pdf".into(), path: Some("/h/my report.pdf".into()), ..Default::default() };
+        let r = InvokeRequest::new("find.reveal", "t").input(pdf);
+        assert_eq!(reveal_args(&r).unwrap(), (Some("\"my report.pdf\"".into()), Some(PathBuf::from("/h/my report.pdf"))));
+        let dir = Content { kind: "folder/reference".into(), path: Some("/h/photos".into()), ..Default::default() };
+        assert_eq!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(dir)).unwrap(), (Some("photos".into()), Some(PathBuf::from("/h/photos"))));
+        let two = Content { kind: "file/pdf[]".into(), paths: vec!["/h/a.pdf".into(), "/h/b.pdf".into()], ..Default::default() };
+        assert!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(two)).is_err());
+        assert!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(Content::plain("x"))).is_err());
+        let rel = Content { kind: "file/pdf".into(), path: Some("a.pdf".into()), ..Default::default() };
+        assert!(reveal_args(&InvokeRequest::new("find.reveal", "t").input(rel)).is_err());
+    }
+
+    #[test]
+    fn the_action_list_is_links_answer_with_the_catalog_rules_and_the_users_choices() {
+        let mut add = Action::new("shelf.add", "Add to Shelf", "add").accepts(&["file/*", "file/*[]", "folder/reference"]).effects(&["persists"]);
+        add.rank.insert("*".into(), 20);
+        let mut convert =
+            Action::new("box:arcade.image.convert#webp", "Convert to WebP", "convert").accepts(&["file/image", "file/image[]"]).effects(&["writes-files"]);
+        convert.rank.insert("file/image".into(), 80);
+        let csv = Action::new("box:arcade.csv.json", "CSV to JSON", "convert").accepts(&["file/csv"]).effects(&["writes-files"]);
+        let mut small = Action::new("x.small", "Small only", "s").accepts(&["file/*", "file/*[]"]).effects(&["writes-files"]);
+        small.max_bytes = Some(5);
+        let needs = Action::new("x.ffmpeg", "Needs ffmpeg", "n").accepts(&["file/*"]).effects(&["writes-files"]).unavailable("Install ffmpeg");
+        let mut needs = needs;
+        needs.requires = vec!["engine:ffmpeg".into()];
+        let preview = Action::new("look.preview", "Quick Look", "preview").accepts(&["file/*"]).interactive(true);
+        let pipelines = Action::new("box.pipeline.run", "Run pipeline", "run").accepts(&["file/*"]).effects(&["writes-files"]);
+        let cards = vec![app(apps::SHELF, vec![add]), app(BOX, vec![convert, csv, pipelines]), app("arcade.x", vec![small, needs]), app(LOOK, vec![preview])];
+        let ids = |v: &[PeerOffer]| v.iter().map(|o| o.action.id.clone()).collect::<Vec<_>>();
+
+        let photos = sel_of(&[item("/h/a.png", false, 3), item("/h/b.png", false, 3)]);
+        let got = offers_for(&cards, &Rules::default(), &Prefs::default(), &photos);
+        // Rank first; Look's preview is Find's own Quick Look; the pipeline plumbing and install entries are left out.
+        assert_eq!(ids(&got), ["box:arcade.image.convert#webp", "shelf.add", "x.small"]);
+        // maxBytes is checked against the whole selection (6 bytes here).
+        assert!(matches!(&got[2].offer, Offer::Disabled(_)));
+
+        // Link's own kinds: a CSV gets the CSV tool.
+        let table = sel_of(&[item("/h/t.csv", false, 1)]);
+        assert!(ids(&offers_for(&cards, &Rules::default(), &Prefs::default(), &table)).contains(&"box:arcade.csv.json".to_string()));
+
+        // Mixed files and folders: only what takes both.
+        let mixed = sel_of(&[item("/h/a.png", false, 1), item("/h/d", true, 0)]);
+        assert_eq!(ids(&offers_for(&cards, &Rules::default(), &Prefs::default(), &mixed)), ["shelf.add"]);
+
+        // The catalog renames and hides; the user's pins lead.
+        let mut rules = Rules::default();
+        rules.rename.insert("arcade.shelf/shelf.add".into(), "Keep on Shelf".into());
+        rules.hide.push("arcade.x/x.small".into());
+        let prefs = Prefs { pinned: vec!["arcade.shelf/shelf.add".into()], ..Prefs::default() };
+        let got = offers_for(&cards, &rules, &prefs, &photos);
+        assert_eq!(ids(&got), ["shelf.add", "box:arcade.image.convert#webp"]);
+        assert_eq!(got[0].title, "Keep on Shelf");
     }
 
     #[test]

@@ -9,7 +9,7 @@ rust-version.workspace = true
 publish.workspace = true
 
 [dependencies]
-arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v1.0.15" }
+arcade-link = { git = "https://github.com/qa-p1/Arcade-Link", tag = "v1.1.1" }
 serde.workspace = true
 serde_json.workspace = true
 memchr.workspace = true
