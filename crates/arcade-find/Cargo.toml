@@ -31,7 +31,7 @@ getrandom = "0.4"
 resvg = { version = "0.45", default-features = false }
 cosmic-text = { version = "0.17", default-features = false, features = ["std", "swash", "fontconfig"] }
 winit = { version = "0.30.13", default-features = false, features = ["rwh_06", "x11", "wayland", "wayland-dlopen"] }
-accesskit = "0.21.1"
+accesskit = "0.25.2"
 accesskit_winit = "0.29.1"
 softbuffer = { version = "0.4", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "x11-dlopen"] }
 # Settings window (a separate process, started on demand).
