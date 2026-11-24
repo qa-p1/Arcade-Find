@@ -36,7 +36,7 @@ accesskit_winit = "0.29.1"
 softbuffer = { version = "0.4", default-features = false, features = ["x11", "wayland", "wayland-dlopen", "x11-dlopen"] }
 # Settings window (a separate process, started on demand).
 eframe = { version = "0.33", default-features = false, features = ["glow", "x11", "wayland", "default_fonts", "accesskit"] }
-global-hotkey = "0.8"
+global-hotkey = "0.10"
 arboard = { version = "3.6", default-features = false, features = ["wayland-data-control"] }
 trash = "5"
 open = "5"
